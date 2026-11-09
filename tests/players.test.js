@@ -68,5 +68,35 @@ describe('Player Classes & Physics', () => {
     expect(rb.isMoving).toBe(false);
     expect(rb.phase).toBe('tackled');
   });
+
+  it('runs toward target defender when out of block range and only stops when block() is engaged', () => {
+    const wr = new WideReceiver({ position: 'WR', ratings: { speed: 10, agility: 10 } });
+    wr.x = 20;
+    wr.y = 0.5;
+    const defender = new DefensivePlayer({ position: 'CB' });
+    defender.x = 30;
+    defender.y = 0.5;
+
+    const delta = 1 / 60;
+    // Over 30 frames (~0.5s) of running towards defender without block():
+    for (let i = 0; i < 30; i++) {
+      wr.run(delta, defender.x, defender.y);
+    }
+    const distRun = wr.x - 20;
+    expect(distRun).toBeGreaterThan(1.5);
+
+    // If block() were called every frame unconditionally (the inching bug):
+    const buggyWr = new WideReceiver({ position: 'WR', ratings: { speed: 10, agility: 10 } });
+    buggyWr.x = 20;
+    buggyWr.y = 0.5;
+    for (let i = 0; i < 30; i++) {
+      buggyWr.run(delta, defender.x, defender.y);
+      buggyWr.block(defender);
+    }
+    const distBuggy = buggyWr.x - 20;
+    // Buggy receiver barely moved due to speed resetting every frame (< 0.2 yards in 0.5s)
+    expect(distBuggy).toBeLessThan(0.2);
+    expect(distRun).toBeGreaterThan(distBuggy * 10);
+  });
 });
 

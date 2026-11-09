@@ -405,6 +405,8 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     return dot >= minCos;
   }
 
+  const BLOCK_ENGAGE_RADIUS = 0.75;
+
   function blockNearestDefender(player, delta) {
     let nearestDefender = null;
     let minDefenderDist = Infinity;
@@ -418,9 +420,14 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       }
     }
     if (nearestDefender) {
-      player.run(delta, nearestDefender.x, nearestDefender.y);
-      player.block(nearestDefender);
+      if (minDefenderDist <= BLOCK_ENGAGE_RADIUS) {
+        player.block(nearestDefender);
+      } else {
+        player.blockingTarget = null;
+        player.run(delta, nearestDefender.x, nearestDefender.y);
+      }
     } else {
+      player.blockingTarget = null;
       player.runRoute(delta);
     }
   }
