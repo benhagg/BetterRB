@@ -243,20 +243,13 @@
         this.isMoving = false;
         return;
       }
-      let vx = dir?.vx;
-      let vy = dir?.vy;
-      if (!Number.isFinite(vx) || !Number.isFinite(vy)) {
-        vx = Number.isFinite(this.lastDirX) ? this.lastDirX : 1;
-        vy = Number.isFinite(this.lastDirY) ? this.lastDirY : 0;
-      }
+      let vx = dir?.vx ?? 1;
+      let vy = dir?.vy ?? 0;
       const len = Math.hypot(vx, vy);
       if (len > 0.001) {
         this.autoRun = { vx: vx / len, vy: vy / len };
       } else {
-        this.autoRun = null;
-        this.velocityX = 0;
-        this.velocityY = 0;
-        this.isMoving = false;
+        this.autoRun = { vx: 1, vy: 0 };
       }
     }
 

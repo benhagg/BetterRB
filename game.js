@@ -490,24 +490,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
         if (target) {
           state.phase = 'running';
           state.quarterback.hasBall = false;
-          const wasMoving = state.pass.targetReceiverNumber
-            ? state.pass.wasTargetMoving
-            : Boolean(target.isMoving) && (Math.hypot(target.velocityX || 0, (target.velocityY || 0) * lateralYards) > 0.05);
-          if (wasMoving) {
-            let catchDirX = target.velocityX;
-            let catchDirY = target.velocityY * lateralYards;
-            if (Math.hypot(catchDirX, catchDirY) < 0.1) {
-              catchDirX = target.lastDirX;
-              catchDirY = target.lastDirY;
-            }
-            target.catchBall(
-              Number.isFinite(catchDirX) && Number.isFinite(catchDirY)
-                ? { vx: catchDirX, vy: catchDirY }
-                : null
-            );
-          } else {
-            target.catchBall({ vx: 0, vy: 0 });
-          }
+          target.catchBall({ vx: 1, vy: 0 });
           state.fieldPosition = target.x;
           state.playerY = target.y;
           movePlayer(0, input);
