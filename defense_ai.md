@@ -21,28 +21,46 @@
   * Drop to assigned zone center (Flat, Hook/Curl, Deep Zone).
   * Bracket/contest any receiver that enters the **$3.0\text{ yds}$ zone radius**.
   * Hand off and re-center if receiver leaves zone.
-* **Run Recognition Delay ($0.0\text{s} - 0.3\text{s}$)**:
-  * When a handoff occurs (or QB scrambles across LOS), coverage defenders abort pass assignments and flow to the ball carrier with a momentum-based recognition delay.
-  * Uses the identical delay formula ($0.15 \times (1.0 - k)$) relative to the ball carrier:
-    * Moving forward toward carrier / mesh ($k = 1.0$): $\text{Delay} = \mathbf{0.00\text{s}}$ (instant downhill trigger).
-    * Moving laterally ($k = 0.0$): $\text{Delay} = \mathbf{0.15\text{s}}$.
-    * Backpedaling away in deep coverage ($k = -1.0$): $\text{Delay} = \mathbf{0.30\text{s}}$ (must plant and change direction).
+* **Run Recognition**:
+  * When a handoff occurs (or QB scrambles across LOS), coverage defenders abort pass assignments and trigger downhill pursuit using the shared function:
+    $$\text{Delay} = \text{calculateDefenderReactionDelay}(\text{defender},\, \vec{x}_{\text{carrier}})$$
 
 ---
 
-### 3. Phase 2: Ball Airborne (Pass Thrown)
-* **Targeted Receiver Delay**:
-  * Targeted receiver waits **$0.05\text{s}$** after throw release before breaking off route toward the pass target.
-* **Defender Reaction Delay ($0.0\text{s} - 0.3\text{s}$)**:
-  * **Backpedaling Defender Override**: If a defender is actively in a backpedal stance when the ball is thrown, their hips and vision are already squared to the QB $\implies \text{Delay} = \mathbf{0.00\text{s}}$ (instant downhill break).
-  * Otherwise, coverage defenders unlock and break on the ball based on momentum relative to the QB:
-    * $\vec{d}_{\text{toQB}} = \frac{\vec{x}_{\text{QB}} - \vec{x}_{\text{def}}}{\|\vec{x}_{\text{QB}} - \vec{x}_{\text{def}}\|}$ (Unit vector towards QB)
-    * $\vec{u}_{\text{def}} = \frac{\vec{v}_{\text{def}}}{\|\vec{v}_{\text{def}}\|}$ (Defender momentum unit vector)
-    * $k = \vec{u}_{\text{def}} \cdot \vec{d}_{\text{toQB}} \in [-1.0, 1.0]$
-    $$\text{Break Delay} = 0.15 \times (1.0 - k) \quad \text{seconds}$$
-  * **Running towards QB ($k = 1.0$)**: $\text{Delay} = \mathbf{0.00\text{s}}$ (instant break).
-  * **Running laterally ($k = 0.0$)**: $\text{Delay} = \mathbf{0.15\text{s}}$.
-  * **Running away downfield ($k = -1.0$)**: $\text{Delay} = \mathbf{0.30\text{s}}$ (hips must flip).
+### 3. Shared Reaction Delay Function (`calculateDefenderReactionDelay`)
+Both **Pass Airborne** and **Run Recognition** use the identical function to determine reaction delay ($0.0\text{s} - 0.3\text{s}$):
+
+```javascript
+function calculateDefenderReactionDelay(defender, targetPos) {
+  // 1. Backpedal override: hips/eyes already square to backfield
+  if (defender.isBackpedaling) return 0.0;
+
+  // 2. Stationary defender: instantly reacts
+  const speed = Math.hypot(defender.velocityX || 0, (defender.velocityY || 0) * 17);
+  if (speed < 0.05) return 0.0;
+
+  // 3. Dot product between defender momentum and vector toward target
+  const dx = targetPos.x - defender.x;
+  const dy = (targetPos.y - defender.y) * 17;
+  const dist = Math.hypot(dx, dy) || 1;
+  const dirX = dx / dist;
+  const dirY = dy / dist;
+
+  const velX = defender.velocityX / speed;
+  const velY = ((defender.velocityY || 0) * 17) / speed;
+  const k = Math.max(-1.0, Math.min(1.0, velX * dirX + velY * dirY));
+
+  // 4. Linear interpolation from 0.0s (k=1) to 0.30s (k=-1)
+  return 0.15 * (1.0 - k);
+}
+```
+
+* **Targeted Receiver Delay**: Targeted receiver waits **$0.05\text{s}$** after throw release before breaking off route toward the pass target.
+* **Pass Airborne Trigger**: When pass is released, each coverage defender unlocks using:
+  $$\text{Delay} = \text{calculateDefenderReactionDelay}(\text{defender},\, \vec{x}_{\text{QB}})$$
+  * **Backpedaling or running toward QB ($k = 1.0$)**: $\mathbf{0.00\text{s}}$ (instant break).
+  * **Running laterally ($k = 0.0$)**: $\mathbf{0.15\text{s}}$.
+  * **Running away downfield ($k = -1.0$)**: $\mathbf{0.30\text{s}}$ (hips must flip).
 
 ---
 
