@@ -1,7 +1,7 @@
 /* The first team is the user-controlled team; the second is its opponent. */
 // currently the top bottom and each end zone of the field are these numbers. out of bounds is anything outside of the top / bottom range and a touchdown is anything in the end zone we are going towards
 const fieldBounds = {top: -.02, bottom: 0.95, endZoneL: 2.217644291800185, endZoneR: 101.66747130270615};
-const cameraTrailingYards = 8;
+const cameraTrailingYards = 5;
 const lateralYards = 17;
 
 window.playGame = function playGame(team1, team2, savedState = null, selectedPlays = {}) {

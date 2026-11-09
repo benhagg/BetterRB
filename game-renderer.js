@@ -6,7 +6,7 @@
       ctx.fillStyle = '#377c08';
       ctx.fillRect(0, 0, width, height);
 
-      const horizontalScale = width / 300;
+      const horizontalScale = width / 350;
       const verticalScale = height / field.height;
       const { pixel } = camera.metrics(width, height);
       const passProgress = (state.phase === 'thrown' || state.phase === 'complete') && state.pass ? state.pass.progress : null;

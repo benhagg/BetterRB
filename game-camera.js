@@ -1,5 +1,5 @@
 (function (root) {
-  function create({ state, field, fieldBounds, cameraTrailingYards, ballCarrier }) {
+  function create({ state, field, fieldBounds, cameraTrailingYards = 5, ballCarrier }) {
     function metrics(width, height) {
       const pixel = Math.max(1, Math.min(Math.round(height / 180), Math.floor(width / 360)));
       return { pixel };
@@ -14,7 +14,7 @@
     }
 
     function canvasCoordsToField(canvasX, canvasY, width = 960, height = 540) {
-      const horizontalScale = width / 300;
+      const horizontalScale = width / 350;
       const verticalScale = height / field.height;
       const top = field.topSideline * verticalScale;
       const bottom = field.bottomSideline * verticalScale;
