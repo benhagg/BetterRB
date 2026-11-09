@@ -5,11 +5,12 @@ const PlayerSkills = require('./player-skills');
 const ScoreHistory = require('./score-history');
 
 const root = __dirname;
-const sharedDir = path.join(root, 'rb', 'shared');
+const sharedDir = path.join(root, 'shared');
 const saveDir = path.join(root, 'data', 'save_1');
 const archiveDir = path.join(saveDir, 'archives');
 const stateFile = path.join(saveDir, 'season.json');
 const rosterFile = path.join(saveDir, 'roster.json');
+const opponentRostersFile = path.join(saveDir, 'opp_rosters.json');
 const historyFile = path.join(saveDir, 'scores.txt');
 const types = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8', '.txt': 'text/plain; charset=utf-8', '.png': 'image/png', '.webp': 'image/webp' };
 
@@ -52,21 +53,23 @@ function uniformColors(teamId, uniforms) {
   };
 }
 
-function makeTeam(teamId, uniforms) {
+function loadOpponentRosters() {
+  try {
+    const rosters = JSON.parse(fs.readFileSync(opponentRostersFile, 'utf8'));
+    if (!rosters || typeof rosters.teams !== 'object' || Array.isArray(rosters.teams)) throw new Error('Invalid opponent rosters');
+    return rosters;
+  } catch (error) {
+    if (error.code === 'ENOENT') return { ratingsScale: 10, teams: {} };
+    throw error;
+  }
+}
+
+function makeTeam(teamId, uniforms, opponentRosters) {
   const source = teams.find(team => Number(team.uid) === Number(teamId));
   if (!source) throw new Error(`Unknown team id: ${teamId}`);
   const abbreviation = source.tla.replaceAll('.', '').slice(0, 3).toUpperCase();
-  const positions = ['QB', 'WR', 'WR', 'RB', 'TE', 'K'];
-  const players = positions.map((position, index) => {
-    const player = {
-      id: `${source.uid}-${index}`,
-      name: `${abbreviation} ${position}${position === 'WR' ? index === 1 ? '1' : '2' : ''}`,
-      position,
-      rating: 5
-    };
-    PlayerSkills.ensureRatings(player);
-    return player;
-  });
+  const stored = opponentRosters?.teams?.[String(teamId)];
+  const players = Array.isArray(stored?.players) ? structuredClone(stored.players) : [];
   return {
     id: Number(source.uid),
     city: source.name,
@@ -78,7 +81,7 @@ function makeTeam(teamId, uniforms) {
   };
 }
 
-function scheduleFor(teamId, uniforms) {
+function scheduleFor(teamId, uniforms, opponentRosters) {
   const rows = readTsv('schedule.txt');
   return rows.filter(row => Number(row.year) === 1 && (Number(row.away_team) === Number(teamId) || Number(row.home_team) === Number(teamId)))
     .map(row => {
@@ -89,7 +92,7 @@ function scheduleFor(teamId, uniforms) {
       return {
         week: Number(row.week),
         opponentId,
-        opponent: makeTeam(opponentId, uniforms),
+        opponent: makeTeam(opponentId, uniforms, opponentRosters),
         location: isHome ? 'HOME' : 'AWAY',
         played: homeScore >= 0 && awayScore >= 0,
         score: homeScore >= 0 && awayScore >= 0 ? (isHome ? [homeScore, awayScore] : [awayScore, homeScore]) : null
@@ -97,8 +100,8 @@ function scheduleFor(teamId, uniforms) {
     }).sort((a, b) => a.week - b.week);
 }
 
-function initialState(uniforms) {
-  const baseTeam = makeTeam(20, uniforms);
+function initialState(uniforms, opponentRosters) {
+  const baseTeam = makeTeam(20, uniforms, opponentRosters);
   const team = {
     ...baseTeam,
     city: 'Arizona',
@@ -115,7 +118,7 @@ function initialState(uniforms) {
     ratingsScale: 10,
     team,
     record: { wins: 0, losses: 0, ties: 0, pointsFor: 0, pointsAgainst: 0 },
-    schedule: scheduleFor(20, uniforms),
+    schedule: scheduleFor(20, uniforms, opponentRosters),
     currentGame: null
   };
 }
@@ -123,13 +126,14 @@ function initialState(uniforms) {
 function loadState() {
   fs.mkdirSync(path.dirname(stateFile), { recursive: true });
   const uniforms = loadUniforms();
+  const opponentRosters = loadOpponentRosters();
   let state;
   let refresh = false;
   try {
     state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
-    state = initialState(uniforms);
+    state = initialState(uniforms, opponentRosters);
     refresh = true;
   }
   const hadEmbeddedRoster = Array.isArray(state.team.players);
@@ -147,8 +151,8 @@ function loadState() {
       fs.copyFileSync(stateFile, archiveFile, fs.constants.COPYFILE_EXCL);
     }
     const previous = state.team;
-    state.team = { ...makeTeam(20, uniforms), city: 'Arizona', name: 'Cardinals', fans: previous.fans, cap: previous.cap, players: previous.players };
-    state.schedule = scheduleFor(20, uniforms);
+    state.team = { ...makeTeam(20, uniforms, opponentRosters), city: 'Arizona', name: 'Cardinals', fans: previous.fans, cap: previous.cap, players: previous.players };
+    state.schedule = scheduleFor(20, uniforms, opponentRosters);
     state.record = { wins: 0, losses: 0, ties: 0, pointsFor: 0, pointsAgainst: 0 };
     state.currentGame = null;
     refresh = true;
@@ -158,14 +162,18 @@ function loadState() {
     state.currentGame.team1.ratingsScale = 10;
   }
   if (!Array.isArray(state.schedule) || state.schedule.length === 0) {
-    state.schedule = scheduleFor(state.team?.id ?? 0, uniforms);
+    state.schedule = scheduleFor(state.team?.id ?? 0, uniforms, opponentRosters);
     refresh = true;
   }
   for (const game of state.schedule) {
-    if (game.opponentId !== undefined && !game.opponent) {
-      game.opponent = makeTeam(game.opponentId, uniforms);
-      refresh = true;
+    if (game.opponentId !== undefined) {
+      if (Array.isArray(game.opponent?.players)) refresh = true;
+      game.opponent = makeTeam(game.opponentId, uniforms, opponentRosters);
     }
+  }
+  if (state.currentGame?.team2?.id !== undefined) {
+    if (Array.isArray(state.currentGame.team2.players)) refresh = true;
+    state.currentGame.team2 = makeTeam(state.currentGame.team2.id, uniforms, opponentRosters);
   }
   if (stripTeamColors(state)) refresh = true;
   applyTeamColors(state, uniforms);
@@ -235,6 +243,10 @@ function saveState(state) {
   stripTeamColors(saved);
   delete saved.team.players;
   if (saved.currentGame?.team1) delete saved.currentGame.team1.players;
+  for (const game of saved.schedule || []) {
+    if (game.opponent) delete game.opponent.players;
+  }
+  if (saved.currentGame?.team2) delete saved.currentGame.team2.players;
   fs.writeFileSync(stateFile, `${JSON.stringify(saved, null, 2)}\n`, 'utf8');
   syncSaveHistory(saved);
 }
@@ -304,7 +316,8 @@ http.createServer((request, response) => {
     return;
   }
 
-  const requested = pathname === '/' ? '/index.html' : pathname;
+  const appRoute = /^\/(?:roster(?:\/[^/]+)?|schedule|game)\/?$/.test(pathname);
+  const requested = pathname === '/' || appRoute ? '/index.html' : pathname;
   const file = path.resolve(root, `.${requested}`);
   if (!file.startsWith(root + path.sep)) {
     response.writeHead(403).end('Forbidden');

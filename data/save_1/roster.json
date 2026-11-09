@@ -1,89 +1,542 @@
 {
+  "ratingsScale": 10,
   "players": [
     {
-      "id": "cc-0",
-      "name": "M. Cole",
+      "id": "20-qb-1",
+      "name": "Jonas Ojulari",
       "position": "QB",
-      "rating": 5,
+      "rating": 6,
+      "potential": 9,
+      "skillCredits": 18,
+      "potentialSkillCredits": 27,
       "ratings": {
-        "strength": 5,
-        "speed": 5,
-        "stamina": 5,
+        "strength": 6,
+        "speed": 1,
+        "agility": 1,
+        "accuracy": 10
+      },
+      "potentialRatings": {
+        "strength": 10,
+        "speed": 4,
+        "agility": 3,
         "accuracy": 10
       },
       "portrait": 0,
       "xp": 0
     },
     {
-      "id": "cc-1",
-      "name": "J. Rivers",
-      "position": "WR",
-      "rating": 5,
+      "id": "20-rb-2",
+      "name": "Luke Sneed",
+      "position": "RB",
+      "rating": 8,
+      "potential": 9,
+      "skillCredits": 24,
+      "potentialSkillCredits": 27,
       "ratings": {
-        "strength": 5,
-        "speed": 5,
-        "stamina": 5,
-        "catching": 5
+        "strength": 8,
+        "speed": 6,
+        "agility": 10,
+        "catching": 0
+      },
+      "potentialRatings": {
+        "strength": 10,
+        "speed": 6,
+        "agility": 10,
+        "catching": 1
       },
       "portrait": 1,
       "xp": 0
     },
     {
-      "id": "cc-2",
-      "name": "T. Hayes",
+      "id": "20-wr-3",
+      "name": "D'Ernest Casey",
       "position": "WR",
-      "rating": 5,
+      "rating": 7,
+      "potential": 10,
+      "skillCredits": 21,
+      "potentialSkillCredits": 30,
       "ratings": {
-        "strength": 5,
-        "speed": 5,
-        "stamina": 5,
-        "catching": 5
+        "strength": 0,
+        "speed": 10,
+        "agility": 4,
+        "catching": 7
+      },
+      "potentialRatings": {
+        "strength": 1,
+        "speed": 10,
+        "agility": 9,
+        "catching": 10
       },
       "portrait": 2,
       "xp": 0
     },
     {
-      "id": "cc-3",
-      "name": "D. Brooks",
-      "position": "RB",
-      "rating": 5,
+      "id": "20-wr-4",
+      "name": "Makinton Pepper",
+      "position": "WR",
+      "rating": 10,
+      "potential": 10,
+      "skillCredits": 30,
+      "potentialSkillCredits": 30,
       "ratings": {
-        "strength": 5,
-        "speed": 5,
-        "stamina": 5,
-        "catching": 5
+        "strength": 3,
+        "speed": 10,
+        "agility": 10,
+        "catching": 7
+      },
+      "potentialRatings": {
+        "strength": 3,
+        "speed": 10,
+        "agility": 10,
+        "catching": 7
       },
       "portrait": 3,
       "xp": 0
     },
     {
-      "id": "cc-4",
-      "name": "A. Stone",
-      "position": "TE",
-      "rating": 5,
+      "id": "20-wr-5",
+      "name": "Tremayne Coley",
+      "position": "WR",
+      "rating": 10,
+      "potential": 10,
+      "skillCredits": 30,
+      "potentialSkillCredits": 30,
       "ratings": {
-        "strength": 5,
-        "speed": 5,
-        "stamina": 5,
-        "catching": 5
+        "strength": 0,
+        "speed": 10,
+        "agility": 10,
+        "catching": 10
+      },
+      "potentialRatings": {
+        "strength": 0,
+        "speed": 10,
+        "agility": 10,
+        "catching": 10
+      },
+      "portrait": 4,
+      "xp": 0
+    },
+    {
+      "id": "20-te-6",
+      "name": "Javien Wren",
+      "position": "TE",
+      "rating": 3,
+      "potential": 3,
+      "skillCredits": 9,
+      "potentialSkillCredits": 9,
+      "ratings": {
+        "strength": 4,
+        "speed": 1,
+        "agility": 2,
+        "catching": 2
+      },
+      "potentialRatings": {
+        "strength": 4,
+        "speed": 1,
+        "agility": 2,
+        "catching": 2
       },
       "portrait": 5,
       "xp": 0
     },
     {
-      "id": "cc-5",
-      "name": "K. Price",
-      "position": "K",
-      "rating": 5,
+      "id": "20-te-7",
+      "name": "Austin Pierre",
+      "position": "TE",
+      "rating": 3,
+      "potential": 4,
+      "skillCredits": 9,
+      "potentialSkillCredits": 12,
       "ratings": {
-        "strength": 5,
-        "speed": 5,
-        "stamina": 5,
-        "accuracy": 5
+        "strength": 3,
+        "speed": 1,
+        "agility": 4,
+        "catching": 1
+      },
+      "potentialRatings": {
+        "strength": 4,
+        "speed": 2,
+        "agility": 4,
+        "catching": 2
       },
       "portrait": 6,
       "xp": 0
+    },
+    {
+      "id": "20-ol-8",
+      "name": "Nicholas House",
+      "position": "OL",
+      "rating": 7,
+      "potential": 7,
+      "skillCredits": 21,
+      "potentialSkillCredits": 21,
+      "ratings": {
+        "strength": 5,
+        "speed": 4,
+        "agility": 4,
+        "catching": 8,
+        "blocking": 7
+      },
+      "potentialRatings": {
+        "strength": 5,
+        "speed": 4,
+        "agility": 4,
+        "catching": 8
+      },
+      "portrait": 7,
+      "xp": 0
+    },
+    {
+      "id": "20-ol-9",
+      "name": "Melvin McCain",
+      "position": "OL",
+      "rating": 8,
+      "potential": 8,
+      "skillCredits": 24,
+      "potentialSkillCredits": 24,
+      "ratings": {
+        "strength": 4,
+        "speed": 8,
+        "agility": 7,
+        "catching": 5,
+        "blocking": 8
+      },
+      "potentialRatings": {
+        "strength": 4,
+        "speed": 8,
+        "agility": 7,
+        "catching": 5
+      },
+      "portrait": 8,
+      "xp": 0
+    },
+    {
+      "id": "20-ol-10",
+      "name": "Derrick Fortson",
+      "position": "OL",
+      "rating": 3,
+      "potential": 6,
+      "skillCredits": 9,
+      "potentialSkillCredits": 18,
+      "ratings": {
+        "strength": 0,
+        "speed": 6,
+        "agility": 1,
+        "catching": 2,
+        "blocking": 3
+      },
+      "potentialRatings": {
+        "strength": 2,
+        "speed": 10,
+        "agility": 3,
+        "catching": 3
+      },
+      "portrait": 9,
+      "xp": 0
+    },
+    {
+      "id": "20-ol-11",
+      "name": "Daryle Ankou",
+      "position": "OL",
+      "rating": 9,
+      "potential": 10,
+      "skillCredits": 27,
+      "potentialSkillCredits": 30,
+      "ratings": {
+        "strength": 7,
+        "speed": 6,
+        "agility": 7,
+        "catching": 7,
+        "blocking": 9
+      },
+      "potentialRatings": {
+        "strength": 8,
+        "speed": 6,
+        "agility": 9,
+        "catching": 7
+      },
+      "portrait": 0,
+      "xp": 0
+    },
+    {
+      "id": "20-k-12",
+      "name": "Hayden Stokes",
+      "position": "K",
+      "rating": 10,
+      "potential": 10,
+      "skillCredits": 30,
+      "potentialSkillCredits": 30,
+      "ratings": {
+        "strength": 10,
+        "speed": 4,
+        "agility": 6,
+        "accuracy": 10
+      },
+      "potentialRatings": {
+        "strength": 10,
+        "speed": 4,
+        "agility": 6,
+        "accuracy": 10
+      },
+      "portrait": 1,
+      "xp": 0
+    },
+    {
+      "id": "20-dl-13",
+      "name": "Francis Beavers",
+      "position": "DL",
+      "rating": 10,
+      "potential": 10,
+      "skillCredits": 30,
+      "potentialSkillCredits": 30,
+      "ratings": {
+        "strength": 9,
+        "speed": 5,
+        "agility": 10,
+        "catching": 6,
+        "tackling": 10
+      },
+      "potentialRatings": {
+        "strength": 9,
+        "speed": 5,
+        "agility": 10,
+        "catching": 6
+      },
+      "portrait": 2,
+      "xp": 0
+    },
+    {
+      "id": "20-dl-14",
+      "name": "Eddy Bledsoe",
+      "position": "DL",
+      "rating": 5,
+      "potential": 8,
+      "skillCredits": 15,
+      "potentialSkillCredits": 24,
+      "ratings": {
+        "strength": 5,
+        "speed": 4,
+        "agility": 2,
+        "catching": 4,
+        "tackling": 5
+      },
+      "potentialRatings": {
+        "strength": 10,
+        "speed": 6,
+        "agility": 4,
+        "catching": 4
+      },
+      "portrait": 3,
+      "xp": 0
+    },
+    {
+      "id": "20-dl-15",
+      "name": "Tye McTyer",
+      "position": "DL",
+      "rating": 4,
+      "potential": 6,
+      "skillCredits": 12,
+      "potentialSkillCredits": 18,
+      "ratings": {
+        "strength": 3,
+        "speed": 2,
+        "agility": 4,
+        "catching": 3,
+        "tackling": 4
+      },
+      "potentialRatings": {
+        "strength": 4,
+        "speed": 2,
+        "agility": 8,
+        "catching": 4
+      },
+      "portrait": 4,
+      "xp": 0
+    },
+    {
+      "id": "20-dl-16",
+      "name": "Kristian Blacklock",
+      "position": "DL",
+      "rating": 2,
+      "potential": 2,
+      "skillCredits": 6,
+      "potentialSkillCredits": 6,
+      "ratings": {
+        "strength": 1,
+        "speed": 0,
+        "agility": 2,
+        "catching": 3,
+        "tackling": 2
+      },
+      "potentialRatings": {
+        "strength": 1,
+        "speed": 0,
+        "agility": 2,
+        "catching": 3
+      },
+      "portrait": 5,
+      "xp": 0
+    },
+    {
+      "id": "20-lb-17",
+      "name": "Ira Lacey",
+      "position": "LB",
+      "rating": 2,
+      "potential": 6,
+      "skillCredits": 6,
+      "potentialSkillCredits": 18,
+      "ratings": {
+        "strength": 1,
+        "speed": 2,
+        "agility": 3,
+        "tackling": 0
+      },
+      "potentialRatings": {
+        "strength": 5,
+        "speed": 5,
+        "agility": 7,
+        "tackling": 1
+      },
+      "portrait": 6,
+      "xp": 0
+    },
+    {
+      "id": "20-lb-18",
+      "name": "Carlton Vakameilalo",
+      "position": "LB",
+      "rating": 5,
+      "potential": 5,
+      "skillCredits": 15,
+      "potentialSkillCredits": 15,
+      "ratings": {
+        "strength": 5,
+        "speed": 5,
+        "agility": 4,
+        "tackling": 1
+      },
+      "potentialRatings": {
+        "strength": 5,
+        "speed": 5,
+        "agility": 4,
+        "tackling": 1
+      },
+      "portrait": 7,
+      "xp": 0
+    },
+    {
+      "id": "20-lb-19",
+      "name": "Frankie Gillikin",
+      "position": "LB",
+      "rating": 6,
+      "potential": 7,
+      "skillCredits": 18,
+      "potentialSkillCredits": 21,
+      "ratings": {
+        "strength": 7,
+        "speed": 2,
+        "agility": 3,
+        "tackling": 6
+      },
+      "potentialRatings": {
+        "strength": 7,
+        "speed": 3,
+        "agility": 5,
+        "tackling": 6
+      },
+      "portrait": 8,
+      "xp": 0
+    },
+    {
+      "id": "20-db-20",
+      "name": "Ambry Schofield",
+      "position": "DB",
+      "rating": 4,
+      "potential": 6,
+      "skillCredits": 12,
+      "potentialSkillCredits": 18,
+      "ratings": {
+        "strength": 0,
+        "speed": 7,
+        "agility": 0,
+        "catching": 5
+      },
+      "potentialRatings": {
+        "strength": 1,
+        "speed": 9,
+        "agility": 0,
+        "catching": 8
+      },
+      "portrait": 9,
+      "xp": 0
+    },
+    {
+      "id": "20-db-21",
+      "name": "Xavien Guy",
+      "position": "DB",
+      "rating": 2,
+      "potential": 3,
+      "skillCredits": 6,
+      "potentialSkillCredits": 9,
+      "ratings": {
+        "strength": 1,
+        "speed": 1,
+        "agility": 0,
+        "catching": 4
+      },
+      "potentialRatings": {
+        "strength": 2,
+        "speed": 1,
+        "agility": 0,
+        "catching": 6
+      },
+      "portrait": 0,
+      "xp": 0
+    },
+    {
+      "id": "20-db-22",
+      "name": "Jarrett Su'a-Filo",
+      "position": "DB",
+      "rating": 9,
+      "potential": 9,
+      "skillCredits": 27,
+      "potentialSkillCredits": 27,
+      "ratings": {
+        "strength": 5,
+        "speed": 6,
+        "agility": 6,
+        "catching": 10
+      },
+      "potentialRatings": {
+        "strength": 5,
+        "speed": 6,
+        "agility": 6,
+        "catching": 10
+      },
+      "portrait": 1,
+      "xp": 0
+    },
+    {
+      "id": "20-db-23",
+      "name": "KJ Drake",
+      "position": "DB",
+      "rating": 7,
+      "potential": 9,
+      "skillCredits": 21,
+      "potentialSkillCredits": 27,
+      "ratings": {
+        "strength": 7,
+        "speed": 3,
+        "agility": 3,
+        "catching": 8
+      },
+      "potentialRatings": {
+        "strength": 7,
+        "speed": 5,
+        "agility": 5,
+        "catching": 10
+      },
+      "portrait": 2,
+      "xp": 0
     }
-  ],
-  "ratingsScale": 10
+  ]
 }

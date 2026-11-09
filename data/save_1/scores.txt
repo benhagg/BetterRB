@@ -1,2 +1,1 @@
 year	week	away_team	home_team	away_score	home_score
-1	1	11	0	0	0

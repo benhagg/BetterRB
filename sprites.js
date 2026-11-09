@@ -10,6 +10,14 @@ window.RetroSprites = (() => {
     '/images/running/run_05.png',
     '/images/running/run_06.png'
   ];
+  const runnerWithBallFrames = [
+    '/images/running/run_ball_01.png',
+    '/images/running/run_ball_02.png',
+    '/images/running/run_ball_03.png',
+    '/images/running/run_ball_04.png',
+    '/images/running/run_ball_05.png',
+    '/images/running/run_ball_06.png'
+  ];
 
   function loadImage(src) {
     if (images.has(src)) return images.get(src);
@@ -28,10 +36,19 @@ window.RetroSprites = (() => {
   const fieldImage = loadImage('/images/field.png').image;
   const footballImage = loadImage('/images/ball.png').image;
   const prePlayFrames = { lineman: '/images/pre_play/lineman.png', center: '/images/pre_play/center.png', skill: '/images/pre_play/skill.png' };
-  const actionFrames = { dropback: ['/images/actions/dropback.png', '/images/actions/dropback1.png'], pass: ['/images/actions/pass.png', '/images/actions/pass1.png'] };
+  const actionFrames = {
+    dropback: ['/images/actions/dropback.png', '/images/actions/dropback1.png'],
+    pass: ['/images/actions/pass.png', '/images/actions/pass1.png'],
+    ddive: ['/images/actions/ddive.png', '/images/actions/ddive1.png', '/images/actions/ddive2.png'],
+    odive: ['/images/actions/odive.png', '/images/actions/odive1.png', '/images/actions/odive2.png'],
+    tackled: ['/images/actions/tackled.png', '/images/actions/tackled1.png', '/images/actions/tackled2.png'],
+    blocking: ['/images/actions/blocking.png', '/images/actions/blocking1.png'],
+    resting: ['/images/actions/resting.png']
+  };
   Object.values(prePlayFrames).forEach(loadImage);
   Object.values(actionFrames).flat().forEach(loadImage);
   runnerFrames.forEach(loadImage);
+  runnerWithBallFrames.forEach(loadImage);
 
   function rgb(value, part) {
     if (!/^#[0-9a-f]{6}$/i.test(value || '')) throw new Error(`Missing or invalid uniform color: ${part}`);
@@ -81,14 +98,17 @@ window.RetroSprites = (() => {
   function sprite(kind, index, uniform) {
     const source = kind === 'portrait'
       ? `/images/portraits/portrait_${String(index).padStart(2, '0')}.png`
-      : kind === 'runner' ? runnerFrames[index] : actionFrames[kind] ? actionFrames[kind][index] : prePlayFrames[kind];
+      : kind === 'runner_ball' ? runnerWithBallFrames[index]
+      : kind === 'runner' ? runnerFrames[index]
+      : actionFrames[kind] ? actionFrames[kind][index]
+      : prePlayFrames[kind];
     const sourceImage = loadImage(source);
     const colors = colorsFor(uniform);
     const key = `${kind}:${index}:${JSON.stringify(colors)}`;
     if (cache.has(key)) return cache.get(key);
     const canvas = document.createElement('canvas');
     canvas.width = kind === 'portrait' ? 29 : 16;
-    canvas.height = kind === 'portrait' ? 37 : kind === 'runner' || actionFrames[kind] ? 17 : 16;
+    canvas.height = kind === 'portrait' ? 37 : kind === 'runner' || kind === 'runner_ball' || actionFrames[kind] ? 17 : 16;
     const entry = { canvas, ready: false };
     entry.promise = sourceImage.ready.then(() => {
       const context = canvas.getContext('2d', { willReadFrequently: true });
@@ -116,8 +136,10 @@ window.RetroSprites = (() => {
     });
   }
 
-  function drawRunner(context, x, y, pixelSize, uniform, frameIndex, flip = false) {
-    const entry = sprite('runner', frameIndex % runnerFrames.length, uniform);
+  function drawRunner(context, x, y, pixelSize, uniform, frameIndex, flip = false, hasBall = false) {
+    const list = hasBall ? runnerWithBallFrames : runnerFrames;
+    const kind = hasBall ? 'runner_ball' : 'runner';
+    const entry = sprite(kind, frameIndex % list.length, uniform);
     if (!entry.ready) return;
     const width = entry.canvas.width * pixelSize;
     const height = entry.canvas.height * pixelSize;
@@ -144,9 +166,20 @@ window.RetroSprites = (() => {
     } else context.drawImage(entry.canvas, x, y, width, height);
   }
 
-  function drawAction(context, x, y, pixelSize, uniform, kind, frameIndex) {
-    const entry = sprite(kind, frameIndex % actionFrames[kind].length, uniform);
-    if (entry.ready) context.drawImage(entry.canvas, x, y, entry.canvas.width * pixelSize, entry.canvas.height * pixelSize);
+  function drawAction(context, x, y, pixelSize, uniform, kind, frameIndex, flip = false) {
+    const frames = actionFrames[kind];
+    if (!frames) return;
+    const entry = sprite(kind, frameIndex % frames.length, uniform);
+    if (!entry.ready) return;
+    const width = entry.canvas.width * pixelSize;
+    const height = entry.canvas.height * pixelSize;
+    if (flip) {
+      context.save();
+      context.translate(x + width, y);
+      context.scale(-1, 1);
+      context.drawImage(entry.canvas, 0, 0, width, height);
+      context.restore();
+    } else context.drawImage(entry.canvas, x, y, width, height);
   }
 
   return { fieldImage, footballImage, paintPortrait, drawRunner, drawPrePlay, drawAction };

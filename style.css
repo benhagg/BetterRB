@@ -71,21 +71,27 @@ button { color: inherit; font: inherit; }
 .roster-back { border: 2px solid #a9c7d8; background: #18354e; color: white; padding: 5px 12px; cursor: pointer; white-space: nowrap; }
 .roster-back:hover, .roster-back:focus-visible { background: #3e7190; outline: 2px solid #ffe18a; }
 .roster-toolbar { display: flex; justify-content: space-between; padding: 9px 16px; background: #173927; color: #d5eca1; font-size: 19px; letter-spacing: 1px; }
-.player-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; padding: 14px; }
-.player-card { display: grid; grid-template-columns: 35px 50px minmax(65px, 1fr) minmax(108px, 1.15fr) 12px; align-items: center; gap: 7px; min-width: 0; min-height: 92px; padding: 9px; border: 2px solid #172d2c; background: #e8e8cd; color: #18262b; text-align: left; box-shadow: 3px 3px #112b1d; cursor: pointer; }
+.roster-tabs { display: flex; gap: 5px; }
+.roster-tabs button { border: 2px solid #739368; background: #244c35; color: #d5eca1; padding: 4px 8px; cursor: pointer; font: 14px 'VT323', monospace; letter-spacing: 1px; }
+.roster-tabs button.active { border-color: #fff0a3; background: #426f3d; color: #fff9ce; }
+.player-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 9px; padding: 12px; }
+.player-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 76px auto; align-items: end; gap: 7px; min-width: 0; min-height: 116px; padding: 8px; border: 2px solid #172d2c; background: #e8e8cd; color: #18262b; text-align: left; box-shadow: 3px 3px #112b1d; cursor: pointer; }
 .player-card:hover, .player-card:focus-visible { background: #fff6ce; outline: 3px solid #ffe17b; outline-offset: 1px; }
 .position-badge, .profile-position { display: grid; place-items: center; padding: 6px 3px; background: #284c70; color: #fff; font-size: 18px; line-height: 1; }
+.player-card-top { position: relative; display: flex; align-items: end; justify-content: center; grid-column: 1 / -1; height: 76px; }
+.player-card .position-badge { position: absolute; top: 0; left: 0; z-index: 1; font-size: 15px; padding: 5px 2px; }
 .player-card-info { min-width: 0; }
 .player-name { display: block; overflow: hidden; color: #142e40; font: 9px/1.5 'Press Start 2P', monospace; text-overflow: ellipsis; }
-.player-card-subtitle { display: block; margin-top: 7px; color: #5d746a; font-size: 15px; }
-.player-card-arrow { color: #607b69; font-size: 30px; }
-.player-card-ratings { display: grid; gap: 2px; min-width: 0; }
+.player-card-overall { color: #254c3e; font: 9px/1 'Press Start 2P', monospace; text-align: right; white-space: nowrap; }
+.player-card-overall small { color: #607b69; font: 13px 'VT323', monospace; }
 .player-rating { display: grid; grid-template-columns: 31px minmax(0, 1fr) 25px; align-items: center; gap: 4px; color: #395447; font-size: 15px; line-height: 1; }
 .player-rating strong { color: #254c3e; font-weight: normal; text-align: right; }
 .rating-blocks { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 2px; }
 .rating-block { display: block; height: 7px; background: #aebba2; }
 .rating-block.filled { background: #3b9560; }
+.rating-block.potential { background: #86a873; opacity: .55; }
 .pixel-player { display: block; width: 46px; height: 59px; flex: none; image-rendering: pixelated; }
+.player-card .pixel-player { width: 46px; height: 59px; }
 .roster-hint { margin: 0; padding: 0 14px 14px; color: #bdcda1; font-size: 16px; letter-spacing: 1px; text-align: center; }
 .profile-body { display: grid; grid-template-columns: 180px 1fr; gap: 22px; padding: 22px; }
 .profile-identity { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 11px; padding: 22px 12px; border: 2px solid #698366; background: #e8e8cd; color: #254438; text-align: center; }
@@ -148,15 +154,16 @@ button { color: inherit; font: inherit; }
   .live-matchup { gap: 6px; font-size: 8px; }
   .live-game-score { font-size: 16px; }
   .game-status { display: none; }
-  .player-grid { grid-template-columns: 1fr; }
+  .player-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; padding: 9px; }
   .profile-body { grid-template-columns: 1fr; gap: 12px; padding: 12px; }
   .profile-identity { flex-direction: row; flex-wrap: wrap; padding: 10px; }
   .profile-identity .pixel-player { transform: none; margin: 0 8px; }
   .roster-header h2 { font-size: 12px; }
 }
 @media (max-width: 380px) {
-  .player-card { grid-template-columns: 32px 42px minmax(55px, 1fr) minmax(85px, 1fr); gap: 4px; padding: 7px; }
-  .player-card-arrow { display: none; }
+  .player-card { grid-template-rows: 66px auto; min-height: 103px; gap: 4px; padding: 5px; }
+  .player-card-top { height: 66px; }
+  .player-card .pixel-player { width: 39px; height: 50px; }
   .player-name { font-size: 8px; }
   .player-card .player-rating { grid-template-columns: 23px minmax(0, 1fr) 19px; gap: 2px; font-size: 13px; }
 }

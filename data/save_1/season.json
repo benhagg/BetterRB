@@ -1,5 +1,7 @@
 {
   "season": 1,
+  "currentWeek": 1,
+  "ratingsScale": 10,
   "team": {
     "id": 20,
     "city": "Arizona",
@@ -25,89 +27,13 @@
         "city": "Tennessee",
         "name": "Tennessee",
         "abbreviation": "TEN",
-        "players": [
-          {
-            "id": "15-0",
-            "name": "TEN QB",
-            "position": "QB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "15-1",
-            "name": "TEN WR1",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "15-2",
-            "name": "TEN WR2",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "15-3",
-            "name": "TEN RB",
-            "position": "RB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "15-4",
-            "name": "TEN TE",
-            "position": "TE",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "15-5",
-            "name": "TEN K",
-            "position": "K",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          }
-        ],
         "ratingsScale": 10
       },
       "location": "AWAY",
+      "uniforms": {
+        "player": "away",
+        "opponent": "home"
+      },
       "played": false,
       "score": null
     },
@@ -119,89 +45,13 @@
         "city": "Minnesota",
         "name": "Minnesota",
         "abbreviation": "MIN",
-        "players": [
-          {
-            "id": "27-0",
-            "name": "MIN QB",
-            "position": "QB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "27-1",
-            "name": "MIN WR1",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "27-2",
-            "name": "MIN WR2",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "27-3",
-            "name": "MIN RB",
-            "position": "RB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "27-4",
-            "name": "MIN TE",
-            "position": "TE",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "27-5",
-            "name": "MIN K",
-            "position": "K",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          }
-        ],
         "ratingsScale": 10
       },
       "location": "HOME",
+      "uniforms": {
+        "player": "home",
+        "opponent": "away"
+      },
       "played": false,
       "score": null
     },
@@ -213,89 +63,13 @@
         "city": "Jacksonville",
         "name": "Jacksonville",
         "abbreviation": "JAC",
-        "players": [
-          {
-            "id": "14-0",
-            "name": "JAC QB",
-            "position": "QB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "14-1",
-            "name": "JAC WR1",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "14-2",
-            "name": "JAC WR2",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "14-3",
-            "name": "JAC RB",
-            "position": "RB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "14-4",
-            "name": "JAC TE",
-            "position": "TE",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "14-5",
-            "name": "JAC K",
-            "position": "K",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          }
-        ],
         "ratingsScale": 10
       },
       "location": "AWAY",
+      "uniforms": {
+        "player": "away",
+        "opponent": "home"
+      },
       "played": false,
       "score": null
     },
@@ -307,89 +81,13 @@
         "city": "Los Angeles R",
         "name": "Los Angeles R",
         "abbreviation": "LAR",
-        "players": [
-          {
-            "id": "21-0",
-            "name": "LAR QB",
-            "position": "QB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "21-1",
-            "name": "LAR WR1",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "21-2",
-            "name": "LAR WR2",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "21-3",
-            "name": "LAR RB",
-            "position": "RB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "21-4",
-            "name": "LAR TE",
-            "position": "TE",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "21-5",
-            "name": "LAR K",
-            "position": "K",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          }
-        ],
         "ratingsScale": 10
       },
       "location": "AWAY",
+      "uniforms": {
+        "player": "away",
+        "opponent": "home"
+      },
       "played": false,
       "score": null
     },
@@ -401,89 +99,13 @@
         "city": "San Francisco",
         "name": "San Francisco",
         "abbreviation": "SF",
-        "players": [
-          {
-            "id": "22-0",
-            "name": "SF QB",
-            "position": "QB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "22-1",
-            "name": "SF WR1",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "22-2",
-            "name": "SF WR2",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "22-3",
-            "name": "SF RB",
-            "position": "RB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "22-4",
-            "name": "SF TE",
-            "position": "TE",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "22-5",
-            "name": "SF K",
-            "position": "K",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          }
-        ],
         "ratingsScale": 10
       },
       "location": "HOME",
+      "uniforms": {
+        "player": "home",
+        "opponent": "away"
+      },
       "played": false,
       "score": null
     },
@@ -495,89 +117,13 @@
         "city": "Cleveland",
         "name": "Cleveland",
         "abbreviation": "CLE",
-        "players": [
-          {
-            "id": "10-0",
-            "name": "CLE QB",
-            "position": "QB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "10-1",
-            "name": "CLE WR1",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "10-2",
-            "name": "CLE WR2",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "10-3",
-            "name": "CLE RB",
-            "position": "RB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "10-4",
-            "name": "CLE TE",
-            "position": "TE",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "10-5",
-            "name": "CLE K",
-            "position": "K",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          }
-        ],
         "ratingsScale": 10
       },
       "location": "AWAY",
+      "uniforms": {
+        "player": "away",
+        "opponent": "home"
+      },
       "played": false,
       "score": null
     },
@@ -589,89 +135,13 @@
         "city": "Houston",
         "name": "Houston",
         "abbreviation": "HOU",
-        "players": [
-          {
-            "id": "12-0",
-            "name": "HOU QB",
-            "position": "QB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "12-1",
-            "name": "HOU WR1",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "12-2",
-            "name": "HOU WR2",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "12-3",
-            "name": "HOU RB",
-            "position": "RB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "12-4",
-            "name": "HOU TE",
-            "position": "TE",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "12-5",
-            "name": "HOU K",
-            "position": "K",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          }
-        ],
         "ratingsScale": 10
       },
       "location": "HOME",
+      "uniforms": {
+        "player": "home",
+        "opponent": "away"
+      },
       "played": false,
       "score": null
     },
@@ -683,89 +153,13 @@
         "city": "Green Bay",
         "name": "Green Bay",
         "abbreviation": "GB",
-        "players": [
-          {
-            "id": "26-0",
-            "name": "GB QB",
-            "position": "QB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "26-1",
-            "name": "GB WR1",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "26-2",
-            "name": "GB WR2",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "26-3",
-            "name": "GB RB",
-            "position": "RB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "26-4",
-            "name": "GB TE",
-            "position": "TE",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "26-5",
-            "name": "GB K",
-            "position": "K",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          }
-        ],
         "ratingsScale": 10
       },
       "location": "HOME",
+      "uniforms": {
+        "player": "home",
+        "opponent": "away"
+      },
       "played": false,
       "score": null
     },
@@ -777,89 +171,13 @@
         "city": "San Francisco",
         "name": "San Francisco",
         "abbreviation": "SF",
-        "players": [
-          {
-            "id": "22-0",
-            "name": "SF QB",
-            "position": "QB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "22-1",
-            "name": "SF WR1",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "22-2",
-            "name": "SF WR2",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "22-3",
-            "name": "SF RB",
-            "position": "RB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "22-4",
-            "name": "SF TE",
-            "position": "TE",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "22-5",
-            "name": "SF K",
-            "position": "K",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          }
-        ],
         "ratingsScale": 10
       },
       "location": "AWAY",
+      "uniforms": {
+        "player": "away",
+        "opponent": "home"
+      },
       "played": false,
       "score": null
     },
@@ -871,89 +189,13 @@
         "city": "Carolina",
         "name": "Carolina",
         "abbreviation": "CAR",
-        "players": [
-          {
-            "id": "29-0",
-            "name": "CAR QB",
-            "position": "QB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "29-1",
-            "name": "CAR WR1",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "29-2",
-            "name": "CAR WR2",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "29-3",
-            "name": "CAR RB",
-            "position": "RB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "29-4",
-            "name": "CAR TE",
-            "position": "TE",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "29-5",
-            "name": "CAR K",
-            "position": "K",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          }
-        ],
         "ratingsScale": 10
       },
       "location": "HOME",
+      "uniforms": {
+        "player": "home",
+        "opponent": "away"
+      },
       "played": false,
       "score": null
     },
@@ -965,89 +207,13 @@
         "city": "Seattle",
         "name": "Seattle",
         "abbreviation": "SEA",
-        "players": [
-          {
-            "id": "23-0",
-            "name": "SEA QB",
-            "position": "QB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "23-1",
-            "name": "SEA WR1",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "23-2",
-            "name": "SEA WR2",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "23-3",
-            "name": "SEA RB",
-            "position": "RB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "23-4",
-            "name": "SEA TE",
-            "position": "TE",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "23-5",
-            "name": "SEA K",
-            "position": "K",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          }
-        ],
         "ratingsScale": 10
       },
       "location": "AWAY",
+      "uniforms": {
+        "player": "away",
+        "opponent": "home"
+      },
       "played": false,
       "score": null
     },
@@ -1059,89 +225,13 @@
         "city": "Chicago",
         "name": "Chicago",
         "abbreviation": "CHI",
-        "players": [
-          {
-            "id": "24-0",
-            "name": "CHI QB",
-            "position": "QB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "24-1",
-            "name": "CHI WR1",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "24-2",
-            "name": "CHI WR2",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "24-3",
-            "name": "CHI RB",
-            "position": "RB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "24-4",
-            "name": "CHI TE",
-            "position": "TE",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "24-5",
-            "name": "CHI K",
-            "position": "K",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          }
-        ],
         "ratingsScale": 10
       },
       "location": "AWAY",
+      "uniforms": {
+        "player": "away",
+        "opponent": "home"
+      },
       "played": false,
       "score": null
     },
@@ -1153,89 +243,13 @@
         "city": "Los Angeles R",
         "name": "Los Angeles R",
         "abbreviation": "LAR",
-        "players": [
-          {
-            "id": "21-0",
-            "name": "LAR QB",
-            "position": "QB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "21-1",
-            "name": "LAR WR1",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "21-2",
-            "name": "LAR WR2",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "21-3",
-            "name": "LAR RB",
-            "position": "RB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "21-4",
-            "name": "LAR TE",
-            "position": "TE",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "21-5",
-            "name": "LAR K",
-            "position": "K",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          }
-        ],
         "ratingsScale": 10
       },
       "location": "HOME",
+      "uniforms": {
+        "player": "home",
+        "opponent": "away"
+      },
       "played": false,
       "score": null
     },
@@ -1247,89 +261,13 @@
         "city": "Detroit",
         "name": "Detroit",
         "abbreviation": "DET",
-        "players": [
-          {
-            "id": "25-0",
-            "name": "DET QB",
-            "position": "QB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "25-1",
-            "name": "DET WR1",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "25-2",
-            "name": "DET WR2",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "25-3",
-            "name": "DET RB",
-            "position": "RB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "25-4",
-            "name": "DET TE",
-            "position": "TE",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "25-5",
-            "name": "DET K",
-            "position": "K",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          }
-        ],
         "ratingsScale": 10
       },
       "location": "AWAY",
+      "uniforms": {
+        "player": "away",
+        "opponent": "home"
+      },
       "played": false,
       "score": null
     },
@@ -1341,89 +279,13 @@
         "city": "Indianapolis",
         "name": "Indianapolis",
         "abbreviation": "IND",
-        "players": [
-          {
-            "id": "13-0",
-            "name": "IND QB",
-            "position": "QB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "13-1",
-            "name": "IND WR1",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "13-2",
-            "name": "IND WR2",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "13-3",
-            "name": "IND RB",
-            "position": "RB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "13-4",
-            "name": "IND TE",
-            "position": "TE",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "13-5",
-            "name": "IND K",
-            "position": "K",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          }
-        ],
         "ratingsScale": 10
       },
       "location": "HOME",
+      "uniforms": {
+        "player": "home",
+        "opponent": "away"
+      },
       "played": false,
       "score": null
     },
@@ -1435,89 +297,13 @@
         "city": "Dallas",
         "name": "Dallas",
         "abbreviation": "DAL",
-        "players": [
-          {
-            "id": "16-0",
-            "name": "DAL QB",
-            "position": "QB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "16-1",
-            "name": "DAL WR1",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "16-2",
-            "name": "DAL WR2",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "16-3",
-            "name": "DAL RB",
-            "position": "RB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "16-4",
-            "name": "DAL TE",
-            "position": "TE",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "16-5",
-            "name": "DAL K",
-            "position": "K",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          }
-        ],
         "ratingsScale": 10
       },
       "location": "AWAY",
+      "uniforms": {
+        "player": "away",
+        "opponent": "home"
+      },
       "played": false,
       "score": null
     },
@@ -1529,202 +315,16 @@
         "city": "Seattle",
         "name": "Seattle",
         "abbreviation": "SEA",
-        "players": [
-          {
-            "id": "23-0",
-            "name": "SEA QB",
-            "position": "QB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "23-1",
-            "name": "SEA WR1",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "23-2",
-            "name": "SEA WR2",
-            "position": "WR",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "23-3",
-            "name": "SEA RB",
-            "position": "RB",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "23-4",
-            "name": "SEA TE",
-            "position": "TE",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "catching": 5
-            },
-            "xp": 0
-          },
-          {
-            "id": "23-5",
-            "name": "SEA K",
-            "position": "K",
-            "rating": 5,
-            "ratings": {
-              "strength": 5,
-              "speed": 5,
-              "stamina": 5,
-              "accuracy": 5
-            },
-            "xp": 0
-          }
-        ],
         "ratingsScale": 10
       },
       "location": "HOME",
+      "uniforms": {
+        "player": "home",
+        "opponent": "away"
+      },
       "played": false,
       "score": null
     }
   ],
-  "currentGame": {
-    "score1": 0,
-    "score2": 0,
-    "fieldPosition": 18.999999999999993,
-    "playerY": 0.5,
-    "clockSeconds": 827.456699999961,
-    "quarter": 1,
-    "isHome": false,
-    "phase": "passing",
-    "team1": {
-      "id": 20,
-      "city": "Arizona",
-      "name": "Cardinals",
-      "abbreviation": "ARI",
-      "fans": 18420,
-      "cap": 32,
-      "ratingsScale": 10
-    },
-    "team2": {
-      "id": 15,
-      "city": "Tennessee",
-      "name": "Tennessee",
-      "abbreviation": "TEN",
-      "players": [
-        {
-          "id": "15-0",
-          "name": "TEN QB",
-          "position": "QB",
-          "rating": 5,
-          "ratings": {
-            "strength": 5,
-            "speed": 5,
-            "stamina": 5,
-            "accuracy": 5
-          },
-          "xp": 0
-        },
-        {
-          "id": "15-1",
-          "name": "TEN WR1",
-          "position": "WR",
-          "rating": 5,
-          "ratings": {
-            "strength": 5,
-            "speed": 5,
-            "stamina": 5,
-            "catching": 5
-          },
-          "xp": 0
-        },
-        {
-          "id": "15-2",
-          "name": "TEN WR2",
-          "position": "WR",
-          "rating": 5,
-          "ratings": {
-            "strength": 5,
-            "speed": 5,
-            "stamina": 5,
-            "catching": 5
-          },
-          "xp": 0
-        },
-        {
-          "id": "15-3",
-          "name": "TEN RB",
-          "position": "RB",
-          "rating": 5,
-          "ratings": {
-            "strength": 5,
-            "speed": 5,
-            "stamina": 5,
-            "catching": 5
-          },
-          "xp": 0
-        },
-        {
-          "id": "15-4",
-          "name": "TEN TE",
-          "position": "TE",
-          "rating": 5,
-          "ratings": {
-            "strength": 5,
-            "speed": 5,
-            "stamina": 5,
-            "catching": 5
-          },
-          "xp": 0
-        },
-        {
-          "id": "15-5",
-          "name": "TEN K",
-          "position": "K",
-          "rating": 5,
-          "ratings": {
-            "strength": 5,
-            "speed": 5,
-            "stamina": 5,
-            "accuracy": 5
-          },
-          "xp": 0
-        }
-      ],
-      "ratingsScale": 10
-    },
-    "week": 1,
-    "scrimmagePosition": 22,
-    "dropbackRemaining": 0,
-    "runAfterDropback": false
-  },
-  "ratingsScale": 10
+  "currentGame": null
 }

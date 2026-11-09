@@ -8,12 +8,23 @@
   const skills = {
     accuracy: { key: 'accuracy', short: 'ACC', label: 'ACCURACY' },
     tackling: { key: 'tackling', short: 'TKL', label: 'TACKLING' },
-    catching: { key: 'catching', short: 'CTH', label: 'CATCHING' }
+    catching: { key: 'catching', short: 'CTH', label: 'CATCHING' },
+    blocking: { key: 'blocking', short: 'BLK', label: 'BLOCKING' }
   };
+
+  function speedMultiplier(position) {
+    const code = String(position || '').trim().toUpperCase();
+    if (['RB', 'WR', 'DB', 'CB', 'S', 'FS', 'SS', 'NB'].includes(code)) return 1.0;
+    if (['QB', 'LB', 'TE', 'ILB', 'MLB', 'OLB', 'SLB', 'WLB'].includes(code)) return 0.85;
+    if (['OL', 'DL', 'DT', 'DE', 'NT', 'EDGE', 'OT', 'OG', 'C', 'G', 'T', 'LINEMAN'].includes(code)) return 0.7;
+    return 1.0;
+  }
 
   function forPosition(position) {
     const code = String(position || '').trim().toUpperCase();
     if (['QB', 'K', 'PK', 'QUARTERBACK', 'KICKER'].includes(code)) return skills.accuracy;
+    if (['OT', 'OG', 'C', 'G', 'T', 'OL', 'OFFENSIVE LINE'].includes(code)) return skills.blocking;
+    if (['DB', 'CB', 'NB', 'S', 'FS', 'SS', 'SAF', 'SAFETY', 'CORNERBACK'].includes(code)) return skills.catching;
     if (defense.has(code)) return skills.tackling;
     return skills.catching;
   }
@@ -34,6 +45,14 @@
       player.xp = 0;
       changed = true;
     }
+    if (player.ratings.agility == null && Number.isFinite(player.ratings.stamina)) {
+      player.ratings.agility = player.ratings.stamina;
+      changed = true;
+    }
+    if (Object.hasOwn(player.ratings, 'stamina')) {
+      delete player.ratings.stamina;
+      changed = true;
+    }
     for (const key of Object.keys(player.ratings)) {
       if (Number.isFinite(player.ratings[key])) {
         const value = points(player.ratings[key]);
@@ -43,7 +62,7 @@
         }
       }
     }
-    for (const key of ['strength', 'speed', 'stamina', forPosition(player.position).key]) {
+    for (const key of ['strength', 'speed', 'agility', forPosition(player.position).key]) {
       if (player.ratings[key] == null) {
         player.ratings[key] = initial;
         changed = true;
@@ -52,7 +71,7 @@
     return changed;
   }
 
-  const api = { forPosition, ensureRatings };
+  const api = { forPosition, ensureRatings, speedMultiplier };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) root.PlayerSkills = api;
 })(typeof window === 'undefined' ? null : window);

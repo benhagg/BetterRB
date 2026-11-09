@@ -4,6 +4,7 @@
   "private": true,
   "description": "better retro bowl",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "new-season": "node scripts/start-new-season.js"
   }
 }

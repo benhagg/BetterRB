@@ -6,6 +6,7 @@ let seasonState = null;
 let gameSession = null;
 let activeScheduledGame = null;
 let selectedPlayerId = null;
+let rosterGroup = 'offense';
 let gameFrame = null;
 let gameFullscreen = false;
 let saveQueue = Promise.resolve();
@@ -26,11 +27,39 @@ async function initialize() {
       views.set(viewNames[i], template.content);
     }
     seasonState = state;
+    applyRoute();
     render();
   } catch (error) {
     app.textContent = 'Unable to load the game. Restart the local server and refresh.';
     console.error(error);
   }
+}
+
+function applyRoute(pathname = window.location.pathname) {
+  const path = pathname.replace(/\/+$/, '') || '/';
+  const playerMatch = path.match(/^\/roster\/([^/]+)$/);
+  if (playerMatch) {
+    screen = 'player';
+    selectedPlayerId = decodeURIComponent(playerMatch[1]);
+  } else if (path === '/roster') {
+    screen = 'roster';
+    selectedPlayerId = null;
+  } else if (path === '/schedule') {
+    screen = 'schedule';
+    selectedPlayerId = null;
+  } else if (path === '/game') {
+    screen = 'game';
+    selectedPlayerId = null;
+  } else {
+    screen = 'home';
+    selectedPlayerId = null;
+  }
+}
+
+function navigate(path, { replace = false } = {}) {
+  if (window.location.pathname !== path) history[replace ? 'replaceState' : 'pushState']({}, '', path);
+  applyRoute(path);
+  render();
 }
 
 function view(name) {
@@ -41,14 +70,16 @@ function bindText(root, name, value) {
   root.querySelector(`[data-bind="${name}"]`).textContent = String(value);
 }
 
-function appendRatings(target, ratings, labels) {
+function appendRatings(target, ratings, labels, potentialRatings = null) {
   for (const [key, label] of labels) {
     const component = view('rating');
     const rating = Math.min(10, Math.max(0, Number(ratings?.[key]) || 0));
+    const potential = Math.min(10, Math.max(rating, Number(potentialRatings?.[key]) || rating));
     bindText(component, 'label', label);
     bindText(component, 'value', rating);
     component.querySelectorAll('.rating-block').forEach((block, index) => {
       block.classList.toggle('filled', index < Math.round(rating));
+      block.classList.toggle('potential', index >= Math.round(rating) && index < Math.round(potential));
     });
     target.append(component);
   }
@@ -118,19 +149,21 @@ function rosterPanel() {
   const grid = component.querySelector('[data-bind="player-grid"]');
   const cardTemplate = component.querySelector('[data-template="player-card"]');
   bindText(component, 'team-title', `${team.city.toUpperCase()} ${team.name.toUpperCase()}`);
-  bindText(component, 'player-count', `${team.players.length} PLAYERS`);
-  component.querySelector('[data-bind="empty-roster"]').hidden = team.players.length > 0;
-  for (const [index, player] of team.players.entries()) {
+  const defensePositions = new Set(['DL', 'DE', 'DT', 'NT', 'EDGE', 'LB', 'ILB', 'MLB', 'OLB', 'DB', 'CB', 'S', 'FS', 'SS']);
+  const showDefense = rosterGroup === 'defense';
+  const players = team.players.filter(player => defensePositions.has(player.position) === showDefense);
+  bindText(component, 'player-count', `${players.length} PLAYERS`);
+  component.querySelector('[data-bind="empty-roster"]').hidden = players.length > 0;
+  component.querySelectorAll('[data-action="roster-group"]').forEach(tab => tab.classList.toggle('active', tab.dataset.group === rosterGroup));
+  for (const player of players) {
     const card = cardTemplate.content.cloneNode(true);
     const button = card.querySelector('.player-card');
     button.dataset.playerId = player.id;
     button.setAttribute('aria-label', `View ${player.name}, ${player.position}`);
     bindText(card, 'position', player.position);
     bindText(card, 'name', player.name);
-    bindText(card, 'subtitle', `${team.name.toUpperCase()} · ${player.position}`);
-    appendPortrait(card.querySelector('[data-bind="portrait"]'), team, player, index);
-    const skill = PlayerSkills.forPosition(player.position);
-    appendRatings(card.querySelector('[data-bind="ratings"]'), player.ratings, [['strength', 'STR'], ['speed', 'SPD'], ['stamina', 'STA'], [skill.key, skill.short]]);
+    bindText(card, 'overall', player.rating ?? 0);
+    appendPortrait(card.querySelector('[data-bind="portrait"]'), team, player, team.players.indexOf(player));
     grid.append(card);
   }
   return component;
@@ -144,10 +177,9 @@ function playerPanel() {
   bindText(component, 'name', player.name.toUpperCase());
   bindText(component, 'position', player.position);
   bindText(component, 'team-title', `${team.city} ${team.name}`);
-  bindText(component, 'xp', `${player.xp ?? 0} XP`);
   appendPortrait(component.querySelector('[data-bind="portrait"]'), team, player, team.players.indexOf(player));
   const skill = PlayerSkills.forPosition(player.position);
-  appendRatings(component.querySelector('[data-bind="ratings"]'), player.ratings, [['strength', 'STRENGTH'], ['speed', 'SPEED'], ['stamina', 'STAMINA'], [skill.key, skill.label]]);
+  appendRatings(component.querySelector('[data-bind="ratings"]'), player.ratings, [['strength', 'STRENGTH'], ['speed', 'SPEED'], ['agility', 'AGILITY'], [skill.key, skill.label]], player.potentialRatings);
   return component;
 }
 
@@ -225,6 +257,8 @@ function startGameLoop() {
 
 function render() {
   stopGameLoop();
+  if (screen === 'game' && !gameSession && seasonState?.currentGame) resumeCurrentGame();
+  if (screen === 'game' && !gameSession) screen = 'home';
   document.body.classList.toggle('game-mode', screen === 'game' && !!gameSession);
   if (!seasonState) return;
   let content;
@@ -235,6 +269,13 @@ function render() {
   else content = home();
   app.replaceChildren(shell(content));
   if (screen === 'game' && gameSession) startGameLoop();
+}
+
+function resumeCurrentGame() {
+  const saved = seasonState.currentGame;
+  activeScheduledGame = seasonState.schedule.find(game => game.week === saved.week);
+  if (!activeScheduledGame) return;
+  gameSession = playGame(saved.team1, saved.team2, saved);
 }
 
 function beginNextGame() {
@@ -256,8 +297,7 @@ function beginNextGame() {
 function leaveGame() {
   if (screen !== 'game') return;
   stopGameLoop();
-  screen = 'home';
-  render();
+  navigate('/');
   persistState().catch(error => console.error(error));
   if (gameFullscreen && document.fullscreenElement && document.exitFullscreen) {
     document.exitFullscreen().catch(error => console.error(error));
@@ -287,16 +327,26 @@ app.addEventListener('click', async event => {
       leaveGame();
       return;
     }
-    screen = 'home';
-  } else if (action === 'roster' || action === 'schedule') screen = action;
-  else if (action === 'player') {
-    selectedPlayerId = target.dataset.playerId;
-    screen = 'player';
+    navigate('/');
+    return;
+  } else if (action === 'roster') {
+    navigate('/roster');
+    return;
+  } else if (action === 'schedule') {
+    navigate('/schedule');
+    return;
+  } else if (action === 'roster-group') {
+    rosterGroup = target.dataset.group === 'defense' ? 'defense' : 'offense';
+    render();
+    return;
+  } else if (action === 'player') {
+    navigate(`/roster/${encodeURIComponent(target.dataset.playerId)}`);
+    return;
   } else if (action === 'game') {
     beginNextGame();
     if (screen === 'game') {
       requestGameFullscreen();
-      render();
+      navigate('/game');
       persistState().catch(error => console.error(error));
       return;
     }
@@ -308,11 +358,21 @@ app.addEventListener('click', async event => {
   render();
 });
 
+window.addEventListener('popstate', () => {
+  applyRoute();
+  render();
+});
+
 window.addEventListener('keydown', event => {
   const key = event.key.toLowerCase();
   if (screen === 'game' && (event.code === 'Space' || key === ' ')) {
     event.preventDefault();
     if (!event.repeat && gameSession) gameSession.pressSpace();
+    return;
+  }
+  if (screen === 'game' && ['1', '2', '3', '4'].includes(key) && !event.repeat && gameSession) {
+    event.preventDefault();
+    gameSession.throwPass(parseInt(key, 10));
     return;
   }
   if (screen === 'game' && key === 'escape') {

@@ -2,15 +2,13 @@
   <header class="roster-header">
     <div><span class="roster-kicker" data-bind="team-title"></span><h2>ROSTER</h2></div>
   </header>
-  <div class="roster-toolbar"><span data-bind="player-count"></span></div>
+  <div class="roster-toolbar"><div class="roster-tabs"><button data-action="roster-group" data-group="offense">OFFENSE</button><button data-action="roster-group" data-group="defense">DEFENSE</button></div><span data-bind="player-count"></span></div>
   <div class="player-grid" data-bind="player-grid"><p class="empty" data-bind="empty-roster" hidden>No players on the roster yet.</p></div>
   <template data-template="player-card">
     <button class="player-card" data-action="player">
-      <span class="position-badge" data-bind="position"></span>
-      <span data-bind="portrait"></span>
-      <span class="player-card-info"><span class="player-name" data-bind="name"></span><span class="player-card-subtitle" data-bind="subtitle"></span></span>
-      <span class="player-card-ratings" data-bind="ratings"></span>
-      <span class="player-card-arrow" aria-hidden="true">›</span>
+      <span class="player-card-top"><span class="position-badge" data-bind="position"></span><span data-bind="portrait"></span></span>
+      <span class="player-card-info"><span class="player-name" data-bind="name"></span></span>
+      <span class="player-card-overall"><strong data-bind="overall"></strong><small>/10</small></span>
     </button>
   </template>
 </section>

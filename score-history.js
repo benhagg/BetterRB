@@ -27,13 +27,15 @@ function syncHistory(file, state, archives = []) {
   let exists = false;
   try {
     const lines = fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, '').split(/\r?\n/).filter(line => line.trim());
-    if (lines.shift() !== HEADER) throw new Error('Invalid score history header');
-    rows = lines.map(line => {
-      const fields = line.split('\t');
-      if (fields.length !== 6 || fields.some(value => !/^-?\d+$/.test(value))) throw new Error('Invalid score history row');
-      return fields.map(Number);
-    });
-    exists = true;
+    if (lines.length) {
+      if (lines.shift() !== HEADER) throw new Error('Invalid score history header');
+      rows = lines.map(line => {
+        const fields = line.split('\t');
+        if (fields.length !== 6 || fields.some(value => !/^-?\d+$/.test(value))) throw new Error('Invalid score history row');
+        return fields.map(Number);
+      });
+      exists = true;
+    }
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
   }
