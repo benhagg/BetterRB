@@ -148,4 +148,30 @@ describe('Player Movement Input: WASD Hold & Persistent Direction', () => {
     expect(rb._movement.speedFactor).toBeGreaterThan(0);
     expect(rb.isMoving).toBe(true);
   });
+
+  it('decelerates and turns toward the end zone after a catch', () => {
+    const rb = new RunningBack({ position: 'RB', ratings: { speed: 8 } });
+    rb.hasBall = false;
+    rb._movement = {
+      direction: { x: -1, y: 0 },
+      speedFactor: 1,
+      hasDirection: true,
+      deceleration: null,
+      cut: null
+    };
+    rb.lastDirX = -1;
+    rb.lastDirY = 0;
+    rb.velocityX = -rb.speed;
+    rb.catchBall({ vx: 1, vy: 0 });
+
+    const before = rb._movement.speedFactor;
+    simulateMovePlayer(rb, false, 1 / 60, {});
+
+    expect(rb.autoRun).toEqual({ vx: 1, vy: 0 });
+    expect(rb._movement.speedFactor).toBeLessThan(before);
+
+    for (let i = 0; i < 120; i++) simulateMovePlayer(rb, false, 1 / 60, {});
+    expect(rb._movement.direction.x).toBeGreaterThan(0);
+    expect(rb.velocityX).toBeGreaterThan(0);
+  });
 });

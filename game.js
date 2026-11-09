@@ -5,7 +5,6 @@ const cameraTrailingYards = 5;
 const runnerTrailingYards = 15;
 const lateralYards = 17;
 const passGravityFeetPerSecondSquared = 32.174;
-const receiverAdjustRadiusYards = 8;
 
 window.playGame = function playGame(team1, team2, savedState = null, selectedPlays = {}) {
   const playType = String(selectedPlays.offense?.playType || selectedPlays.offense?.playtype || selectedPlays.offense?.type || 'pass').toLowerCase();
@@ -350,8 +349,11 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       time: contact.time
     };
     state.quarterback.hasBall = false;
-    player.x = ball.x;
-    player.y = ball.y;
+    // The receiver remains on their simulated trajectory. At contact, the
+    // ball is brought to the player's position instead of teleporting the
+    // player to the ball.
+    ball.x = player.x;
+    ball.y = player.y;
 
     if (interception) {
       player.hasBall = true;
@@ -361,9 +363,10 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       return;
     }
 
-    const velocityX = Number(player.velocityX) || Number(player.lastDirX) || 1;
-    const velocityY = (Number(player.velocityY) || 0) * lateralYards || Number(player.lastDirY) || 0;
-    player.beginCatch(catchType, { vx: velocityX, vy: velocityY });
+    // After securing the ball, the carrier turns toward the offensive end zone.
+    // movementStep handles the deceleration and directional cut rather than
+    // teleporting the player onto the new heading.
+    player.beginCatch(catchType, { vx: 1, vy: 0 });
     state.fieldPosition = player.x;
     state.playerY = player.y;
     if (catchType === 'standard') {
@@ -538,13 +541,10 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       console.log(`[Ball] height: ${currentHeight.toFixed(2)} ft`);
       for (const player of [...state.receivers, state.runningBack]) {
         if (!player.hasBall) {
-          const distToTarget = Math.hypot(state.pass.targetX - player.x, (state.pass.targetY - player.y) * lateralYards);
           if (state.pass.targetReceiverNumber && player.receiverNumber === state.pass.targetReceiverNumber) {
-            if (state.pass.wasTargetMoving || distToTarget <= receiverAdjustRadiusYards) {
-              player.run(delta, state.pass.targetX, state.pass.targetY);
-            } else {
-              player.runRoute(delta);
-            }
+            // The targeted receiver always adjusts toward the predicted ball
+            // location, including passes thrown behind their current route.
+            player.run(delta, state.pass.targetX, state.pass.targetY);
           } else {
             // Non-targeted receivers keep running their assigned routes while
             // the ball is airborne. Catch-volume contests can be layered on

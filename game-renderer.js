@@ -37,17 +37,32 @@
         const drawRoute = player => {
           if (!player.route?.length) return;
           ctx.save();
-          ctx.strokeStyle = '#ffe35c';
+          ctx.strokeStyle = '#4da3ff';
           ctx.lineWidth = Math.max(1, pixel);
-          ctx.setLineDash([4 * pixel, 3 * pixel]);
+          ctx.setLineDash([]);
           ctx.beginPath();
           const start = screenCoordinates(player);
           ctx.moveTo(start.screenX, start.screenY);
           for (const waypoint of player.route) {
-            const point = screenCoordinates({ x: player.startX + waypoint.dx, y: player.startY + waypoint.dy });
+            const point = screenCoordinates({ x: player.startX + waypoint.dx, y: player.startY + waypoint.dy / 17 });
             ctx.lineTo(point.screenX, point.screenY);
           }
+          const last = player.route[player.route.length - 1];
+          const end = screenCoordinates({
+            x: player.startX + last.dx,
+            y: player.startY + last.dy / 17
+          });
+          ctx.lineTo(end.screenX, end.screenY);
           ctx.stroke();
+          const angle = Math.atan2(end.screenY - start.screenY, end.screenX - start.screenX);
+          const size = 5 * pixel;
+          ctx.beginPath();
+          ctx.moveTo(end.screenX, end.screenY);
+          ctx.lineTo(end.screenX - size * Math.cos(angle - 0.5), end.screenY - size * Math.sin(angle - 0.5));
+          ctx.lineTo(end.screenX - size * Math.cos(angle + 0.5), end.screenY - size * Math.sin(angle + 0.5));
+          ctx.closePath();
+          ctx.fillStyle = '#4da3ff';
+          ctx.fill();
           ctx.restore();
         };
         state.receivers.forEach(drawRoute);

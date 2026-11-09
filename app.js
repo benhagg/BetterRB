@@ -329,7 +329,7 @@ function renderPlayDiagramSVG(play) {
   const losX = 55;
   const centerY = 50;
   const toSvgX = (startX, dx) => Math.min(195, Math.max(5, startX + dx * 4.2));
-  const toSvgY = (startY, dy) => Math.min(95, Math.max(5, startY + dy * 85));
+  const toSvgY = (startY, dy) => Math.min(95, Math.max(5, startY + (dy / 17) * 85));
 
   let svg = `<svg viewBox="0 0 ${width} ${height}" width="100%" height="100%" class="play-diagram-svg">`;
   svg += `<rect width="${width}" height="${height}" fill="#162c20" rx="3"/>`;
@@ -377,8 +377,14 @@ function renderPlayDiagramSVG(play) {
         curX = nx;
         curY = ny;
       });
-      svg += `<path d="${pathD}" fill="none" stroke="#ffe35c" stroke-width="1.5" stroke-dasharray="3,2"/>`;
-      svg += `<circle cx="${curX.toFixed(1)}" cy="${curY.toFixed(1)}" r="2" fill="#ffe35c"/>`;
+      const last = r.route[r.route.length - 1];
+      const endX = toSvgX(rx, last.dx);
+      const endY = toSvgY(ry, last.dy);
+      const angle = Math.atan2(endY - curY, endX - curX);
+      const left = `${(endX - 5 * Math.cos(angle - 0.5)).toFixed(1)},${(endY - 5 * Math.sin(angle - 0.5)).toFixed(1)}`;
+      const right = `${(endX - 5 * Math.cos(angle + 0.5)).toFixed(1)},${(endY - 5 * Math.sin(angle + 0.5)).toFixed(1)}`;
+      svg += `<path d="${pathD}" fill="none" stroke="#4da3ff" stroke-width="1.5"/>`;
+      svg += `<polygon points="${endX.toFixed(1)},${endY.toFixed(1)} ${left} ${right}" fill="#4da3ff"/>`;
     }
   });
 
@@ -401,9 +407,14 @@ function renderPlayDiagramSVG(play) {
         curX = nx;
         curY = ny;
       });
-      const strokeColor = isRun ? '#00e676' : '#80d8ff';
-      svg += `<path d="${pathD}" fill="none" stroke="${strokeColor}" stroke-width="${isRun ? '2.5' : '1.5'}"/>`;
-      svg += `<polygon points="${curX.toFixed(1)},${(curY - 3).toFixed(1)} ${(curX + 5).toFixed(1)},${curY.toFixed(1)} ${curX.toFixed(1)},${(curY + 3).toFixed(1)}" fill="${strokeColor}"/>`;
+      const last = rb.route[rb.route.length - 1];
+      const endX = toSvgX(rbx, last.dx);
+      const endY = toSvgY(rby, last.dy);
+      const angle = Math.atan2(endY - curY, endX - curX);
+      const left = `${(endX - 5 * Math.cos(angle - 0.5)).toFixed(1)},${(endY - 5 * Math.sin(angle - 0.5)).toFixed(1)}`;
+      const right = `${(endX - 5 * Math.cos(angle + 0.5)).toFixed(1)},${(endY - 5 * Math.sin(angle + 0.5)).toFixed(1)}`;
+      svg += `<path d="${pathD}" fill="none" stroke="#4da3ff" stroke-width="1.5"/>`;
+      svg += `<polygon points="${endX.toFixed(1)},${endY.toFixed(1)} ${left} ${right}" fill="#4da3ff"/>`;
     }
   }
 

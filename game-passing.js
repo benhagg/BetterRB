@@ -11,7 +11,6 @@
   const ARC_START_YARDS = 3;
   const ARC_MAX_YARDS = 25;
   const MAX_ARC_FEET = 15;
-  const ARC_EXPONENTIAL_RATE = 3;
   const SHORT_PASS_MAX_YARDS = 5;
   const SHORT_PASS_SPEED_YPS = 20;
 
@@ -23,15 +22,20 @@
   // Running while throwing penalty multiplier (recommended 1.25, range 1.1 - 1.3)
   const RUNNING_THROW_INACCURACY_MULTIPLIER = 1.25;
 
+  function arcFactor(distanceYards) {
+    const arcStart = 5;
+    const arcEnd = 25;
+    const d = Math.max(0, Number(distanceYards) || 0);
+    if (d <= arcStart) return 0;
+    const t = Math.min(1, (d - arcStart) / (arcEnd - arcStart));
+    return t * t * (3 - 2 * t);
+  }
+
   function calculateThrowArc(distanceYards, strength = 5) {
     const d = Math.max(0, Number(distanceYards) || 0);
     const numStrength = Number(strength);
     const s = Math.max(0, Math.min(10, Number.isFinite(numStrength) ? numStrength : 5));
-    if (d <= ARC_START_YARDS) return 0;
-    const progress = Math.min(1, (d - ARC_START_YARDS) / (ARC_MAX_YARDS - ARC_START_YARDS));
-    const exponential = (1 - Math.exp(-ARC_EXPONENTIAL_RATE * progress))
-      / (1 - Math.exp(-ARC_EXPONENTIAL_RATE));
-    return MAX_ARC_FEET * exponential * (1 - ARC_STRENGTH_REDUCTION * s);
+    return MAX_ARC_FEET * arcFactor(d) * (1 - ARC_STRENGTH_REDUCTION * s);
   }
 
   function desiredApexForDistance(distanceYards) {
@@ -357,7 +361,8 @@
       calculateSigma,
       calculateInaccuracy,
       calculateThrowArc,
-      desiredApexForDistance
+      desiredApexForDistance,
+      arcFactor
     };
   }
 
@@ -367,6 +372,7 @@
     throwHeightAt,
     calculateThrowArc,
     desiredApexForDistance,
+    arcFactor,
     calculateSigma,
     calculateInaccuracy,
     releaseHeightFeet,

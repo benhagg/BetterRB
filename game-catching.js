@@ -10,7 +10,6 @@
   const SIMULATION_STEP = 1 / 60;
   const SIMULTANEOUS_WINDOW = SIMULATION_STEP + 0.001;
   const GRAVITY = 32.174;
-  const RECEIVER_ADJUST_RADIUS_YARDS = 8;
 
   function playerRating(player, name, fallback = 5) {
     const value = player?.ratings?.[name] ?? player?.rating?.[name] ?? player?.[name];
@@ -113,8 +112,7 @@
           const sim = sims.get(player);
           // At release, players continue in their current heading. This mirrors
           // the existing route engine without mutating live player objects.
-          const shouldPursueTarget = player.receiverNumber === pass.targetReceiverNumber
-            && (pass.wasTargetMoving || Math.hypot(pass.targetX - player.x, (pass.targetY - player.y) * lateralYards) <= RECEIVER_ADJUST_RADIUS_YARDS);
+          const shouldPursueTarget = player.receiverNumber === pass.targetReceiverNumber;
           const target = shouldPursueTarget
             ? { x: pass.targetX, y: pass.targetY }
             : null;

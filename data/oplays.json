@@ -2,70 +2,70 @@
   "routes": {
     "comeback": [
       { "dx": 8, "dy": 0 },
-      { "dx": 6.5, "dy": 0.02 }
+      { "dx": 6.5, "dy": 0.5 }
     ],
     "post": [
       { "dx": 8, "dy": 0 },
-      { "dx": 22, "dy": 0.18 }
+      { "dx": 22, "dy": 3 }
     ],
     "post_left": [
       { "dx": 8, "dy": 0 },
-      { "dx": 22, "dy": -0.18 }
+      { "dx": 22, "dy": -3 }
     ],
     "post_right": [
       { "dx": 8, "dy": 0 },
-      { "dx": 22, "dy": 0.18 }
+      { "dx": 22, "dy": 3 }
     ],
     "down_in_5": [
       { "dx": 5, "dy": 0 },
-      { "dx": 14, "dy": 0.12 }
+      { "dx": 14, "dy": 3 }
     ],
     "down_in_10": [
       { "dx": 10, "dy": 0 },
-      { "dx": 20, "dy": 0.18 }
+      { "dx": 20, "dy": 3 }
     ],
     "down_out_5": [
       { "dx": 5, "dy": 0 },
-      { "dx": 14, "dy": -0.12 }
+      { "dx": 14, "dy": -2 }
     ],
     "down_out_10": [
       { "dx": 10, "dy": 0 },
-      { "dx": 20, "dy": -0.18 }
+      { "dx": 20, "dy": -3 }
     ],
     "slant": [
       { "dx": 4, "dy": 0 },
-      { "dx": 16, "dy": -0.18 }
+      { "dx": 16, "dy": -3 }
     ],
     "slant_left": [
       { "dx": 4, "dy": 0 },
-      { "dx": 16, "dy": -0.18 }
+      { "dx": 16, "dy": -3 }
     ],
     "slant_right": [
       { "dx": 4, "dy": 0 },
-      { "dx": 16, "dy": 0.18 }
+      { "dx": 16, "dy": 3 }
     ],
     "go": [
       { "dx": 35, "dy": 0 }
     ],
     "flat": [
-      { "dx": 3, "dy": 0.12 },
-      { "dx": 12, "dy": 0.12 }
+      { "dx": 3, "dy": 2 },
+      { "dx": 12, "dy": 2 }
     ],
     "check_release": [
-      { "dx": 2, "dy": -0.05 },
+      { "dx": 2, "dy": -1 },
       { "dx": 9, "dy": 0 }
     ],
     "flat_left": [
-      { "dx": 2, "dy": -0.12 },
-      { "dx": 8, "dy": -0.30 }
+      { "dx": 2, "dy": -2 },
+      { "dx": 8, "dy": -5 }
     ],
     "flat_right": [
-      { "dx": 2, "dy": 0.12 },
-      { "dx": 8, "dy": 0.30 }
+      { "dx": 2, "dy": 2 },
+      { "dx": 8, "dy": 5 }
     ],
     "checkdown": [
-      { "dx": 2, "dy": 0.05 },
-      { "dx": 6, "dy": 0.15 }
+      { "dx": 2, "dy": 1 },
+      { "dx": 6, "dy": 2.5 }
     ]
   },
   "offensiveLines": {
@@ -141,22 +141,6 @@
       }
     },
     {
-      "id": "in-and-outs",
-      "name": "In and Outs",
-      "playtype": "pass",
-      "formation": {
-        "quarterback": { "position": "QB", "across": 0, "offset": -3 },
-        "offensiveLine": "standard",
-        "receivers": [
-          { "receiverNumber": 1, "position": "WR", "across": -0.43, "offset": -0.5, "route": "down_in_5" },
-          { "receiverNumber": 2, "position": "TE", "across": -0.28, "offset": -0.5, "route": "down_out_10" },
-          { "receiverNumber": 4, "position": "WR", "across": 0.28, "offset": -0.5, "route": "down_in_10" },
-          { "receiverNumber": 5, "position": "WR", "across": 0.43, "offset": -0.5, "route": "down_out_5" }
-        ],
-        "runningBack": { "receiverNumber": 3, "position": "RB", "across": 0.13, "offset": -4.5, "route": "down_in_5" }
-      }
-    },
-    {
       "id": "hb-dive",
       "name": "HB Dive",
       "playtype": "run",
@@ -224,13 +208,13 @@
             "position": "TE",
             "across": 0.12,
             "offset": -1,
-            "route": [{ "dx": 6, "dy": 0.08 }]
+            "route": [{ "dx": 6, "dy": 1.36 }]
           },
           {
             "position": "WR",
             "across": 0.38,
             "offset": -0.5,
-            "route": [{ "dx": 8, "dy": 0.06 }]
+            "route": [{ "dx": 8, "dy": 1.02 }]
           }
         ],
         "runningBack": {
@@ -238,9 +222,9 @@
           "across": -0.05,
           "offset": -3.8,
           "route": [
-            { "dx": 2.5, "dy": 0.05 },
-            { "dx": 5.0, "dy": 0.30 },
-            { "dx": 18, "dy": 0.30 }
+            { "dx": 2.5, "dy": 0.85 },
+            { "dx": 5.0, "dy": 5.10 },
+            { "dx": 18, "dy": 5.10 }
           ]
         }
       }

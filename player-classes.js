@@ -657,7 +657,7 @@
 
       const target = this.route[this.routeIndex];
       const targetX = this.startX + target.dx;
-      const targetY = this.startY + target.dy;
+      const targetY = this.startY + target.dy / LATERAL_YARDS;
 
       const diffX = targetX - this.x;
       const diffY = (targetY - this.y) * LATERAL_YARDS;
@@ -696,7 +696,7 @@
       }
       const target = this.route[this.routeIndex];
       const targetX = this.startX + target.dx;
-      const targetY = this.startY + target.dy;
+      const targetY = this.startY + target.dy / LATERAL_YARDS;
       const dist = Math.hypot(targetX - this.x, (targetY - this.y) * LATERAL_YARDS);
       if (dist < 0.4) {
         this.routeIndex++;
@@ -734,7 +734,7 @@
       }
       const target = this.route[this.routeIndex];
       const targetX = this.startX + target.dx;
-      const targetY = this.startY + target.dy;
+      const targetY = this.startY + target.dy / LATERAL_YARDS;
       const dist = Math.hypot(targetX - this.x, (targetY - this.y) * LATERAL_YARDS);
       if (dist < 0.4) {
         this.routeIndex++;
