@@ -404,19 +404,21 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
         if (dx !== 0 || dy !== 0) {
           carrier.move(delta, dx, dy);
         } else {
-          carrier.move(delta, 0, 0);
+          carrier.velocityX = 0;
+          carrier.velocityY = 0;
+          carrier.isMoving = false;
         }
       } else if (carrier.autoRun) {
         carrier.move(delta, carrier.autoRun.vx, carrier.autoRun.vy);
       } else {
-        carrier.move(delta, 0, 0);
+        carrier.velocityX = 0;
+        carrier.velocityY = 0;
+        carrier.isMoving = false;
       }
       carrier.x = Math.max(fieldBounds.endZoneL, Math.min(fieldBounds.endZoneR, carrier.x));
       carrier.y = Math.max(fieldBounds.top, Math.min(fieldBounds.bottom, carrier.y));
       state.fieldPosition = carrier.x;
       state.playerY = carrier.y;
-      const speed = Math.hypot(carrier.velocityX || 0, (carrier.velocityY || 0) * lateralYards);
-      console.log(`[Ball carrier] ${carrier.name} ${speed.toFixed(2)} yd/s`);
     }
   }
 

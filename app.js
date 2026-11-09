@@ -361,6 +361,7 @@ function updatePlayCardsSelection() {
 }
 
 function navigatePreSnapPlay(direction) {
+  if (!isPreSnapCardsVisible()) return;
   if (!currentPlayOptions || currentPlayOptions.length === 0) return;
   let currentIndex = currentPlayOptions.findIndex(p => p.id === activePlay?.id);
   if (currentIndex === -1) currentIndex = 0;
@@ -373,6 +374,7 @@ function navigatePreSnapPlay(direction) {
 }
 
 function selectPreSnapPlay(index) {
+  if (!isPreSnapCardsVisible()) return false;
   if (!currentPlayOptions || index < 0 || index >= currentPlayOptions.length) return false;
   activePlay = currentPlayOptions[index];
   finalizePreSnapPlay();
@@ -606,11 +608,6 @@ window.addEventListener('keydown', event => {
     }
     return;
   }
-  if (screen === 'game' && ['1', '2', '3'].includes(key) && !event.repeat && gameSession?.state?.phase === 'preplay') {
-    event.preventDefault();
-    selectPreSnapPlay(parseInt(key, 10) - 1);
-    return;
-  }
   if (screen === 'game' && ['1', '2', '3', '4', '5'].includes(key) && !event.repeat && gameSession) {
     event.preventDefault();
     if (gameSession.state.playType === 'run') return;
@@ -633,7 +630,7 @@ window.addEventListener('keydown', event => {
     render();
     return;
   }
-  if (screen === 'game' && key === 'p' && !event.repeat && gameSession?.state?.phase === 'preplay') {
+  if (screen === 'game' && key === 'p' && !event.repeat && isPreSnapCardsVisible()) {
     event.preventDefault();
     const plays = playbooks.offense?.plays || [];
     if (plays.length > 1) {
