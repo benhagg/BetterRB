@@ -141,14 +141,15 @@
       const MIN_DECEL_TIME = 0.04;
 
       // Cut Deceleration
-      const BASE_CUT_TIME_SCALE = 0.33;
-      const AGILITY_CUT_SCALE = 0.05;
-      const MIN_CUT_TIME = 0.02;
+      const CUT_DECEL_TIME_SCALE = 0.55;
+      const MIN_CUT_TIME = 0.06;
+      const CUT_TARGET_DOT_THRESHOLD = 0.70; // ~45 deg to allow continuous waypoint tracking and diagonal input overlap
 
       // Thresholds
       const MIN_MAGNITUDE = 0.0001;
       const MIN_SPEED_FACTOR = 0.001;
-      const STRAIGHT_DOT_THRESHOLD = 0.9999;
+      const MIN_CUT_SPEED_FACTOR = 0.05;
+      const STRAIGHT_DOT_THRESHOLD = 0.965; // ~15 deg steering tolerance before triggering plant-and-cut
       // ------------------------------------
 
       const movement = this._movement ||= {
@@ -189,7 +190,7 @@
         const dot = movement.direction.x * direction.x + movement.direction.y * direction.y;
         movement.deceleration = null;
 
-        if (!movement.hasDirection || movement.speedFactor <= MIN_SPEED_FACTOR) {
+        if (!movement.hasDirection || movement.speedFactor <= MIN_CUT_SPEED_FACTOR) {
           movement.direction = direction;
           movement.cut = null;
           movement.speedFactor = 1 - (1 - movement.speedFactor) * Math.exp(-accelerationRate * delta);
@@ -200,37 +201,42 @@
         } else {
           // Direction change: player must decelerate to the cut speed threshold before turning
           const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
-          const targetFactor = Math.cos(angle / 2);
+          const maxDecelTime = BASE_MAX_DECEL_TIME * Math.max(MIN_ACCEL_SCALE, 1 - agility * AGILITY_DECEL_SCALE);
 
-          if (movement.speedFactor <= targetFactor) {
-            // Already below allowable cut speed; change direction immediately
-            movement.direction = direction;
-            movement.cut = null;
-            movement.speedFactor = 1 - (1 - movement.speedFactor) * Math.exp(-accelerationRate * delta);
+          // Check if this is a genuinely new cut direction or a continuation of an active cut
+          const isNewTarget = !movement.cut ||
+            (movement.cut.targetDir.x * direction.x + movement.cut.targetDir.y * direction.y) < CUT_TARGET_DOT_THRESHOLD;
+
+          if (isNewTarget) {
+            const targetFactor = movement.speedFactor * Math.cos(angle / 2);
+            const tStop = Math.max(MIN_DECEL_TIME, maxDecelTime * (movement.speedFactor ** 2));
+            const speedDropFraction = Math.max(0, 1 - (targetFactor / movement.speedFactor));
+            const tCut = Math.max(MIN_CUT_TIME, tStop * Math.sqrt(speedDropFraction) * CUT_DECEL_TIME_SCALE);
+            movement.cut = {
+              elapsed: 0,
+              startFactor: movement.speedFactor,
+              targetFactor,
+              targetDir: direction,
+              tCut
+            };
           } else {
-            // Decelerate along current momentum heading before changing direction
-            if (!movement.cut || Math.abs(movement.cut.targetDir.x - direction.x) > 0.001 || Math.abs(movement.cut.targetDir.y - direction.y) > 0.001) {
-              const speedDiff = movement.speedFactor - targetFactor;
-              const agilityScale = Math.max(MIN_ACCEL_SCALE, 1 - agility * AGILITY_CUT_SCALE);
-              const tCut = Math.max(MIN_CUT_TIME, BASE_CUT_TIME_SCALE * agilityScale * speedDiff);
-              movement.cut = {
-                elapsed: 0,
-                startFactor: movement.speedFactor,
-                targetFactor,
-                targetDir: direction,
-                tCut
-              };
-            }
+            // Update ongoing cut: if turn angle has deepened (e.g. keyboard diagonal overlap), scale targetFactor & tCut
+            const targetFactor = Math.min(movement.cut.targetFactor, movement.cut.startFactor * Math.cos(angle / 2));
+            const tStop = Math.max(MIN_DECEL_TIME, maxDecelTime * (movement.cut.startFactor ** 2));
+            const speedDropFraction = Math.max(0, 1 - (targetFactor / movement.cut.startFactor));
+            movement.cut.targetFactor = targetFactor;
+            movement.cut.tCut = Math.max(movement.cut.tCut, tStop * Math.sqrt(speedDropFraction) * CUT_DECEL_TIME_SCALE);
+            movement.cut.targetDir = direction;
+          }
 
-            movement.cut.elapsed += delta;
-            const progress = Math.min(1, movement.cut.elapsed / movement.cut.tCut);
-            movement.speedFactor = movement.cut.startFactor - (movement.cut.startFactor - movement.cut.targetFactor) * progress;
+          movement.cut.elapsed += delta;
+          const progress = Math.min(1, movement.cut.elapsed / movement.cut.tCut);
+          movement.speedFactor = movement.cut.startFactor - (movement.cut.startFactor - movement.cut.targetFactor) * progress;
 
-            if (progress >= 1 || movement.speedFactor <= movement.cut.targetFactor) {
-              movement.speedFactor = movement.cut.targetFactor;
-              movement.direction = movement.cut.targetDir;
-              movement.cut = null;
-            }
+          if (progress >= 1 || movement.speedFactor <= movement.cut.targetFactor) {
+            movement.speedFactor = movement.cut.targetFactor;
+            movement.direction = movement.cut.targetDir;
+            movement.cut = null;
           }
         }
         movement.hasDirection = true;
