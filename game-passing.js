@@ -12,7 +12,12 @@
     const d = Math.max(0, Number(distanceYards) || 0);
     const numStrength = Number(strength);
     const s = Math.max(0, Math.min(10, Number.isFinite(numStrength) ? numStrength : 5));
-    return Math.max(0.05, (0.14 + 0.007 * d) * (1 - 0.02 * s));
+    const arc = (0 + 0.01 * d) * (1 - 0.02 * s);
+    if (arc < 0){
+      arc = 0;
+    }
+    console.log("arc", arc)
+    return arc
   }
 
   function calculateSigma(distanceYards) {
@@ -53,6 +58,14 @@
   }
 
   function throwHeightAt(progress, distanceYards, targetHeight = targetHeightFeet, strength = 5) {
+    if (typeof distanceYards === 'object' && distanceYards !== null) {
+      const p = distanceYards.profile || distanceYards;
+      if (Number.isFinite(p.launchVelocity) && Number.isFinite(p.duration)) {
+        const elapsed = Math.max(0, Math.min(1, progress)) * p.duration;
+        return releaseHeightFeet + p.launchVelocity * elapsed
+          - 0.5 * gravityFeetPerSecondSquared * elapsed * elapsed;
+      }
+    }
     const resolvedTargetHeight = Number.isFinite(targetHeight) ? targetHeight : targetHeightFeet;
     const profile = throwProfile(distanceYards, resolvedTargetHeight, strength);
     const elapsed = Math.max(0, Math.min(1, progress)) * profile.duration;
@@ -106,14 +119,14 @@
       const actualTargetHeightFeet = Math.max(1, targetHeightFeet + inaccuracyHeightFeet);
 
       const distance = Math.hypot(actualTargetX - fromX, (actualTargetY - fromY) * lateralYards);
-      const duration = throwProfile(distance, actualTargetHeightFeet, getQbStrength()).duration;
+      const profile = throwProfile(distance, actualTargetHeightFeet, getQbStrength());
       state.pass = {
         fromX,
         fromY,
         targetX: actualTargetX,
         targetY: actualTargetY,
         targetHeightFeet: actualTargetHeightFeet,
-        duration,
+        duration: profile.duration,
         progress: 0,
         distanceYards: distance,
         heightFeet: releaseHeightFeet,
@@ -122,7 +135,11 @@
         wasTargetMoving: false,
         intendedTargetX: targetX,
         intendedTargetY: targetY,
-        sigma
+        sigma,
+        profile,
+        launchVelocity: profile.launchVelocity,
+        apexHeight: profile.apexHeight,
+        arc: profile.arc
       };
       state.quarterback.hasBall = false;
       state.quarterback.phase = 'thrown';
@@ -164,7 +181,7 @@
       const actualTargetY = Math.max(fieldBounds.top, Math.min(fieldBounds.bottom, targetY + inaccuracyY));
       const actualTargetHeightFeet = Math.max(1, targetHeightFeet + inaccuracyHeightFeet);
       const actualDistance = Math.hypot(actualTargetX - fromX, (actualTargetY - fromY) * lateralYards);
-      const actualDuration = throwProfile(actualDistance, actualTargetHeightFeet, getQbStrength()).duration;
+      const profile = throwProfile(actualDistance, actualTargetHeightFeet, getQbStrength());
 
       state.pass = {
         fromX,
@@ -172,7 +189,7 @@
         targetX: actualTargetX,
         targetY: actualTargetY,
         targetHeightFeet: actualTargetHeightFeet,
-        duration: actualDuration,
+        duration: profile.duration,
         progress: 0,
         distanceYards: actualDistance,
         heightFeet: releaseHeightFeet,
@@ -181,7 +198,11 @@
         wasTargetMoving: isMoving,
         intendedTargetX: targetX,
         intendedTargetY: targetY,
-        sigma
+        sigma,
+        profile,
+        launchVelocity: profile.launchVelocity,
+        apexHeight: profile.apexHeight,
+        arc: profile.arc
       };
       state.quarterback.hasBall = false;
       state.quarterback.phase = 'thrown';
@@ -246,7 +267,14 @@
     }
 
     return {
-      throwHeightAt: (progress, distanceYards, targetHeight) => throwHeightAt(progress, distanceYards, targetHeight, getQbStrength()),
+      throwHeightAt: (progress, distanceYards, targetHeight) => {
+        if (state.pass?.profile) {
+          const p = state.pass.profile;
+          const elapsed = Math.max(0, Math.min(1, progress)) * p.duration;
+          return releaseHeightFeet + p.launchVelocity * elapsed - 0.5 * gravityFeetPerSecondSquared * elapsed * elapsed;
+        }
+        return throwHeightAt(progress, distanceYards, targetHeight, getQbStrength());
+      },
       throwProfile: (distanceYards, targetHeight) => throwProfile(distanceYards, targetHeight, getQbStrength()),
       throwPass,
       throwPassToLocation,
