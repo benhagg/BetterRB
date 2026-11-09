@@ -146,6 +146,7 @@
       const accelerationRate = 1.3 / Math.max(0.5, 1 - agility * 0.05);
 
       if (magnitude < 0.0001) {
+        movement.cut = null;
         if (!movement.deceleration) {
           const maxDecelTime = 0.7 * Math.max(0.5, 1 - agility * 0.04);
           const tStop = Math.max(0.04, maxDecelTime * (movement.speedFactor ** 2));
@@ -161,18 +162,51 @@
       } else {
         const direction = { x: requestedX / magnitude, y: requestedY / magnitude };
         const dot = movement.direction.x * direction.x + movement.direction.y * direction.y;
-        const changedDirection = movement.hasDirection && dot < 0.9999;
         movement.deceleration = null;
 
-        if (changedDirection) {
-          // v_cut = v_max * cos(theta / 2), where theta is the direction-change angle.
-          const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
-          movement.speedFactor *= Math.cos(angle / 2);
+        if (!movement.hasDirection || movement.speedFactor <= 0.001) {
           movement.direction = direction;
-        } else {
-          movement.direction = direction;
-          // Exponential saturation from the current speed preserves cuts and restarts smoothly.
+          movement.cut = null;
           movement.speedFactor = 1 - (1 - movement.speedFactor) * Math.exp(-accelerationRate * delta);
+        } else if (dot >= 0.9999) {
+          movement.direction = direction;
+          movement.cut = null;
+          movement.speedFactor = 1 - (1 - movement.speedFactor) * Math.exp(-accelerationRate * delta);
+        } else {
+          // Direction change: player must decelerate to the cut speed threshold before turning
+          const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
+          const targetFactor = Math.cos(angle / 2);
+
+          if (movement.speedFactor <= targetFactor) {
+            // Already below allowable cut speed; change direction immediately
+            movement.direction = direction;
+            movement.cut = null;
+            movement.speedFactor = 1 - (1 - movement.speedFactor) * Math.exp(-accelerationRate * delta);
+          } else {
+            // Decelerate along current momentum heading before changing direction
+            if (!movement.cut || Math.abs(movement.cut.targetDir.x - direction.x) > 0.001 || Math.abs(movement.cut.targetDir.y - direction.y) > 0.001) {
+              const speedDiff = movement.speedFactor - targetFactor;
+              const agilityScale = Math.max(0.5, 1 - agility * 0.05);
+              const tCut = Math.max(0.02, 0.33 * agilityScale * speedDiff);
+              movement.cut = {
+                elapsed: 0,
+                startFactor: movement.speedFactor,
+                targetFactor,
+                targetDir: direction,
+                tCut
+              };
+            }
+
+            movement.cut.elapsed += delta;
+            const progress = Math.min(1, movement.cut.elapsed / movement.cut.tCut);
+            movement.speedFactor = movement.cut.startFactor - (movement.cut.startFactor - movement.cut.targetFactor) * progress;
+
+            if (progress >= 1 || movement.speedFactor <= movement.cut.targetFactor) {
+              movement.speedFactor = movement.cut.targetFactor;
+              movement.direction = movement.cut.targetDir;
+              movement.cut = null;
+            }
+          }
         }
         movement.hasDirection = true;
       }
