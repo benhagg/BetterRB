@@ -4,6 +4,7 @@ const fieldBounds = {top: -.02, bottom: 0.95, endZoneL: 2.217644291800185, endZo
 const cameraTrailingYards = 5;
 const runnerTrailingYards = 15;
 const lateralYards = 17;
+const passGravityFeetPerSecondSquared = 32.174;
 
 window.playGame = function playGame(team1, team2, savedState = null, selectedPlays = {}) {
   const dropbackYards = 3;
@@ -26,7 +27,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
   state.playerY = Number.isFinite(state.playerY) ? Math.max(0.08, Math.min(0.92, state.playerY)) : 0.5;
   state.clockSeconds = Number.isFinite(state.clockSeconds) ? Math.max(0, state.clockSeconds) : 900;
   state.scrimmagePosition = Number.isFinite(state.scrimmagePosition) ? state.scrimmagePosition : state.fieldPosition;
-  if (!['preplay', 'dropback', 'passing', 'running', 'thrown', 'complete'].includes(state.phase)) {
+  if (!['preplay', 'dropback', 'passing', 'running', 'thrown', 'bouncing', 'complete'].includes(state.phase)) {
     state.phase = 'preplay';
     state.scrimmagePosition = state.fieldPosition;
   }
@@ -456,6 +457,27 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     }
   }
 
+  function startIncompleteBounce() {
+    const pass = state.pass;
+    if (!pass || !Number.isFinite(pass.duration) || pass.duration <= 0) {
+      state.phase = 'complete';
+      return;
+    }
+    state.bounce = {
+      x: pass.targetX,
+      y: pass.targetY,
+      z: Number.isFinite(pass.targetHeightFeet) ? pass.targetHeightFeet : 4,
+      velocityX: (pass.targetX - pass.fromX) / pass.duration,
+      velocityY: (pass.targetY - pass.fromY) / pass.duration,
+      velocityZ: (pass.launchVelocity || 0) - passGravityFeetPerSecondSquared * pass.duration,
+      restitution: 0.45,
+      friction: 0.5,
+      bounces: 0,
+      maxBounces: 3
+    };
+    state.phase = 'bouncing';
+  }
+
   function update(seconds, input = {}) {
     const delta = Number.isFinite(seconds) ? Math.max(0, Math.min(seconds, 0.1)) : 0;
     if (state.phase === 'preplay' || state.phase === 'complete' || state.clockSeconds <= 0) return state;
@@ -527,7 +549,14 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       if (state.pass.progress >= 1) {
         let target = null;
         if (state.pass.targetReceiverNumber) {
-          target = passTarget(state.pass.targetReceiverNumber);
+          const intended = passTarget(state.pass.targetReceiverNumber);
+          if (intended) {
+            const intendedDistance = Math.hypot(
+              state.pass.targetX - intended.x,
+              (state.pass.targetY - intended.y) * lateralYards
+            );
+            if (intendedDistance <= 2.5) target = intended;
+          }
         } else {
           const eligible = [...state.receivers, state.runningBack];
           let bestDist = Infinity;
@@ -551,8 +580,26 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
           state.playerY = target.y;
           movePlayer(0, input);
         } else {
-          state.phase = 'complete';
           state.quarterback.hasBall = false;
+          startIncompleteBounce();
+        }
+      }
+    } else if (state.phase === 'bouncing') {
+      const bounce = state.bounce;
+      if (bounce) {
+        bounce.x += bounce.velocityX * delta;
+        bounce.y += bounce.velocityY * delta;
+        bounce.z += bounce.velocityZ * delta;
+        bounce.velocityZ -= passGravityFeetPerSecondSquared * delta;
+        if (bounce.z <= 0) {
+          bounce.z = 0;
+          bounce.bounces += 1;
+          bounce.velocityZ = -bounce.velocityZ * bounce.restitution;
+          bounce.velocityX *= bounce.friction;
+          bounce.velocityY *= bounce.friction;
+          if (bounce.bounces >= bounce.maxBounces || Math.abs(bounce.velocityZ) < 1) {
+            state.phase = 'complete';
+          }
         }
       }
     }
@@ -636,6 +683,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     state.playType = String(selectedPlays.offense?.playType || selectedPlays.offense?.playtype || selectedPlays.offense?.type || 'pass').toLowerCase();
     state.dropbackRemaining = 0;
     delete state.pass;
+    delete state.bounce;
     delete state.throwWindup;
     state.quarterback = createQuarterback();
     state.defenders = createDefenders();

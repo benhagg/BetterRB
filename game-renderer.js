@@ -9,7 +9,8 @@
       const horizontalScale = width / 350;
       const verticalScale = height / field.height;
       const { pixel } = camera.metrics(width, height);
-      const passProgress = (state.phase === 'thrown' || state.phase === 'complete') && state.pass ? state.pass.progress : null;
+      const passProgress = state.phase === 'thrown' && state.pass ? state.pass.progress : null;
+      const isBouncing = state.phase === 'bouncing' && state.bounce;
       const cameraOriginYard = camera.originYard();
       const fieldOrigin = field.goalLine + cameraOriginYard * field.pixelsPerYard;
       const fieldImage = RetroSprites.fieldImage;
@@ -59,27 +60,33 @@
       for (const defender of state.defenders) defender.draw(ctx, screenCoordinates(defender), pixel, defense);
       state.quarterback.draw(ctx, screenCoordinates(state.quarterback), pixel, offense);
 
-      if (passProgress === null || !RetroSprites.footballImage.complete || !RetroSprites.footballImage.naturalWidth) return;
-      const targetX = (state.pass.targetX - cameraOriginYard) * field.pixelsPerYard * horizontalScale;
-      const targetY = top + state.pass.targetY * (bottom - top);
-      const xSize = Math.max(3, 3 * pixel);
-      ctx.save();
-      ctx.strokeStyle = '#e53935';
-      ctx.lineWidth = Math.max(1, pixel);
-      ctx.beginPath();
-      ctx.moveTo(targetX - xSize, targetY - xSize);
-      ctx.lineTo(targetX + xSize, targetY + xSize);
-      ctx.moveTo(targetX + xSize, targetY - xSize);
-      ctx.lineTo(targetX - xSize, targetY + xSize);
-      ctx.stroke();
-      ctx.restore();
+      if ((passProgress === null && !isBouncing) || !RetroSprites.footballImage.complete || !RetroSprites.footballImage.naturalWidth) return;
+      if (passProgress !== null) {
+        const targetX = (state.pass.targetX - cameraOriginYard) * field.pixelsPerYard * horizontalScale;
+        const targetY = top + state.pass.targetY * (bottom - top);
+        const xSize = Math.max(3, 3 * pixel);
+        ctx.save();
+        ctx.strokeStyle = '#e53935';
+        ctx.lineWidth = Math.max(1, pixel);
+        ctx.beginPath();
+        ctx.moveTo(targetX - xSize, targetY - xSize);
+        ctx.lineTo(targetX + xSize, targetY + xSize);
+        ctx.moveTo(targetX + xSize, targetY - xSize);
+        ctx.lineTo(targetX - xSize, targetY + xSize);
+        ctx.stroke();
+        ctx.restore();
+      }
 
-      const ballWorldX = state.pass.fromX + (state.pass.targetX - state.pass.fromX) * passProgress;
-      const ballWorldY = state.pass.fromY + (state.pass.targetY - state.pass.fromY) * passProgress;
+      const ballWorldX = isBouncing
+        ? state.bounce.x
+        : state.pass.fromX + (state.pass.targetX - state.pass.fromX) * passProgress;
+      const ballWorldY = isBouncing
+        ? state.bounce.y
+        : state.pass.fromY + (state.pass.targetY - state.pass.fromY) * passProgress;
       const ballX = (ballWorldX - cameraOriginYard) * field.pixelsPerYard * horizontalScale;
       const groundY = top + ballWorldY * (bottom - top);
-      const heightFeet = typeof state.pass.heightFeet === 'number'
-        ? state.pass.heightFeet : throwHeightAt(passProgress, state.pass);
+      const heightFeet = isBouncing ? state.bounce.z : (typeof state.pass.heightFeet === 'number'
+        ? state.pass.heightFeet : throwHeightAt(passProgress, state.pass));
       const ballY = groundY - heightFeet * ((16 * pixel) / 6);
       ctx.save();
       ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';

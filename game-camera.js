@@ -7,9 +7,11 @@
 
     function originYard() {
       const passProgress = (state.phase === 'thrown' || state.phase === 'complete') && state.pass ? state.pass.progress : null;
-      const trackingYard = passProgress === null
-        ? (ballCarrier()?.x ?? state.fieldPosition)
-        : state.pass.fromX + (state.pass.targetX - state.pass.fromX) * passProgress;
+      const trackingYard = state.phase === 'bouncing' && state.bounce
+        ? state.bounce.x
+        : passProgress === null
+          ? (ballCarrier()?.x ?? state.fieldPosition)
+          : state.pass.fromX + (state.pass.targetX - state.pass.fromX) * passProgress;
       const initialOrigin = state.scrimmagePosition - cameraTrailingYards;
       return Math.max(initialOrigin, trackingYard - runnerTrailingYards);
     }
