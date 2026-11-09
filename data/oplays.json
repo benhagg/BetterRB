@@ -86,8 +86,8 @@
         "quarterback": { "position": "QB", "across": 0, "offset": -3 },
         "offensiveLine": "standard",
         "receivers": [
-          { "receiverNumber": 1, "position": "WR", "across": -0.43, "offset": -0.5, "route": "post" },
-          { "receiverNumber": 2, "position": "TE", "across": -0.28, "offset": -0.5, "route": "down_out_5" },
+          { "receiverNumber": 1, "position": "WR", "across": -0.43, "offset": -0.5, "route": "down_in_5" },
+          { "receiverNumber": 2, "position": "TE", "across": -0.28, "offset": -0.5, "route": "down_out_10" },
           { "receiverNumber": 4, "position": "WR", "across": 0.28, "offset": -0.5, "route": "slant" },
           { "receiverNumber": 5, "position": "WR", "across": 0.43, "offset": -0.5, "route": "go" }
         ],
@@ -138,6 +138,22 @@
           "offset": -4.5,
           "route": "check_release"
         }
+      }
+    },
+    {
+      "id": "in-and-outs",
+      "name": "In and Outs",
+      "playtype": "pass",
+      "formation": {
+        "quarterback": { "position": "QB", "across": 0, "offset": -3 },
+        "offensiveLine": "standard",
+        "receivers": [
+          { "receiverNumber": 1, "position": "WR", "across": -0.43, "offset": -0.5, "route": "down_in_5" },
+          { "receiverNumber": 2, "position": "TE", "across": -0.28, "offset": -0.5, "route": "down_out_10" },
+          { "receiverNumber": 4, "position": "WR", "across": 0.28, "offset": -0.5, "route": "down_in_10" },
+          { "receiverNumber": 5, "position": "WR", "across": 0.43, "offset": -0.5, "route": "down_out_5" }
+        ],
+        "runningBack": { "receiverNumber": 3, "position": "RB", "across": 0.13, "offset": -4.5, "route": "down_in_5" }
       }
     },
     {

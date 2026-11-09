@@ -10,6 +10,7 @@
   const SIMULATION_STEP = 1 / 60;
   const SIMULTANEOUS_WINDOW = SIMULATION_STEP + 0.001;
   const GRAVITY = 32.174;
+  const RECEIVER_ADJUST_RADIUS_YARDS = 8;
 
   function playerRating(player, name, fallback = 5) {
     const value = player?.ratings?.[name] ?? player?.rating?.[name] ?? player?.[name];
@@ -91,14 +92,12 @@
     function ballAt(pass, time) {
       const progress = Math.max(0, Math.min(1, time / pass.duration));
       const profile = pass.profile;
-      const apexAt = profile.apexAt ?? 0.5;
-      const height = progress <= apexAt
-        ? profile.releaseHeight + (profile.apexHeight - profile.releaseHeight) * Math.pow(progress / apexAt, 2)
-        : profile.apexHeight + (profile.targetHeight - profile.apexHeight) * Math.pow((progress - apexAt) / (1 - apexAt), 2);
+      const elapsed = progress * pass.duration;
       return {
         x: pass.fromX + (pass.targetX - pass.fromX) * progress,
         y: pass.fromY + (pass.targetY - pass.fromY) * progress,
-        z: height
+        z: profile.releaseHeight + profile.launchVelocity * elapsed
+          - 0.5 * profile.gravity * elapsed * elapsed
       };
     }
 
@@ -115,7 +114,7 @@
           // At release, players continue in their current heading. This mirrors
           // the existing route engine without mutating live player objects.
           const shouldPursueTarget = player.receiverNumber === pass.targetReceiverNumber
-            && (pass.wasTargetMoving || Math.hypot(pass.targetX - player.x, (pass.targetY - player.y) * lateralYards) <= 5);
+            && (pass.wasTargetMoving || Math.hypot(pass.targetX - player.x, (pass.targetY - player.y) * lateralYards) <= RECEIVER_ADJUST_RADIUS_YARDS);
           const target = shouldPursueTarget
             ? { x: pass.targetX, y: pass.targetY }
             : null;

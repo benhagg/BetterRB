@@ -5,6 +5,7 @@ const cameraTrailingYards = 5;
 const runnerTrailingYards = 15;
 const lateralYards = 17;
 const passGravityFeetPerSecondSquared = 32.174;
+const receiverAdjustRadiusYards = 8;
 
 window.playGame = function playGame(team1, team2, savedState = null, selectedPlays = {}) {
   const playType = String(selectedPlays.offense?.playType || selectedPlays.offense?.playtype || selectedPlays.offense?.type || 'pass').toLowerCase();
@@ -22,7 +23,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     team1,
     team2
   };
-  state.fieldPosition = Number.isFinite(state.fieldPosition) ? Math.max(-10, Math.min(100, state.fieldPosition)) : 22;
+  state.fieldPosition = Number.isFinite(state.fieldPosition) ? Math.max(-10, Math.min(100, state.fieldPosition)) : 25;
   state.playerY = Number.isFinite(state.playerY) ? Math.max(0.08, Math.min(0.92, state.playerY)) : 0.5;
   state.clockSeconds = Number.isFinite(state.clockSeconds) ? Math.max(0, state.clockSeconds) : 900;
   state.scrimmagePosition = Number.isFinite(state.scrimmagePosition) ? state.scrimmagePosition : state.fieldPosition;
@@ -539,7 +540,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
         if (!player.hasBall) {
           const distToTarget = Math.hypot(state.pass.targetX - player.x, (state.pass.targetY - player.y) * lateralYards);
           if (state.pass.targetReceiverNumber && player.receiverNumber === state.pass.targetReceiverNumber) {
-            if (state.pass.wasTargetMoving || distToTarget <= 5) {
+            if (state.pass.wasTargetMoving || distToTarget <= receiverAdjustRadiusYards) {
               player.run(delta, state.pass.targetX, state.pass.targetY);
             } else {
               player.runRoute(delta);
@@ -663,7 +664,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
   }
 
   function reset() {
-    state.fieldPosition = 22;
+    state.fieldPosition = 25;
     state.playerY = 0.5;
     state.clockSeconds = 900;
     state.quarter = 1;

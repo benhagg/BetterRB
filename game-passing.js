@@ -1,20 +1,24 @@
 (function (root) {
   // --- Tunable Throw & Accuracy Physics Coefficients ---
-  const releaseHeightFeet = 8;
+  const releaseHeightFeet = 6;
   const targetHeightFeet = 4;
   const gravityFeetPerSecondSquared = 32.174;
   const feetPerYard = 3.0;
 
   // Vertical clearance is intentionally independent from horizontal travel time.
   // A pass needs to clear defenders without becoming slower downfield.
-  const ARC_BASE_FEET = 0;
-  const ARC_FEET_PER_YARD = 0.30;
   const ARC_STRENGTH_REDUCTION = 0.015;
+  const ARC_START_YARDS = 3;
+  const ARC_MAX_YARDS = 25;
+  const MAX_ARC_FEET = 15;
+  const ARC_EXPONENTIAL_RATE = 3;
+  const SHORT_PASS_MAX_YARDS = 5;
+  const SHORT_PASS_SPEED_YPS = 20;
 
   // Inaccuracy base & distance coefficients (less is more accurate)
-  const C_BASE = 0.15;
-  const ALPHA = 0.00317;
-  const BETA = 0.00132;
+  const C_BASE = 0.10;
+  const ALPHA = 0.0016;
+  const BETA = 0.00066;
 
   // Running while throwing penalty multiplier (recommended 1.25, range 1.1 - 1.3)
   const RUNNING_THROW_INACCURACY_MULTIPLIER = 1.25;
@@ -23,9 +27,15 @@
     const d = Math.max(0, Number(distanceYards) || 0);
     const numStrength = Number(strength);
     const s = Math.max(0, Math.min(10, Number.isFinite(numStrength) ? numStrength : 5));
-    const arc = (ARC_BASE_FEET + ARC_FEET_PER_YARD * d) * (1 - ARC_STRENGTH_REDUCTION * s);
-    console.log("arc", arc);
-    return arc
+    if (d <= ARC_START_YARDS) return 0;
+    const progress = Math.min(1, (d - ARC_START_YARDS) / (ARC_MAX_YARDS - ARC_START_YARDS));
+    const exponential = (1 - Math.exp(-ARC_EXPONENTIAL_RATE * progress))
+      / (1 - Math.exp(-ARC_EXPONENTIAL_RATE));
+    return MAX_ARC_FEET * exponential * (1 - ARC_STRENGTH_REDUCTION * s);
+  }
+
+  function desiredApexForDistance(distanceYards) {
+    return releaseHeightFeet + calculateThrowArc(distanceYards);
   }
 
   // Retains the legacy flight-time relationship so changing the visual arc
@@ -64,6 +74,21 @@
 
   function throwProfile(distanceYards, targetHeight = targetHeightFeet, strength = 5) {
     const resolvedTargetHeight = Number.isFinite(targetHeight) ? targetHeight : targetHeightFeet;
+    const distance = Math.max(0, Number(distanceYards) || 0);
+    if (distance <= SHORT_PASS_MAX_YARDS) {
+      const duration = Math.max(0.05, distance / SHORT_PASS_SPEED_YPS);
+      return {
+        launchVelocity: (resolvedTargetHeight - releaseHeightFeet) / duration,
+        duration,
+        apexHeight: releaseHeightFeet,
+        arc: 0,
+        gravity: 0,
+        apexAt: 0,
+        releaseHeight: releaseHeightFeet,
+        targetHeight: resolvedTargetHeight,
+        flat: true
+      };
+    }
     const arc = calculateThrowArc(distanceYards, strength);
     const timingArc = calculateTimingArc(distanceYards, strength);
     const timingApex = Math.max(releaseHeightFeet, resolvedTargetHeight) + timingArc * distanceYards;
@@ -74,24 +99,22 @@
 
     // h(p) = linear height + arc * 4p(1-p). This reaches the new high
     // clearance arc while arriving at the same time as the legacy throw.
-    const gravity = (8 * arc) / (duration * duration);
-    const launchVelocity = (resolvedTargetHeight - releaseHeightFeet + 4 * arc) / duration;
-    const apexAt = Math.max(0.55, Math.min(0.75, Number(distanceYards) < 8 ? 0.55 : 0.75));
-    const apexHeight = Math.max(releaseHeightFeet, resolvedTargetHeight) + arc;
-    console.log(`[Pass arc] apex height: ${apexHeight.toFixed(2)} ft at ${(apexAt * 100).toFixed(0)}% flight`);
-    return { launchVelocity, duration, apexHeight, arc, gravity, apexAt,
+    const gravity = gravityFeetPerSecondSquared;
+    const apexHeight = Math.max(releaseHeightFeet + 0.1, desiredApexForDistance(distanceYards));
+    const riseToApex = apexHeight - releaseHeightFeet;
+    const launchVelocity = Math.sqrt(2 * gravity * riseToApex);
+    const timeToApex = launchVelocity / gravity;
+    const timeFromApex = Math.sqrt(2 * (apexHeight - resolvedTargetHeight) / gravity);
+    const projectileDuration = Math.max(0.001, timeToApex + timeFromApex);
+    const apexAt = timeToApex / projectileDuration;
+    return { launchVelocity, duration: projectileDuration, apexHeight, arc, gravity, apexAt,
       releaseHeight: releaseHeightFeet, targetHeight: resolvedTargetHeight };
   }
 
   function arcHeightAt(progress, profile) {
-    const p = Math.max(0, Math.min(1, progress));
-    const apexAt = profile.apexAt ?? 0.5;
-    if (p <= apexAt) {
-      const t = p / apexAt;
-      return profile.releaseHeight + (profile.apexHeight - profile.releaseHeight) * t * t;
-    }
-    const t = (p - apexAt) / (1 - apexAt);
-    return profile.apexHeight + (profile.targetHeight - profile.apexHeight) * t * t;
+    const elapsed = Math.max(0, Math.min(1, progress)) * profile.duration;
+    return profile.releaseHeight + profile.launchVelocity * elapsed
+      - 0.5 * profile.gravity * elapsed * elapsed;
   }
 
   function throwHeightAt(progress, distanceYards, targetHeight = targetHeightFeet, strength = 5) {
@@ -333,7 +356,8 @@
       updateWindup,
       calculateSigma,
       calculateInaccuracy,
-      calculateThrowArc
+      calculateThrowArc,
+      desiredApexForDistance
     };
   }
 
@@ -342,6 +366,7 @@
     throwProfile,
     throwHeightAt,
     calculateThrowArc,
+    desiredApexForDistance,
     calculateSigma,
     calculateInaccuracy,
     releaseHeightFeet,
