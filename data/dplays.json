@@ -1,4 +1,12 @@
 {
+  "defensiveLines": {
+    "standard": [
+      { "position": "DL", "role": "rush", "across": -0.09, "offset": 0.1 },
+      { "position": "DL", "role": "rush", "across": -0.03, "offset": 0.1 },
+      { "position": "DL", "role": "rush", "across": 0.03, "offset": 0.1 },
+      { "position": "DL", "role": "rush", "across": 0.09, "offset": 0.1 }
+    ]
+  },
   "plays": [
     {
       "id": "base-cover-2",
@@ -9,11 +17,8 @@
         "description": "Two deep safeties with underneath hook and flat zone coverage."
       },
       "formation": {
+        "defensiveLine": "standard",
         "defenders": [
-          { "position": "DL", "role": "rush", "across": -0.09, "offset": 0.1 },
-          { "position": "DL", "role": "rush", "across": -0.03, "offset": 0.1 },
-          { "position": "DL", "role": "rush", "across": 0.03, "offset": 0.1 },
-          { "position": "DL", "role": "rush", "across": 0.09, "offset": 0.1 },
           { "position": "LB", "role": "zone", "zone": "flat_top", "across": -0.30, "offset": 3.0 },
           { "position": "LB", "role": "zone", "zone": "hook_top", "across": -0.10, "offset": 3.5 },
           { "position": "LB", "role": "zone", "zone": "hook_bottom", "across": 0.10, "offset": 3.5 },
@@ -33,11 +38,8 @@
         "description": "Man-to-man coverage across receivers with single high safety help."
       },
       "formation": {
+        "defensiveLine": "standard",
         "defenders": [
-          { "position": "DL", "role": "rush", "across": -0.09, "offset": 0.1 },
-          { "position": "DL", "role": "rush", "across": -0.03, "offset": 0.1 },
-          { "position": "DL", "role": "rush", "across": 0.03, "offset": 0.1 },
-          { "position": "DL", "role": "rush", "across": 0.09, "offset": 0.1 },
           { "position": "LB", "role": "man", "manTarget": "RB", "across": -0.15, "offset": 3.5 },
           { "position": "LB", "role": "man", "manTarget": "TE", "across": 0.15, "offset": 3.5 },
           { "position": "LB", "role": "rush", "across": -0.28, "offset": 3.0 },

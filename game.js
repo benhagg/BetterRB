@@ -31,7 +31,15 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     state.scrimmagePosition = state.fieldPosition;
   }
 
-  const defensiveFormationSlots = selectedPlays.defense?.formation?.defenders || [];
+  const dlSlots = Array.isArray(selectedPlays.defense?.formation?.defensiveLine)
+    ? selectedPlays.defense.formation.defensiveLine
+    : [];
+  const otherDefenders = Array.isArray(selectedPlays.defense?.formation?.defenders)
+    ? selectedPlays.defense.formation.defenders
+    : [];
+  const defensiveFormationSlots = (otherDefenders.length === 11)
+    ? otherDefenders
+    : [...dlSlots, ...otherDefenders];
 
   function createDefenders(slots = defensiveFormationSlots) {
     const roster = Array.isArray(team2?.players) ? team2.players : [];

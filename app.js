@@ -88,6 +88,7 @@ async function initialize() {
 function expandPlaybookRoutes(playbook) {
   const routes = playbook?.routes || {};
   const offensiveLines = playbook?.offensiveLines || {};
+  const defensiveLines = playbook?.defensiveLines || {};
   const expand = value => {
     if (Array.isArray(value)) return value.map(expand);
     if (!value || typeof value !== 'object') return value;
@@ -98,6 +99,12 @@ function expandPlaybookRoutes(playbook) {
     }
     if (typeof copy.offensiveLine === 'string' && Array.isArray(offensiveLines[copy.offensiveLine])) {
       copy.offensiveLine = offensiveLines[copy.offensiveLine].map(lineman => ({ ...lineman }));
+    }
+    if (typeof copy.defensiveLine === 'string' && Array.isArray(defensiveLines[copy.defensiveLine])) {
+      copy.defensiveLine = defensiveLines[copy.defensiveLine].map(dl => ({ ...dl }));
+    }
+    if (Array.isArray(copy.defensiveLine) && Array.isArray(copy.defenders) && copy.defenders.length < 11) {
+      copy.defenders = [...copy.defensiveLine.map(dl => ({ ...dl })), ...copy.defenders];
     }
     return copy;
   };

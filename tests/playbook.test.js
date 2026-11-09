@@ -3,10 +3,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 describe('Playbook Data Validation', () => {
-  it('validates dplays.json has valid zone and man plays', () => {
+  it('validates dplays.json has valid zone and man plays with reusable defensiveLine config', () => {
     const dplaysRaw = fs.readFileSync(path.resolve(__dirname, '../data/dplays.json'), 'utf8');
     const dplays = JSON.parse(dplaysRaw);
 
+    expect(dplays.defensiveLines?.standard).toHaveLength(4);
     expect(Array.isArray(dplays.plays)).toBe(true);
     expect(dplays.plays.length).toBeGreaterThanOrEqual(2);
 
@@ -16,8 +17,16 @@ describe('Playbook Data Validation', () => {
     expect(zonePlay).toBeDefined();
     expect(manPlay).toBeDefined();
 
-    expect(zonePlay.formation.defenders).toHaveLength(11);
-    expect(manPlay.formation.defenders).toHaveLength(11);
+    expect(zonePlay.formation.defensiveLine).toBe('standard');
+    expect(manPlay.formation.defensiveLine).toBe('standard');
+
+    dplays.plays.forEach(play => {
+      const dlCount = play.formation?.defensiveLine === 'standard'
+        ? dplays.defensiveLines.standard.length
+        : (play.formation?.defensiveLine?.length || 0);
+      const coverageCount = play.formation?.defenders?.length || 0;
+      expect(dlCount + coverageCount).toBe(11);
+    });
   });
 
   it('validates oplays.json formations have 11 players total', () => {
