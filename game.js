@@ -538,7 +538,6 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       const currentHeight = passing.throwHeightAt(state.pass.progress, state.pass);
       state.pass.heightFeet = currentHeight;
       state.pass.heightfeet = currentHeight;
-      console.log(`[Ball] height: ${currentHeight.toFixed(2)} ft`);
       for (const player of [...state.receivers, state.runningBack]) {
         if (!player.hasBall) {
           if (state.pass.targetReceiverNumber && player.receiverNumber === state.pass.targetReceiverNumber) {

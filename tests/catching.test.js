@@ -81,7 +81,7 @@ describe('catch scheduling', () => {
 
   it('rolls a failed player only once for a pass', () => {
     vi.spyOn(Math, 'random').mockReturnValue(1);
-    const receiver = player();
+    const receiver = player({ ratings: { catching: 0, agility: 5 } });
     const engine = catcher([receiver]);
     const thrown = pass();
     const plan = engine.schedule(thrown);

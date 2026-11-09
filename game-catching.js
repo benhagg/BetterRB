@@ -35,7 +35,9 @@
       const dy = (ballY - player.y) * lateralYards;
       const length = Math.hypot(dx, dy);
       if (length > 0.001) return { x: dx / length, y: dy / length };
-      return { x: player.facingLeft ? -1 : 1, y: 0 };
+      // A stationary player has no directional bias. Catch reach is handled
+      // symmetrically in probability() instead of using last movement direction.
+      return null;
     }
 
     function probability(player, ball) {
@@ -43,15 +45,16 @@
       const heading = headingFor(player, ball.x, ball.y);
       const dx = ball.x - player.x;
       const dy = (ball.y - player.y) * lateralYards;
-      const parallel = dx * heading.x + dy * heading.y;
-      const lateral = Math.abs(dx * heading.y - dy * heading.x);
-      const longitudinalReach = parallel >= 0 ? REACH_FORWARD_YARDS : REACH_REAR_YARDS;
+      const parallel = heading ? dx * heading.x + dy * heading.y : Math.abs(dx);
+      const lateral = heading ? Math.abs(dx * heading.y - dy * heading.x) : Math.abs(dy);
+      const longitudinalReach = heading && parallel < 0 ? REACH_REAR_YARDS : REACH_FORWARD_YARDS;
       const distance = Math.hypot(parallel / longitudinalReach, lateral / REACH_LATERAL_YARDS);
       if (distance > 1) return null;
       const heightFactor = ball.z > HEIGHT_JUMP_THRESHOLD_FEET ? JUMP_CATCH_PENALTY : 1;
-      const chance = Math.max(0, Math.min(1,
-        (1 - distance ** 2) * heightFactor * (0.5 + 0.05 * playerRating(player, 'catching'))
-      ));
+      const catchingRating = playerRating(player, 'catching');
+      const skillBase = 0.3 * (catchingRating / 10);
+      const positionBonus = 0.9 * (1 - distance ** 2);
+      const chance = Math.max(0, Math.min(1, skillBase + positionBonus)) * heightFactor;
       return {
         chance,
         normalizedDistance: distance,
@@ -130,6 +133,24 @@
       const attempts = [...best.values()]
         .map(attempt => ({ ...attempt, roll: Math.random(), attempted: false }))
         .sort((a, b) => a.time - b.time || a.normalizedDistance - b.normalizedDistance);
+      attempts.forEach(attempt => {
+        const player = attempt.player;
+        const side = attempt.side === 'defense' ? 'defense' : 'offense';
+        const number = player.receiverNumber == null ? '' : ` #${player.receiverNumber}`;
+        const catchingRating = playerRating(player, 'catching');
+        const skillContribution = 0.3 * (catchingRating / 10);
+        const passAccuracyContribution = 0.9 * (1 - attempt.normalizedDistance ** 2);
+        const heightFactor = attempt.ball.z > HEIGHT_JUMP_THRESHOLD_FEET ? JUMP_CATCH_PENALTY : 1;
+        console.log(`[Catch probability] ${side} ${player.name || player.position || 'player'}${number}`
+          + ` distance=${attempt.normalizedDistance.toFixed(3)}`
+          + ` height=${attempt.ball.z.toFixed(2)}ft`
+          + ` type=${attempt.catchType}`
+          + ` skill=${skillContribution.toFixed(3)}`
+          + ` passAccuracy=${passAccuracyContribution.toFixed(3)}`
+          + ` heightFactor=${heightFactor.toFixed(3)}`
+          + ` probability=${attempt.chance.toFixed(3)}`
+          + ` roll=${attempt.roll.toFixed(3)}`);
+      });
       pass.catchPlan = { attempts, nextIndex: 0, resolved: false };
       return pass.catchPlan;
     }
