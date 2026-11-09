@@ -20,20 +20,22 @@ Relative displacement to ball: \(\Delta \vec{d} = (x_b - x_p, (y_b - y_p) \cdot 
   $$D_{xy}(t) = \sqrt{\left(\frac{d_{\parallel}(t)}{R_x}\right)^2 + \left(\frac{d_{\perp}(t)}{R_{\text{lateral}}}\right)^2} \le 1.0$$
 
 ### Vertical Reach (Feet)
-* **Standard Reach Zone**: \(1.0\text{ ft} \le z_b(t) \le 8.5\text{ ft}\) (standing / running hands catch).
-* **High / Jumping Reach Zone**: \(8.5\text{ ft} < z_b(t) \le 10.5\text{ ft}\) (triggers jump catch).
-* **Out of Reach**: \(z_b(t) > 10.5\text{ ft}\) (sails overhead) or \(z_b(t) \le 0\text{ ft}\) (hits ground).
+* **Low / Ground Zone**: \(0\text{ ft} < z_b(t) < 2\text{ ft}\) (low catch; no jump).
+* **Standard Reach Zone**: \(2\text{ ft} \le z_b(t) \le 8.5\text{ ft}\) (standing / running hands catch).
+* **Jumping Reach Zone**: \(8.5\text{ ft} < z_b(t) \le 10\text{ ft}\) (jump catch only).
+* **Out of Reach**: \(z_b(t) > 10\text{ ft}\) (sails overhead) or \(z_b(t) \le 0\text{ ft}\) (hits ground).
 
 ---
 
 ## 3. Jump Catch Animation (`jump_catch.png` & `jump_catch_1.png`)
-* **Trigger**: Initiated when the peak contact point occurs at a ball height **above 8.5 feet** (\(z_b(t) > 8.5\text{ ft}\)).
+* **Trigger**: A jump catch is permitted only when the catch roll succeeds and contact height is **above 8.5 feet and no higher than 10 feet**.
+* **Movement penalty**: As soon as the successful jump begins, reduce horizontal movement speed to 50%. Restore normal speed when the player lands or the catch ends.
 * **Sprite Sequence**:
   * **Frame 0 (`images/actions/jump_catch.png`)**: Receiver leaps into air, reaching upward at apex.
   * **Frame 1 (`images/actions/jump_catch_1.png`)**: Hands on ball / tucking ball on descent.
 * **Jump Catch Outcomes**:
   * **Success**: Receiver secures the ball at jump apex, lands, and transitions to running ball carrier.
-  * **Incomplete**: Receiver jumps and contests the high ball, but fails catch roll \(\implies\) ball tips/deflects and triggers incomplete bounce sequence.
+  * **Failure**: No jump animation starts when the catch roll fails. The ball continues its projectile and may be contested by another eligible player.
 
 ---
 
@@ -56,8 +58,8 @@ When a pass is incomplete (untouched, dropped, or swatted/PBU):
 ## 5. Catch Probability & Contention Rules
 * **Point Probability**:
   $$P(t) = (1 - D_{xy}(t)^2) \times P_z(t) \times (0.50 + 0.05 \cdot \text{catching})$$
-  * \(P_z(t) = 1.0\) for standard height (\(3.0\)–\(7.5\text{ ft}\)).
-  * \(P_z(t) = 0.85\) for high jumping catches (\(8.5\)–\(10.5\text{ ft}\)).
+  * \(P_z(t) = 1.0\) for low and standard catches (\(0\)–\(8.5\text{ ft}\)), provided the ball is above the ground.
+  * \(P_z(t) = 0.85\) for jumping catches (\(8.5\)–\(10\text{ ft}\)).
 * **Peak Probability**: \(P_{\text{peak}} = \max_t P(t)\) evaluated along trajectory through volume.
 * **Contested Resolution**:
   * **Offense vs. Offense**: Designed intended receiver gets a **+0.15 priority bonus** to \(P_{\text{peak}}\).
@@ -79,7 +81,7 @@ const REACH_REAR_YARDS = 0.6;
 // Vertical Reach (Feet)
 const HEIGHT_CHEST_FEET = 5.0;
 const HEIGHT_JUMP_THRESHOLD_FEET = 8.5;
-const HEIGHT_MAX_JUMP_FEET = 10.5;
+const HEIGHT_MAX_JUMP_FEET = 10.0;
 const HEIGHT_MIN_FEET = 1.0;
 
 // Catch Probabilities
