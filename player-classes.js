@@ -34,7 +34,7 @@
       this.uniform = config.uniform ?? null;
       this.rating = Number.isFinite(config.rating) ? config.rating : 5;
       this.speedMultiplier = speedMultiplier(this.position);
-      this.speed = (6 + this.rating * 0.2) * this.speedMultiplier;
+      this.speed = (5 + this.rating * 0.3) * this.speedMultiplier;
       this.kind = config.kind ?? kindForPosition(this.position);
 
       this.x = Number.isFinite(config.x) ? config.x : 22;
