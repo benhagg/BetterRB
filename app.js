@@ -15,19 +15,47 @@ let selectedOffensivePlayIndex = 0;
 let currentPlayOptions = [];
 let activePlay = null;
 let playbooks = { offense: null, defense: null };
+const STORAGE_KEY = 'better_rb_season_state';
+
+async function loadInitialState() {
+  const localSaved = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
+  if (localSaved) {
+    try {
+      return JSON.parse(localSaved);
+    } catch (_) {}
+  }
+
+  // Load static default state if available
+  try {
+    const response = await fetch('/data/default_state.json', { cache: 'no-store' });
+    if (response.ok) {
+      const data = await response.json();
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
+      } catch (_) {}
+      return data;
+    }
+  } catch (_) {}
+
+  // Fallback to /api/state if running with backend server
+  try {
+    const apiResp = await fetch('/api/state', { cache: 'no-store' });
+    if (apiResp.ok) return await apiResp.json();
+  } catch (_) {}
+
+  throw new Error('Could not load season state');
+}
 
 async function initialize() {
   app.textContent = 'Loading season...';
   try {
-    const responses = await Promise.all([
-      fetch('/api/state', { cache: 'no-store' }),
-      fetch('/data/oplays.json', { cache: 'no-store' }),
-      fetch('/data/dplays.json', { cache: 'no-store' }),
-      ...viewNames.map(name => fetch(`/views/${name}.html`, { cache: 'no-store' }))
-    ]);
-    if (responses.some(response => !response.ok)) throw new Error('Could not load season or view files');
     const [state, offensePlays, defensePlays, ...markup] = await Promise.all([
-      responses[0].json(), responses[1].json(), responses[2].json(), ...responses.slice(3).map(response => response.text())
+      loadInitialState(),
+      fetch('/data/oplays.json', { cache: 'no-store' }).then(r => r.json()),
+      fetch('/data/dplays.json', { cache: 'no-store' }).then(r => r.json()),
+      ...viewNames.map(name => fetch(`/views/${name}.html`, { cache: 'no-store' }).then(r => r.text()))
     ]);
     for (let i = 0; i < viewNames.length; i++) {
       const template = document.createElement('template');
@@ -39,7 +67,7 @@ async function initialize() {
     applyRoute();
     render();
   } catch (error) {
-    app.textContent = 'Unable to load the game. Restart the local server and refresh.';
+    app.textContent = 'Unable to load the game. Please refresh.';
     console.error(error);
   }
 }
@@ -105,13 +133,21 @@ function appendPortrait(target, team, player, index) {
 
 function persistState() {
   const snapshot = JSON.stringify(seasonState);
-  saveQueue = saveQueue.catch(() => {}).then(async () => {
-    const response = await fetch('/api/state', {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY, snapshot);
+    }
+  } catch (err) {
+    console.error('Failed to save to localStorage:', err);
+  }
+
+  // Optional background sync with backend if running with local server
+  saveQueue = saveQueue.catch(() => {}).then(() => {
+    return fetch('/api/state', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: snapshot
-    });
-    if (!response.ok) throw new Error('Could not save season data');
+    }).catch(() => {});
   });
   return saveQueue;
 }
