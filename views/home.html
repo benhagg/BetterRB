@@ -1,0 +1,26 @@
+<div class="home-view">
+  <div class="welcome">
+    <section class="team-card">
+      <div>
+        <p class="eyebrow">Your club</p>
+        <h2 class="team-name"><span class="team-city" data-bind="city"></span><br><span data-bind="team-name"></span></h2>
+      </div>
+      <div class="team-abbreviation" data-bind="abbreviation" aria-hidden="true"></div>
+      <div class="team-meta">
+        <span>RECORD <b data-bind="record"></b></span>
+        <span>FANS <b data-bind="fans"></b></span>
+        <span>CAP <b data-bind="cap"></b></span>
+      </div>
+    </section>
+    <section class="next-game">
+      <h2 data-bind="next-title"></h2>
+      <div class="versus"><span data-bind="player-name"></span><strong>VS</strong><span data-bind="opponent-name"></span></div>
+      <p class="venue" data-bind="venue"></p>
+    </section>
+  </div>
+  <nav class="menu-grid" aria-label="Club menu">
+    <button class="menu-button" data-action="roster"><span class="button-label">ROSTER</span></button>
+    <button class="menu-button" data-action="schedule"><span class="button-label">SCHEDULE</span></button>
+    <button class="menu-button primary" data-action="game" data-bind="play-button"><span class="button-label" data-bind="play-label">PLAY GAME</span></button>
+  </nav>
+</div>

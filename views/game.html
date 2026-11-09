@@ -1,0 +1,9 @@
+<section class="live-game">
+  <header class="game-scorebar" aria-label="Game score">
+    <span><span data-bind="home-team"></span> <strong data-bind="home-score"></strong></span>
+    <span>VS</span>
+    <span><strong data-bind="away-score"></strong> <span data-bind="away-team"></span></span>
+  </header>
+  <canvas id="game-canvas" class="game-canvas" width="960" height="540" tabindex="0" aria-label="Football field. Your player runs forward automatically. Hold W to move up and S to move down."></canvas>
+  <footer class="game-clockbar"><span data-bind="quarter"></span><span id="game-yard"></span><span id="game-clock"></span></footer>
+</section>

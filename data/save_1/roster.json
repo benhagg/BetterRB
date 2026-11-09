@@ -1,0 +1,89 @@
+{
+  "players": [
+    {
+      "id": "cc-0",
+      "name": "M. Cole",
+      "position": "QB",
+      "rating": 5,
+      "ratings": {
+        "strength": 5,
+        "speed": 5,
+        "stamina": 5,
+        "accuracy": 10
+      },
+      "portrait": 0,
+      "xp": 0
+    },
+    {
+      "id": "cc-1",
+      "name": "J. Rivers",
+      "position": "WR",
+      "rating": 5,
+      "ratings": {
+        "strength": 5,
+        "speed": 5,
+        "stamina": 5,
+        "catching": 5
+      },
+      "portrait": 1,
+      "xp": 0
+    },
+    {
+      "id": "cc-2",
+      "name": "T. Hayes",
+      "position": "WR",
+      "rating": 5,
+      "ratings": {
+        "strength": 5,
+        "speed": 5,
+        "stamina": 5,
+        "catching": 5
+      },
+      "portrait": 2,
+      "xp": 0
+    },
+    {
+      "id": "cc-3",
+      "name": "D. Brooks",
+      "position": "RB",
+      "rating": 5,
+      "ratings": {
+        "strength": 5,
+        "speed": 5,
+        "stamina": 5,
+        "catching": 5
+      },
+      "portrait": 3,
+      "xp": 0
+    },
+    {
+      "id": "cc-4",
+      "name": "A. Stone",
+      "position": "TE",
+      "rating": 5,
+      "ratings": {
+        "strength": 5,
+        "speed": 5,
+        "stamina": 5,
+        "catching": 5
+      },
+      "portrait": 5,
+      "xp": 0
+    },
+    {
+      "id": "cc-5",
+      "name": "K. Price",
+      "position": "K",
+      "rating": 5,
+      "ratings": {
+        "strength": 5,
+        "speed": 5,
+        "stamina": 5,
+        "accuracy": 5
+      },
+      "portrait": 6,
+      "xp": 0
+    }
+  ],
+  "ratingsScale": 10
+}

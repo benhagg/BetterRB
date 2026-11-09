@@ -1,0 +1,9 @@
+{
+  "name": "better-rb",
+  "version": "1.0.0",
+  "private": true,
+  "description": "better retro bowl",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

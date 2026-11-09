@@ -1,19 +1,17 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retro Bowl</title>
-    <style>
-      body {
-        background: black;
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-      }
-    </style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#101820">
+    <title>Better RB</title>
+    <link rel="stylesheet" href="./style.css">
   </head>
   <body>
-    <iframe src="/rb/index.html" style="position: fixed; inset: 0px; outline: none; border: none; height: 100%; width: 100%; overflow: hidden;"></iframe>
+    <main id="app" class="app-shell" aria-live="polite"></main>
+    <script src="./player-skills.js" defer></script>
+    <script src="./sprites.js" defer></script>
+    <script src="./game.js" defer></script>
+    <script src="./app.js" defer></script>
   </body>
 </html>
