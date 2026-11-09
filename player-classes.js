@@ -87,6 +87,9 @@
       this.lastDirX = 1;
       this.lastDirY = 0;
       this.autoRun = null;
+      this.velocityX = 0;
+      this.velocityY = 0;
+      this._movement = null;
     }
 
     movementStep(delta, requestedX, requestedY) {
@@ -96,6 +99,14 @@
         hasDirection: false,
         deceleration: null
       };
+
+      if (!this.isMoving && Math.hypot(this.velocityX || 0, (this.velocityY || 0) * LATERAL_YARDS) < 0.05) {
+        if (!movement.deceleration) {
+          movement.speedFactor = 0;
+          movement.hasDirection = false;
+        }
+      }
+
       const magnitude = Math.hypot(requestedX, requestedY);
       const agility = Math.max(0, Math.min(10, Number(this.agility ?? this.acceleration ?? this.rating) || 0));
       // Level 0 uses f(t) = 1 - exp(-1.3t); each agility level shortens the time scale by 5%.
@@ -108,6 +119,10 @@
         movement.deceleration.elapsed += delta;
         const t = movement.deceleration.elapsed;
         movement.speedFactor = t >= 1.2 ? 0 : movement.deceleration.startFactor * (1 - (t / 1.2) ** 2);
+        if (movement.speedFactor <= 0.001) {
+          movement.speedFactor = 0;
+          movement.deceleration = null;
+        }
       } else {
         const direction = { x: requestedX / magnitude, y: requestedY / magnitude };
         const dot = movement.direction.x * direction.x + movement.direction.y * direction.y;
@@ -135,6 +150,20 @@
       return { direction: movement.direction, step: this.speed * factor * delta, isMoving: factor > 0.001 };
     }
 
+    coastToStop(delta) {
+      if (this._movement && this._movement.speedFactor > 0.001) {
+        const movement = this.movementStep(delta, 0, 0);
+        this.x += movement.direction.x * movement.step;
+        this.y += (movement.direction.y * movement.step) / LATERAL_YARDS;
+        this.animDistance += movement.step;
+        this.isMoving = movement.isMoving;
+      } else {
+        this.isMoving = false;
+        this.velocityX = 0;
+        this.velocityY = 0;
+      }
+    }
+
     run(delta, targetX, targetY) {
       const dx = targetX - this.x;
       const dyYards = (targetY - this.y) * LATERAL_YARDS;
@@ -149,8 +178,7 @@
         this.facingLeft = movement.direction.x < 0;
         this.isMoving = movement.isMoving;
       } else {
-        this.movementStep(delta, 0, 0);
-        this.isMoving = false;
+        this.coastToStop(delta);
       }
     }
 
@@ -475,9 +503,7 @@
     runRoute(delta) {
       if (this.hasBall || this.isTackled) return;
       if (!this.route || this.routeIndex >= this.route.length) {
-        this.isMoving = false;
-        this.velocityX = 0;
-        this.velocityY = 0;
+        this.coastToStop(delta);
         return;
       }
 
@@ -492,9 +518,7 @@
       if (dist < 0.4) {
         this.routeIndex++;
         if (this.routeIndex >= this.route.length) {
-          this.isMoving = false;
-          this.velocityX = 0;
-          this.velocityY = 0;
+          this.coastToStop(delta);
           return;
         }
       }
@@ -519,9 +543,7 @@
     runRoute(delta) {
       if (this.hasBall || this.isTackled) return;
       if (!this.route || this.routeIndex >= this.route.length) {
-        this.isMoving = false;
-        this.velocityX = 0;
-        this.velocityY = 0;
+        this.coastToStop(delta);
         return;
       }
       const target = this.route[this.routeIndex];
@@ -531,9 +553,7 @@
       if (dist < 0.4) {
         this.routeIndex++;
         if (this.routeIndex >= this.route.length) {
-          this.isMoving = false;
-          this.velocityX = 0;
-          this.velocityY = 0;
+          this.coastToStop(delta);
           return;
         }
       }
@@ -561,9 +581,7 @@
       if (this.hasBall || this.isTackled) return;
       this.routeElapsed += delta;
       if (!this.route || this.routeIndex >= this.route.length) {
-        this.isMoving = false;
-        this.velocityX = 0;
-        this.velocityY = 0;
+        this.coastToStop(delta);
         return;
       }
       const target = this.route[this.routeIndex];
@@ -573,9 +591,7 @@
       if (dist < 0.4) {
         this.routeIndex++;
         if (this.routeIndex >= this.route.length) {
-          this.isMoving = false;
-          this.velocityX = 0;
-          this.velocityY = 0;
+          this.coastToStop(delta);
           return;
         }
       }
