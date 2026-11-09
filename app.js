@@ -565,13 +565,19 @@ function render() {
   if (screen === 'game' && gameSession) startGameLoop();
 }
 
+function randomDefensePlay() {
+  const dPlays = playbooks.defense?.plays;
+  if (!Array.isArray(dPlays) || !dPlays.length) return null;
+  return dPlays[Math.floor(Math.random() * dPlays.length)];
+}
+
 function beginNextGame() {
   activeScheduledGame = nextScheduledGame();
   if (!activeScheduledGame) return;
   setupPreSnapPlays();
   gameSession = playGame(seasonState.team, activeScheduledGame.opponent, null, {
     offense: activePlay || playbooks.offense?.plays?.[0],
-    defense: playbooks.defense?.plays?.[0]
+    defense: randomDefensePlay()
   });
   gameSession.state.week = activeScheduledGame.week;
   gameSession.state.isHome = activeScheduledGame.location === 'HOME';
@@ -731,7 +737,7 @@ window.addEventListener('keydown', event => {
         scrimmagePosition: currentFieldPos
       }, {
         offense: plays[selectedOffensivePlayIndex],
-        defense: playbooks.defense?.plays?.[0]
+        defense: randomDefensePlay()
       });
       gameSession.state.week = currentWeek;
       gameSession.state.isHome = currentHome;

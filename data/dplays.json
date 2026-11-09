@@ -2,21 +2,49 @@
   "plays": [
     {
       "id": "base-cover-2",
-      "name": "Base Cover 2",
-      "coverage": { "type": "cover-2-zone", "description": "Two deep defensive backs with underneath zone support." },
+      "name": "Base Cover 2 (Zone)",
+      "coverage": {
+        "type": "zone",
+        "scheme": "cover-2-zone",
+        "description": "Two deep safeties with underneath hook and flat zone coverage."
+      },
       "formation": {
         "defenders": [
-          { "position": "DL", "across": -0.09, "offset": 0.5 },
-          { "position": "DL", "across": -0.03, "offset": 0.5 },
-          { "position": "DL", "across": 0.03, "offset": 0.5 },
-          { "position": "DL", "across": 0.09, "offset": 0.5 },
-          { "position": "LB", "across": -0.30, "offset": 3 },
-          { "position": "LB", "across": -0.10, "offset": 3 },
-          { "position": "LB", "across": 0.10, "offset": 3 },
-          { "position": "LB", "across": 0.30, "offset": 3 },
-          { "position": "DB", "across": -0.42, "offset": 8 },
-          { "position": "DB", "across": 0, "offset": 8 },
-          { "position": "DB", "across": 0.42, "offset": 8 }
+          { "position": "DL", "role": "rush", "across": -0.09, "offset": 0.5 },
+          { "position": "DL", "role": "rush", "across": -0.03, "offset": 0.5 },
+          { "position": "DL", "role": "rush", "across": 0.03, "offset": 0.5 },
+          { "position": "DL", "role": "rush", "across": 0.09, "offset": 0.5 },
+          { "position": "LB", "role": "zone", "zone": "flat_top", "across": -0.30, "offset": 3.0 },
+          { "position": "LB", "role": "zone", "zone": "hook_top", "across": -0.10, "offset": 3.5 },
+          { "position": "LB", "role": "zone", "zone": "hook_bottom", "across": 0.10, "offset": 3.5 },
+          { "position": "LB", "role": "zone", "zone": "flat_bottom", "across": 0.30, "offset": 3.0 },
+          { "position": "DB", "role": "zone", "zone": "deep_top", "across": -0.35, "offset": 8.0 },
+          { "position": "DB", "role": "zone", "zone": "deep_middle", "across": 0.0, "offset": 10.0 },
+          { "position": "DB", "role": "zone", "zone": "deep_bottom", "across": 0.35, "offset": 8.0 }
+        ]
+      }
+    },
+    {
+      "id": "base-cover-1-man",
+      "name": "Cover 1 Man",
+      "coverage": {
+        "type": "man",
+        "scheme": "cover-1-man",
+        "description": "Man-to-man coverage across receivers with single high safety help."
+      },
+      "formation": {
+        "defenders": [
+          { "position": "DL", "role": "rush", "across": -0.09, "offset": 0.5 },
+          { "position": "DL", "role": "rush", "across": -0.03, "offset": 0.5 },
+          { "position": "DL", "role": "rush", "across": 0.03, "offset": 0.5 },
+          { "position": "DL", "role": "rush", "across": 0.09, "offset": 0.5 },
+          { "position": "LB", "role": "man", "manTarget": "RB", "across": -0.15, "offset": 3.5 },
+          { "position": "LB", "role": "man", "manTarget": "TE", "across": 0.15, "offset": 3.5 },
+          { "position": "LB", "role": "rush", "across": -0.28, "offset": 3.0 },
+          { "position": "DB", "role": "man", "manTarget": "WR1", "across": -0.42, "offset": 4.5 },
+          { "position": "DB", "role": "man", "manTarget": "WR2", "across": 0.42, "offset": 4.5 },
+          { "position": "DB", "role": "man", "manTarget": "WR3", "across": 0.25, "offset": 5.0 },
+          { "position": "DB", "role": "zone", "zone": "deep_free_safety", "across": 0.0, "offset": 11.0 }
         ]
       }
     }
