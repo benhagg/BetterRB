@@ -138,7 +138,7 @@ function home() {
   bindText(component, 'next-title', next ? `UP NEXT · WEEK ${next.week}` : 'SEASON COMPLETE');
   bindText(component, 'player-name', team.name.toUpperCase());
   bindText(component, 'opponent-name', next ? next.opponent.name.toUpperCase() : 'FINAL');
-  bindText(component, 'play-label', next ? seasonState.currentGame ? 'RESUME GAME' : 'PLAY GAME' : 'SEASON COMPLETE');
+  bindText(component, 'play-label', next ? 'PLAY GAME' : 'SEASON COMPLETE');
   component.querySelector('[data-bind="play-button"]').dataset.action = next ? 'game' : 'schedule';
   return component;
 }
@@ -232,8 +232,6 @@ function startGameLoop() {
   const context = canvas?.getContext('2d');
   if (!context) return;
   let previousTime = null;
-  let lastSave = null;
-  let savedPosition = `${gameSession.state.fieldPosition}:${gameSession.state.playerY}:${gameSession.state.clockSeconds}:${gameSession.state.phase}`;
   function frame(now) {
     if (screen !== 'game' || !gameSession) return;
     const seconds = previousTime === null ? 0 : (now - previousTime) / 1000;
@@ -245,13 +243,6 @@ function startGameLoop() {
     gameSession.draw(context, canvas.width, canvas.height);
     const clock = app.querySelector('#game-clock');
     if (clock) clock.textContent = formatClock(gameSession.state.clockSeconds);
-    if (lastSave === null) lastSave = now;
-    const position = `${gameSession.state.fieldPosition}:${gameSession.state.playerY}:${gameSession.state.clockSeconds}:${gameSession.state.phase}`;
-    if (now - lastSave >= 2000 && position !== savedPosition) {
-      lastSave = now;
-      savedPosition = position;
-      persistState().catch(error => console.error(error));
-    }
     gameFrame = requestAnimationFrame(frame);
   }
   gameFrame = requestAnimationFrame(frame);
@@ -259,7 +250,6 @@ function startGameLoop() {
 
 function render() {
   stopGameLoop();
-  if (screen === 'game' && !gameSession && seasonState?.currentGame) resumeCurrentGame();
   if (screen === 'game' && !gameSession) screen = 'home';
   document.body.classList.toggle('game-mode', screen === 'game' && !!gameSession);
   if (!seasonState) return;
@@ -273,26 +263,12 @@ function render() {
   if (screen === 'game' && gameSession) startGameLoop();
 }
 
-function resumeCurrentGame() {
-  const saved = seasonState.currentGame;
-  activeScheduledGame = seasonState.schedule.find(game => game.week === saved.week);
-  if (!activeScheduledGame) return;
-  gameSession = playGame(saved.team1, saved.team2, saved);
-}
-
 function beginNextGame() {
   activeScheduledGame = nextScheduledGame();
   if (!activeScheduledGame) return;
-  if (seasonState.currentGame) {
-    const saved = seasonState.currentGame;
-    activeScheduledGame = seasonState.schedule.find(game => game.week === saved.week) || activeScheduledGame;
-    gameSession = playGame(saved.team1, saved.team2, saved);
-  } else {
-    gameSession = playGame(seasonState.team, activeScheduledGame.opponent);
-    gameSession.state.week = activeScheduledGame.week;
-  }
+  gameSession = playGame(seasonState.team, activeScheduledGame.opponent);
+  gameSession.state.week = activeScheduledGame.week;
   gameSession.state.isHome = activeScheduledGame.location === 'HOME';
-  seasonState.currentGame = gameSession.state;
   screen = 'game';
 }
 
@@ -300,7 +276,8 @@ function leaveGame() {
   if (screen !== 'game') return;
   stopGameLoop();
   navigate('/');
-  persistState().catch(error => console.error(error));
+  gameSession = null;
+  activeScheduledGame = null;
   if (gameFullscreen && document.fullscreenElement && document.exitFullscreen) {
     document.exitFullscreen().catch(error => console.error(error));
   }
@@ -349,13 +326,11 @@ app.addEventListener('click', async event => {
     if (screen === 'game') {
       requestGameFullscreen();
       navigate('/game');
-      persistState().catch(error => console.error(error));
       return;
     }
   } else if (action === 'restart-run' && gameSession) {
     stopGameLoop();
     gameSession.reset();
-    await persistState();
   }
   render();
 });
@@ -387,7 +362,6 @@ window.addEventListener('keydown', event => {
     stopGameLoop();
     gameSession.reset();
     render();
-    persistState().catch(error => console.error(error));
     return;
   }
   if (screen === 'game' && ['w', 's', 'a', 'd'].includes(key)) {

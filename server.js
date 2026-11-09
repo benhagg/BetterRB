@@ -118,8 +118,7 @@ function initialState(uniforms, opponentRosters) {
     ratingsScale: 10,
     team,
     record: { wins: 0, losses: 0, ties: 0, pointsFor: 0, pointsAgainst: 0 },
-    schedule: scheduleFor(20, uniforms, opponentRosters),
-    currentGame: null
+    schedule: scheduleFor(20, uniforms, opponentRosters)
   };
 }
 
@@ -143,9 +142,13 @@ function loadState() {
     refresh = true;
   }
   if (hadEmbeddedRoster) refresh = true;
+  if (Object.hasOwn(state, 'currentGame')) {
+    delete state.currentGame;
+    refresh = true;
+  }
   // Preserve the previous franchise before starting Arizona's schedule.
   if (state.team.id === 0 && state.team.name === 'Comets') {
-    if (state.currentGame || state.schedule?.some(game => game.played)) {
+    if (state.schedule?.some(game => game.played)) {
       fs.mkdirSync(archiveDir, { recursive: true });
       const archiveFile = path.join(archiveDir, `season-comets-${Date.now()}.json`);
       fs.copyFileSync(stateFile, archiveFile, fs.constants.COPYFILE_EXCL);
@@ -154,12 +157,7 @@ function loadState() {
     state.team = { ...makeTeam(20, uniforms, opponentRosters), city: 'Arizona', name: 'Cardinals', fans: previous.fans, cap: previous.cap, players: previous.players };
     state.schedule = scheduleFor(20, uniforms, opponentRosters);
     state.record = { wins: 0, losses: 0, ties: 0, pointsFor: 0, pointsAgainst: 0 };
-    state.currentGame = null;
     refresh = true;
-  }
-  if (state.currentGame?.team1) {
-    state.currentGame.team1.players = state.team.players;
-    state.currentGame.team1.ratingsScale = 10;
   }
   if (!Array.isArray(state.schedule) || state.schedule.length === 0) {
     state.schedule = scheduleFor(state.team?.id ?? 0, uniforms, opponentRosters);
@@ -170,10 +168,6 @@ function loadState() {
       if (Array.isArray(game.opponent?.players)) refresh = true;
       game.opponent = makeTeam(game.opponentId, uniforms, opponentRosters);
     }
-  }
-  if (state.currentGame?.team2?.id !== undefined) {
-    if (Array.isArray(state.currentGame.team2.players)) refresh = true;
-    state.currentGame.team2 = makeTeam(state.currentGame.team2.id, uniforms, opponentRosters);
   }
   if (stripTeamColors(state)) refresh = true;
   applyTeamColors(state, uniforms);
@@ -209,7 +203,7 @@ function loadRoster(legacyPlayers, sourceScale) {
 function ensureOpponentRatings(state) {
   let changed = false;
   const scale = state.ratingsScale === 10 ? 10 : 100;
-  const opponents = [...(state.schedule || []).map(game => game.opponent), state.currentGame?.team2];
+  const opponents = (state.schedule || []).map(game => game.opponent);
   for (const team of opponents) {
     if (!team) continue;
     const teamScale = team.ratingsScale === 10 ? 10 : scale;
@@ -238,21 +232,20 @@ function syncSaveHistory(state) {
 function saveState(state) {
   fs.mkdirSync(path.dirname(stateFile), { recursive: true });
   const saved = structuredClone(state);
+  delete saved.currentGame;
   ensureOpponentRatings(saved);
   removeMascots(saved);
   stripTeamColors(saved);
   delete saved.team.players;
-  if (saved.currentGame?.team1) delete saved.currentGame.team1.players;
   for (const game of saved.schedule || []) {
     if (game.opponent) delete game.opponent.players;
   }
-  if (saved.currentGame?.team2) delete saved.currentGame.team2.players;
   fs.writeFileSync(stateFile, `${JSON.stringify(saved, null, 2)}\n`, 'utf8');
   syncSaveHistory(saved);
 }
 
 function savedTeams(state) {
-  return [state.team, ...(state.schedule || []).map(game => game.opponent), state.currentGame?.team1, state.currentGame?.team2].filter(Boolean);
+  return [state.team, ...(state.schedule || []).map(game => game.opponent)].filter(Boolean);
 }
 
 function stripTeamColors(state) {

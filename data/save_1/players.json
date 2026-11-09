@@ -1,0 +1,4 @@
+{
+  "_comment": "Reserved for persistent player statistics recorded after completed games. Live game statistics remain in memory until then.",
+  "players": {}
+}

@@ -1,5 +1,5 @@
 (function (root) {
-  const LATERAL_YARDS = 35; // Arcade-tuned lateral field width (35 yards sideline to sideline)
+  const LATERAL_YARDS = 17; // Playable sideline-to-sideline width used for movement scaling.
 
   function speedMultiplier(position) {
     if (typeof PlayerSkills !== 'undefined' && typeof PlayerSkills.speedMultiplier === 'function') {
@@ -33,7 +33,7 @@
       this.rating = Number.isFinite(config.rating) ? config.rating : 5;
       this.speedMultiplier = speedMultiplier(this.position);
       // Global tempo is intentionally half-speed while the core play systems are built.
-      this.speed = (4 + this.rating * 0.8) * this.speedMultiplier * 0.5;
+      this.speed = (6 + this.rating * 0.2) * this.speedMultiplier * 0.5;
       this.kind = config.kind ?? kindForPosition(this.position);
 
       this.x = Number.isFinite(config.x) ? config.x : 22;

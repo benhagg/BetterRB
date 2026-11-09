@@ -125,6 +125,7 @@ window.playGame = function playGame(team1, team2, savedState = null) {
       route: [{ dx: 35, dy: 0 }] // Go / Streak
     }
   ];
+  const runningBackRoute = [{ dx: 3, dy: 0.12 }, { dx: 12, dy: 0.12 }];
 
   function createReceivers() {
     const used = new Set();
@@ -186,7 +187,8 @@ window.playGame = function playGame(team1, team2, savedState = null) {
     const back = new RunningBack({
       id: player?.id ?? 'rb', name: player?.name ?? 'RB', position: 'RB',
       rating: Number.isFinite(player?.ratings?.speed) ? player.ratings.speed : 5,
-      x: state.scrimmagePosition - 4.5, y: 0.63
+      x: state.scrimmagePosition - 4.5, y: 0.63,
+      route: runningBackRoute
     });
     back.offset = -4.5;
     back.across = .13;
@@ -228,6 +230,11 @@ window.playGame = function playGame(team1, team2, savedState = null) {
     });
     state.runningBack.x = state.scrimmagePosition + state.runningBack.offset;
     state.runningBack.y = 0.5 + state.runningBack.across;
+    state.runningBack.startX = state.runningBack.x;
+    state.runningBack.startY = state.runningBack.y;
+    state.runningBack.route = runningBackRoute;
+    state.runningBack.routeIndex = 0;
+    state.runningBack.hasBall = false;
     state.runningBack.phase = 'preplay';
     state.defenders.forEach((def, index) => {
       const slot = defensiveFormationSlots[index];
@@ -316,6 +323,7 @@ window.playGame = function playGame(team1, team2, savedState = null) {
       for (const rec of state.receivers) {
         rec.runRoute(delta);
       }
+      state.runningBack.runRoute(delta);
     }
     if (state.phase !== 'complete') {
       state.clockSeconds = Math.max(0, state.clockSeconds - delta);
@@ -403,8 +411,12 @@ window.playGame = function playGame(team1, team2, savedState = null) {
     const horizontalScale = width / 300;
     const verticalScale = height / field.height;
     const { pixel, lineOffset, playerX } = camera(width, height);
-    state.qbYard = state.fieldPosition - lineOffset / (field.pixelsPerYard * horizontalScale);
-    const playerPosition = field.goalLine + state.fieldPosition * field.pixelsPerYard;
+    const passProgress = (state.phase === 'thrown' || state.phase === 'complete') && state.pass ? state.pass.progress : null;
+    const cameraYard = passProgress === null
+      ? state.fieldPosition
+      : state.pass.fromX + (state.pass.targetX - state.pass.fromX) * passProgress;
+    const cameraOriginYard = cameraYard - lineOffset / (field.pixelsPerYard * horizontalScale);
+    const playerPosition = field.goalLine + cameraYard * field.pixelsPerYard;
     if (fieldImage.complete && fieldImage.naturalWidth) {
       ctx.save();
       ctx.setTransform(horizontalScale, 0, 0, verticalScale, playerX + lineOffset - playerPosition * horizontalScale, 0);
@@ -414,24 +426,43 @@ window.playGame = function playGame(team1, team2, savedState = null) {
 
     const offense = uniformForTeam(team1);
     const defense = uniformForTeam(team2);
-    const lineX = playerX + lineOffset + (state.scrimmagePosition - state.fieldPosition) * field.pixelsPerYard * horizontalScale;
+    const lineX = playerX + (state.scrimmagePosition - cameraOriginYard) * field.pixelsPerYard * horizontalScale;
     const top = field.topSideline * verticalScale;
     const bottom = field.bottomSideline * verticalScale;
     ctx.fillStyle = 'rgba(92, 174, 255, .65)';
     ctx.fillRect(lineX, top, Math.max(1, pixel), bottom - top);
     const screenCoordinates = actor => ({
-      screenX: playerX + (actor.x - state.qbYard) * field.pixelsPerYard * horizontalScale,
+      screenX: playerX + (actor.x - cameraOriginYard) * field.pixelsPerYard * horizontalScale,
       screenY: top + actor.y * (bottom - top)
     });
+    if (state.phase === 'preplay') {
+      const drawRoute = player => {
+        if (!player.route?.length) return;
+        ctx.save();
+        ctx.strokeStyle = '#ffe35c';
+        ctx.lineWidth = Math.max(1, pixel);
+        ctx.setLineDash([4 * pixel, 3 * pixel]);
+        ctx.beginPath();
+        const start = screenCoordinates(player);
+        ctx.moveTo(start.screenX, start.screenY);
+        for (const waypoint of player.route) {
+          const point = screenCoordinates({ x: player.startX + waypoint.dx, y: player.startY + waypoint.dy });
+          ctx.lineTo(point.screenX, point.screenY);
+        }
+        ctx.stroke();
+        ctx.restore();
+      };
+      state.receivers.forEach(drawRoute);
+      drawRoute(state.runningBack);
+    }
     for (const lineman of state.offensiveLine) lineman.draw(ctx, screenCoordinates(lineman), pixel, offense);
     state.runningBack.draw(ctx, screenCoordinates(state.runningBack), pixel, offense);
     for (const receiver of state.receivers) receiver.draw(ctx, screenCoordinates(receiver), pixel, offense);
     for (const defender of state.defenders) defender.draw(ctx, screenCoordinates(defender), pixel, defense);
-    state.quarterback.draw(ctx, { screenX: playerX, screenY: top + state.quarterback.y * (bottom - top) }, pixel, offense);
-    if ((state.phase === 'thrown' || state.phase === 'complete') && state.pass && RetroSprites.footballImage.complete && RetroSprites.footballImage.naturalWidth) {
-      const p = state.pass.progress;
-      const ballX = playerX + (state.pass.fromX + (state.pass.targetX - state.pass.fromX) * p - state.qbYard) * field.pixelsPerYard * horizontalScale;
-      const ballY = top + (state.pass.fromY + (state.pass.targetY - state.pass.fromY) * p) * (bottom - top);
+    state.quarterback.draw(ctx, screenCoordinates(state.quarterback), pixel, offense);
+    if (passProgress !== null && RetroSprites.footballImage.complete && RetroSprites.footballImage.naturalWidth) {
+      const ballX = playerX + (cameraYard - cameraOriginYard) * field.pixelsPerYard * horizontalScale;
+      const ballY = top + (state.pass.fromY + (state.pass.targetY - state.pass.fromY) * passProgress) * (bottom - top);
       ctx.drawImage(RetroSprites.footballImage, ballX - 10 * pixel, ballY - 5 * pixel, 20 * pixel, 10 * pixel);
     }
   }

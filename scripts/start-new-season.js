@@ -151,13 +151,12 @@ function buildSeason() {
     ratingsScale: 10,
     team: { ...teamSummary(cardinals), city: 'Arizona', name: 'Cardinals', fans: 18420, cap: 32 },
     record: { wins: 0, losses: 0, ties: 0, pointsFor: 0, pointsAgainst: 0 },
-    schedule,
-    currentGame: null
+    schedule
   };
 }
 
 function validateSeason(season) {
-  if (season.currentWeek !== 1 || season.currentGame !== null) throw new Error('New season state is invalid');
+  if (season.currentWeek !== 1) throw new Error('New season state is invalid');
   if (!season.schedule.length || season.schedule.some(game => game.played || game.score !== null)) {
     throw new Error('New schedule must contain only unplayed games');
   }
