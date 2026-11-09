@@ -385,7 +385,13 @@
     }
 
     block(target = null) {
-      // Empty for now; to be implemented later
+      this.isMoving = false;
+      this.velocityX = 0;
+      this.velocityY = 0;
+      if (this._movement) {
+        this._movement.speedFactor = 0;
+      }
+      this.blockingTarget = target;
     }
 
     tackled() {
