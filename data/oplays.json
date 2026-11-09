@@ -8,6 +8,14 @@
       { "dx": 8, "dy": 0 },
       { "dx": 22, "dy": 0.18 }
     ],
+    "post_left": [
+      { "dx": 8, "dy": 0 },
+      { "dx": 22, "dy": -0.18 }
+    ],
+    "post_right": [
+      { "dx": 8, "dy": 0 },
+      { "dx": 22, "dy": 0.18 }
+    ],
     "down_in_5": [
       { "dx": 5, "dy": 0 },
       { "dx": 14, "dy": 0.12 }
@@ -28,12 +36,36 @@
       { "dx": 4, "dy": 0 },
       { "dx": 16, "dy": -0.18 }
     ],
+    "slant_left": [
+      { "dx": 4, "dy": 0 },
+      { "dx": 16, "dy": -0.18 }
+    ],
+    "slant_right": [
+      { "dx": 4, "dy": 0 },
+      { "dx": 16, "dy": 0.18 }
+    ],
     "go": [
       { "dx": 35, "dy": 0 }
     ],
     "flat": [
       { "dx": 3, "dy": 0.12 },
       { "dx": 12, "dy": 0.12 }
+    ],
+    "check_release": [
+      { "dx": 2, "dy": -0.05 },
+      { "dx": 9, "dy": 0 }
+    ],
+    "flat_left": [
+      { "dx": 2, "dy": -0.12 },
+      { "dx": 8, "dy": -0.30 }
+    ],
+    "flat_right": [
+      { "dx": 2, "dy": 0.12 },
+      { "dx": 8, "dy": 0.30 }
+    ],
+    "checkdown": [
+      { "dx": 2, "dy": 0.05 },
+      { "dx": 6, "dy": 0.15 }
     ]
   },
   "plays": [
@@ -78,40 +110,28 @@
             "position": "WR",
             "across": -0.38,
             "offset": -0.5,
-            "route": [
-              { "dx": 10, "dy": 0 },
-              { "dx": 26, "dy": 0.18 }
-            ]
+            "route": "comeback"
           },
           {
             "receiverNumber": 2,
             "position": "WR",
             "across": -0.22,
             "offset": -0.5,
-            "route": [
-              { "dx": 8, "dy": 0 },
-              { "dx": 6.5, "dy": 0.02 }
-            ]
+            "route": "post_left"
           },
           {
             "receiverNumber": 4,
             "position": "TE",
             "across": 0.12,
             "offset": -0.5,
-            "route": [
-              { "dx": 6, "dy": 0 },
-              { "dx": 6.5, "dy": -0.10 }
-            ]
+            "route": "slant_left"
           },
           {
             "receiverNumber": 5,
             "position": "WR",
             "across": 0.38,
             "offset": -0.5,
-            "route": [
-              { "dx": 8, "dy": 0 },
-              { "dx": 8.5, "dy": 0.07 }
-            ]
+            "route": "post_left"
           }
         ],
         "runningBack": {
@@ -119,10 +139,7 @@
           "position": "RB",
           "across": -0.05,
           "offset": -4.5,
-          "route": [
-            { "dx": 2, "dy": -0.05 },
-            { "dx": 9, "dy": 0 }
-          ]
+          "route": "check_release"
         }
       }
     },
@@ -246,28 +263,28 @@
             "position": "WR",
             "across": -0.42,
             "offset": -0.5,
-            "route": [{ "dx": 35, "dy": 0 }]
+            "route": "go"
           },
           {
             "receiverNumber": 2,
             "position": "WR",
             "across": -0.20,
             "offset": -0.5,
-            "route": [{ "dx": 35, "dy": 0 }]
+            "route": "go"
           },
           {
             "receiverNumber": 4,
             "position": "TE",
             "across": 0.20,
             "offset": -0.5,
-            "route": [{ "dx": 35, "dy": 0 }]
+            "route": "go"
           },
           {
             "receiverNumber": 5,
             "position": "WR",
             "across": 0.42,
             "offset": -0.5,
-            "route": [{ "dx": 35, "dy": 0 }]
+            "route": "go"
           }
         ],
         "runningBack": {
@@ -275,10 +292,7 @@
           "position": "RB",
           "across": 0.12,
           "offset": -4.5,
-          "route": [
-            { "dx": 3, "dy": 0.12 },
-            { "dx": 8, "dy": 0.12 }
-          ]
+          "route": "checkdown"
         }
       }
     }

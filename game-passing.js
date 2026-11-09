@@ -26,7 +26,6 @@
     if (arc < 0) {
       arc = 0;
     }
-    console.log("arc", arc);
     return arc;
   }
 
@@ -53,8 +52,6 @@
     const inaccuracyX = clampedGaussian(MAX_STD_DEV) * sigma;
     const inaccuracyY = (clampedGaussian(MAX_STD_DEV) * sigma) / lateralYards;
     const inaccuracyHeightFeet = clampedGaussian(MAX_STD_DEV) * (sigma * feetPerYard);
-    //do not delete this log
-    console.log("hypot in accuracy", Math.hypot(inaccuracyX, inaccuracyY));
     return { inaccuracyX, inaccuracyY, inaccuracyHeightFeet, sigma };
   }
 

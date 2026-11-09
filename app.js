@@ -63,13 +63,33 @@ async function initialize() {
       views.set(viewNames[i], template.content);
     }
     seasonState = state;
-    playbooks = { offense: offensePlays, defense: defensePlays };
+    playbooks = {
+      offense: expandPlaybookRoutes(offensePlays),
+      defense: expandPlaybookRoutes(defensePlays)
+    };
     applyRoute();
     render();
   } catch (error) {
     app.textContent = 'Unable to load the game. Please refresh.';
     console.error(error);
   }
+}
+
+// Expand reusable route names once when the playbook loads. The game engine and
+// route preview continue to receive the existing array-of-waypoints format.
+function expandPlaybookRoutes(playbook) {
+  const routes = playbook?.routes || {};
+  const expand = value => {
+    if (Array.isArray(value)) return value.map(expand);
+    if (!value || typeof value !== 'object') return value;
+    const copy = {};
+    for (const [key, child] of Object.entries(value)) copy[key] = expand(child);
+    if (typeof copy.route === 'string' && Array.isArray(routes[copy.route])) {
+      copy.route = routes[copy.route].map(waypoint => ({ ...waypoint }));
+    }
+    return copy;
+  };
+  return { ...playbook, plays: (playbook.plays || []).map(expand) };
 }
 
 function applyRoute(pathname = window.location.pathname) {
