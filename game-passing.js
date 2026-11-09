@@ -7,8 +7,8 @@
 
   // Inaccuracy base & distance coefficients (less is more accurate)
   const C_BASE = 0.15;
-  const ALPHA = 0.00417;
-  const BETA = 0.00192;
+  const ALPHA = 0.00317;
+  const BETA = 0.00132;
 
   // Running while throwing penalty multiplier (recommended 1.25, range 1.1 - 1.3)
   const RUNNING_THROW_INACCURACY_MULTIPLIER = 1.25;
