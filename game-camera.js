@@ -1,5 +1,5 @@
 (function (root) {
-  function create({ state, field, fieldBounds, cameraTrailingYards = 5, ballCarrier }) {
+  function create({ state, field, fieldBounds, cameraTrailingYards = 5, runnerTrailingYards = 15, ballCarrier }) {
     function metrics(width, height) {
       const pixel = Math.max(1, Math.min(Math.round(height / 180), Math.floor(width / 360)));
       return { pixel };
@@ -10,7 +10,8 @@
       const trackingYard = passProgress === null
         ? (ballCarrier()?.x ?? state.fieldPosition)
         : state.pass.fromX + (state.pass.targetX - state.pass.fromX) * passProgress;
-      return Math.max(state.scrimmagePosition, trackingYard) - cameraTrailingYards;
+      const initialOrigin = state.scrimmagePosition - cameraTrailingYards;
+      return Math.max(initialOrigin, trackingYard - runnerTrailingYards);
     }
 
     function canvasCoordsToField(canvasX, canvasY, width = 960, height = 540) {

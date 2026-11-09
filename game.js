@@ -2,6 +2,7 @@
 // currently the top bottom and each end zone of the field are these numbers. out of bounds is anything outside of the top / bottom range and a touchdown is anything in the end zone we are going towards
 const fieldBounds = {top: -.02, bottom: 0.95, endZoneL: 2.217644291800185, endZoneR: 101.66747130270615};
 const cameraTrailingYards = 5;
+const runnerTrailingYards = 15;
 const lateralYards = 17;
 
 window.playGame = function playGame(team1, team2, savedState = null, selectedPlays = {}) {
@@ -314,7 +315,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     return state.quarterback.x < state.scrimmagePosition;
   }
 
-  const camera = GameCamera.create({ state, field, fieldBounds, cameraTrailingYards, ballCarrier });
+  const camera = GameCamera.create({ state, field, fieldBounds, cameraTrailingYards, runnerTrailingYards, ballCarrier });
   const passing = GamePassing.create({ state, lateralYards, fieldBounds, passTarget, quarterbackIsBehindLineOfScrimmage });
 
   function isTargetInFrontCone(player, targetX, targetY, maxDist = 5, coneAngleDeg = 60) {
