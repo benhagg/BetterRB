@@ -14,9 +14,25 @@
 
   function speedMultiplier(position) {
     const code = String(position || '').trim().toUpperCase();
-    if (['RB', 'WR', 'DB', 'CB', 'S', 'FS', 'SS', 'NB'].includes(code)) return 1.0;
-    if (['QB', 'LB', 'TE', 'ILB', 'MLB', 'OLB', 'SLB', 'WLB'].includes(code)) return 0.85;
-    if (['OL', 'DL', 'DT', 'DE', 'NT', 'EDGE', 'OT', 'OG', 'C', 'G', 'T', 'LINEMAN'].includes(code)) return 0.7;
+    if (['RB', 'WR', 'DB'].includes(code)) return 1.0;
+    if (['QB', 'LB', 'TE'].includes(code)) return 0.85;
+    if (['OL', 'DL'].includes(code)) return 0.7;
+    return 1.0;
+  }
+
+  function strengthMultiplier(position) {
+    const code = String(position || '').trim().toUpperCase();
+    if (['RB', 'WR', 'DB', 'QB'].includes(code)) return 0.6;
+    if (['LB', 'TE'].includes(code)) return 0.85;
+    if (['OL', 'DL'].includes(code)) return 1.0;
+    return 1.0;
+  }
+
+  function agilityMultiplier(position) {
+    const code = String(position || '').trim().toUpperCase();
+    if (['RB', 'WR', 'DB'].includes(code)) return 1;
+    if (['QB', 'LB', 'TE'].includes(code)) return 0.85;
+    if (['OL', 'DL'].includes(code)) return 0.6;
     return 1.0;
   }
 
