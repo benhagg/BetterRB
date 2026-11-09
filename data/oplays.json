@@ -1,4 +1,41 @@
 {
+  "routes": {
+    "comeback": [
+      { "dx": 8, "dy": 0 },
+      { "dx": 6.5, "dy": 0.02 }
+    ],
+    "post": [
+      { "dx": 8, "dy": 0 },
+      { "dx": 22, "dy": 0.18 }
+    ],
+    "down_in_5": [
+      { "dx": 5, "dy": 0 },
+      { "dx": 14, "dy": 0.12 }
+    ],
+    "down_in_10": [
+      { "dx": 10, "dy": 0 },
+      { "dx": 20, "dy": 0.18 }
+    ],
+    "down_out_5": [
+      { "dx": 5, "dy": 0 },
+      { "dx": 14, "dy": -0.12 }
+    ],
+    "down_out_10": [
+      { "dx": 10, "dy": 0 },
+      { "dx": 20, "dy": -0.18 }
+    ],
+    "slant": [
+      { "dx": 4, "dy": 0 },
+      { "dx": 16, "dy": -0.18 }
+    ],
+    "go": [
+      { "dx": 35, "dy": 0 }
+    ],
+    "flat": [
+      { "dx": 3, "dy": 0.12 },
+      { "dx": 12, "dy": 0.12 }
+    ]
+  },
   "plays": [
     {
       "id": "ace-cross",
@@ -14,12 +51,12 @@
           { "position": "OL", "across": 0.08, "offset": -0.6 }
         ],
         "receivers": [
-          { "receiverNumber": 1, "position": "WR", "across": -0.43, "offset": -0.5, "route": [{ "dx": 8, "dy": 0 }, { "dx": 22, "dy": 0.18 }] },
-          { "receiverNumber": 2, "position": "TE", "across": -0.28, "offset": -0.5, "route": [{ "dx": 5, "dy": 0 }, { "dx": 14, "dy": -0.12 }] },
-          { "receiverNumber": 4, "position": "WR", "across": 0.28, "offset": -0.5, "route": [{ "dx": 4, "dy": 0 }, { "dx": 16, "dy": -0.18 }] },
-          { "receiverNumber": 5, "position": "WR", "across": 0.43, "offset": -0.5, "route": [{ "dx": 35, "dy": 0 }] }
+          { "receiverNumber": 1, "position": "WR", "across": -0.43, "offset": -0.5, "route": "post" },
+          { "receiverNumber": 2, "position": "TE", "across": -0.28, "offset": -0.5, "route": "down_out_5" },
+          { "receiverNumber": 4, "position": "WR", "across": 0.28, "offset": -0.5, "route": "slant" },
+          { "receiverNumber": 5, "position": "WR", "across": 0.43, "offset": -0.5, "route": "go" }
         ],
-        "runningBack": { "receiverNumber": 3, "position": "RB", "across": 0.13, "offset": -4.5, "route": [{ "dx": 3, "dy": 0.12 }, { "dx": 12, "dy": 0.12 }] }
+        "runningBack": { "receiverNumber": 3, "position": "RB", "across": 0.13, "offset": -4.5, "route": "flat" }
       }
     },
     {
