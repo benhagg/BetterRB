@@ -193,47 +193,54 @@ body.game-mode { overflow: hidden; }
 /* Pre-Snap Play Options Overlay */
 .play-select-overlay {
   position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 50%;
+  right: 14px;
+  transform: translateY(-50%);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 8px;
+  align-items: flex-end;
+  gap: 6px;
   z-index: 50;
   pointer-events: auto;
   user-select: none;
+  max-height: calc(100% - 46px);
 }
 .play-select-overlay.hidden {
   display: none !important;
 }
 .play-select-header {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 4px 14px;
-  background: rgba(16, 26, 32, 0.92);
+  justify-content: center;
+  gap: 2px;
+  padding: 4px 8px;
+  background: rgba(16, 26, 32, 0.94);
   border: 2px solid #3c5446;
   border-radius: 3px;
   color: #fff;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
 }
 .play-select-title {
-  font: 11px/1.5 'Press Start 2P', monospace;
+  font: 10px/1.3 'Press Start 2P', monospace;
   color: #ffe18a;
   letter-spacing: 1px;
 }
 .play-select-hint {
-  font: 16px/1 'VT323', monospace;
+  font: 14px/1 'VT323', monospace;
   color: #a7b6a2;
 }
 .play-cards-row {
   display: flex;
-  gap: 12px;
-  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
 }
 .play-card {
-  width: 200px;
-  height: 165px;
+  width: 190px;
+  height: 125px;
   background: rgba(14, 25, 30, 0.94);
   border: 2px solid #395244;
   border-radius: 4px;
@@ -245,33 +252,33 @@ body.game-mode { overflow: hidden; }
   transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
 }
 .play-card:hover {
-  transform: translateY(-4px);
+  transform: translateX(-4px);
   border-color: #ffe18a;
 }
 .play-card.selected {
   border-color: #00e676;
   box-shadow: 0 0 14px rgba(0, 230, 118, 0.6), inset 0 0 8px rgba(0, 230, 118, 0.15);
-  transform: translateY(-2px);
+  transform: translateX(-2px);
 }
 .play-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 8px;
+  padding: 4px 8px;
   background: #102128;
   border-bottom: 1px solid #233c32;
 }
 .play-card-name {
-  font: 9px/1.4 'Press Start 2P', monospace;
+  font: 8px/1.3 'Press Start 2P', monospace;
   color: #ffffff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 130px;
+  max-width: 125px;
 }
 .play-card-type-badge {
   font: 8px/1.2 'Press Start 2P', monospace;
-  padding: 2px 5px;
+  padding: 2px 4px;
   border-radius: 2px;
 }
 .play-card-type-badge.pass {
@@ -284,23 +291,25 @@ body.game-mode { overflow: hidden; }
 }
 .play-card-diagram {
   flex: 1;
-  padding: 4px;
+  padding: 2px 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #14271f;
+  min-height: 0;
 }
 .play-card-diagram svg {
   width: 100%;
   height: 100%;
   display: block;
+  max-height: 70px;
 }
 .play-card-footer {
-  padding: 4px 6px;
+  padding: 3px 6px;
   background: #0d1a20;
   border-top: 1px solid #1f362c;
   text-align: center;
-  font: 14px/1 'VT323', monospace;
+  font: 13px/1 'VT323', monospace;
   color: #8da394;
 }
 .play-card.selected .play-card-footer {
@@ -312,4 +321,9 @@ body.game-mode { overflow: hidden; }
   .game-scorebar { min-height: 34px; padding: 3px 10px; font-size: 18px; }
   .game-teams { gap: 8px; }
   .game-clock { gap: 6px; }
+  .play-card { width: 140px; height: 100px; }
+  .play-card-name { font-size: 7px; max-width: 90px; }
+  .play-select-header { padding: 3px 6px; }
+  .play-select-title { font-size: 8px; }
+  .play-select-hint { font-size: 12px; }
 }
