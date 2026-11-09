@@ -437,32 +437,24 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     if (!carrier || carrier.isTackled) return;
 
     const isPocketQb = (carrier === state.quarterback && state.phase === 'passing');
+    const hasInput = Boolean(input.right || input.left || input.down || input.up);
+    let dx = Number(Boolean(input.right)) - Number(Boolean(input.left));
+    let dy = Number(Boolean(input.down)) - Number(Boolean(input.up));
 
     if (isPocketQb) {
       // QB in the pocket: requires holding keys to move; stays stationary when released
-      const hasInput = Boolean(input.right || input.left || input.down || input.up);
-      let dx = Number(Boolean(input.right)) - Number(Boolean(input.left));
-      let dy = Number(Boolean(input.down)) - Number(Boolean(input.up));
       if (hasInput && (dx !== 0 || dy !== 0)) {
         carrier.move(delta, dx, dy);
       } else {
         carrier.coastToStop(delta);
       }
     } else {
-      // Ball carrier downfield: single-click steering runs indefinitely until next click
-      if (input.carrierDir && (input.carrierDir.dx !== 0 || input.carrierDir.dy !== 0)) {
-        carrier.autoRun = { vx: input.carrierDir.dx, vy: input.carrierDir.dy };
-      } else if (!carrier.autoRun) {
-        const hasInput = Boolean(input.right || input.left || input.down || input.up);
-        if (hasInput) {
-          let dx = Number(Boolean(input.right)) - Number(Boolean(input.left));
-          let dy = Number(Boolean(input.down)) - Number(Boolean(input.up));
-          if (dx !== 0 || dy !== 0) {
-            carrier.autoRun = { vx: dx, vy: dy };
-          }
-        }
+      // Ball carrier downfield:
+      // While holding keys, move according to input and remember the last commanded direction
+      if (hasInput && (dx !== 0 || dy !== 0)) {
+        carrier.autoRun = { vx: dx, vy: dy };
       }
-
+      // Continue moving indefinitely in the last commanded direction (not stopping on field when keys released)
       if (carrier.autoRun) {
         carrier.move(delta, carrier.autoRun.vx, carrier.autoRun.vy);
       } else {

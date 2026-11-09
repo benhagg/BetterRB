@@ -11,9 +11,6 @@ let gameFrame = null;
 let gameFullscreen = false;
 let saveQueue = Promise.resolve();
 const movementKeys = new Set();
-let latchedCarrierDir = null;
-let lastMovementKeyPress = null;
-const CHORD_WINDOW_MS = 90;
 let selectedOffensivePlayIndex = 0;
 let currentPlayOptions = [];
 let activePlay = null;
@@ -520,8 +517,6 @@ function stopGameLoop() {
   if (gameFrame !== null) cancelAnimationFrame(gameFrame);
   gameFrame = null;
   movementKeys.clear();
-  latchedCarrierDir = null;
-  lastMovementKeyPress = null;
 }
 
 function startGameLoop() {
@@ -533,16 +528,11 @@ function startGameLoop() {
     if (screen !== 'game' || !gameSession) return;
     const seconds = previousTime === null ? 0 : (now - previousTime) / 1000;
     previousTime = now;
-    if (gameSession.state && gameSession.state.phase !== 'running') {
-      latchedCarrierDir = null;
-      lastMovementKeyPress = null;
-    }
     gameSession.update(seconds, {
       up: movementKeys.has('w') || movementKeys.has('arrowup'),
       down: movementKeys.has('s') || movementKeys.has('arrowdown'),
       left: movementKeys.has('a') || movementKeys.has('arrowleft'),
-      right: movementKeys.has('d') || movementKeys.has('arrowright'),
-      carrierDir: latchedCarrierDir
+      right: movementKeys.has('d') || movementKeys.has('arrowright')
     });
     gameSession.draw(context, canvas.width, canvas.height);
     const clock = app.querySelector('#game-clock');
@@ -643,8 +633,6 @@ app.addEventListener('click', async event => {
       const canvasX = (event.clientX - rect.left) * scaleX;
       const canvasY = (event.clientY - rect.top) * scaleY;
       if (typeof gameSession.throwPassToCanvasCoords === 'function') {
-        latchedCarrierDir = null;
-        lastMovementKeyPress = null;
         gameSession.throwPassToCanvasCoords(canvasX, canvasY, canvas.width, canvas.height);
       }
     }
@@ -721,8 +709,6 @@ window.addEventListener('keydown', event => {
     event.preventDefault();
     if (!event.repeat && gameSession) {
       movementKeys.clear();
-      latchedCarrierDir = null;
-      lastMovementKeyPress = null;
       gameSession.pressSpace();
     }
     return;
@@ -730,8 +716,6 @@ window.addEventListener('keydown', event => {
   if (screen === 'game' && ['1', '2', '3', '4', '5'].includes(key) && !event.repeat && gameSession) {
     event.preventDefault();
     if (gameSession.state.playType === 'run') return;
-    latchedCarrierDir = null;
-    lastMovementKeyPress = null;
     gameSession.throwPass(parseInt(key, 10));
     return;
   }
@@ -744,8 +728,6 @@ window.addEventListener('keydown', event => {
     event.preventDefault();
     stopGameLoop();
     setupPreSnapPlays();
-    latchedCarrierDir = null;
-    lastMovementKeyPress = null;
     gameSession.reset();
     if (activePlay && typeof gameSession.setOffensivePlay === 'function') {
       gameSession.setOffensivePlay(activePlay);
@@ -777,39 +759,6 @@ window.addEventListener('keydown', event => {
   if (screen === 'game' && ['w', 's', 'a', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
     event.preventDefault();
     movementKeys.add(key);
-
-    if (!event.repeat && gameSession && gameSession.state?.phase === 'running') {
-      const now = performance.now();
-      let axis = null;
-      let val = 0;
-      if (key === 'w' || key === 'arrowup') { axis = 'y'; val = -1; }
-      else if (key === 's' || key === 'arrowdown') { axis = 'y'; val = 1; }
-      else if (key === 'a' || key === 'arrowleft') { axis = 'x'; val = -1; }
-      else if (key === 'd' || key === 'arrowright') { axis = 'x'; val = 1; }
-
-      if (axis) {
-        const isChord = Boolean(
-          lastMovementKeyPress &&
-          (now - lastMovementKeyPress.timestamp <= CHORD_WINDOW_MS) &&
-          (lastMovementKeyPress.axis !== axis)
-        );
-
-        if (isChord) {
-          // Simultaneous key chord within chord window: diagonal movement
-          latchedCarrierDir = {
-            dx: axis === 'x' ? val : lastMovementKeyPress.val,
-            dy: axis === 'y' ? val : lastMovementKeyPress.val
-          };
-        } else {
-          // Single key click: override strictly to cardinal direction
-          latchedCarrierDir = {
-            dx: axis === 'x' ? val : 0,
-            dy: axis === 'y' ? val : 0
-          };
-        }
-        lastMovementKeyPress = { axis, val, timestamp: now };
-      }
-    }
   }
 });
 window.addEventListener('keyup', event => movementKeys.delete(event.key.toLowerCase()));
