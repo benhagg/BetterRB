@@ -33,3 +33,14 @@
   * Even matchup ($\Delta S = 0$): 100% speed loss (`speed = 0`).
   * Big advantage ($\Delta S \ge 5$): 20% speed loss (defender retains 80% speed).
 * **Defensive Pancake**: At $\Delta S \ge +5$, defender knocks blocker down for **$1.0\text{s}$** and continues pursuit at 80% speed.
+
+---
+
+### 5. Double-Team Blocking
+* **Trigger**: When two offensive players engage the same defender simultaneously.
+* **Combined Score**: The blockers combine their blocking scores against the defender's shed score:
+  $$S_{\text{block, total}} = S_{\text{block, 1}} + S_{\text{block, 2}}$$
+* **Effect**:
+  * Both blockers and the defender are locked at `speed = 0`.
+  * The combined score virtually guarantees maximum hold time ($2.0\text{s}$) and the $50\%$ pancake chance.
+  * If pancaked, the defender is downed for $2.0\text{s}$ and both blockers release to block downfield.
