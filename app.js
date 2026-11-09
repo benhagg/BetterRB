@@ -178,7 +178,6 @@ function gamePanel() {
   bindText(component, 'away-team', awayTeam.abbreviation);
   bindText(component, 'away-score', playerIsHome ? state.score2 : state.score1);
   bindText(component, 'quarter', `Q${state.quarter}`);
-  component.querySelector('#game-yard').textContent = `${Math.floor(state.fieldPosition)} YD`;
   component.querySelector('#game-clock').textContent = formatClock(state.clockSeconds);
   return component;
 }
@@ -200,19 +199,20 @@ function startGameLoop() {
   if (!context) return;
   let previousTime = null;
   let lastSave = null;
-  let savedPosition = `${gameSession.state.fieldPosition}:${gameSession.state.playerY}:${gameSession.state.clockSeconds}`;
+  let savedPosition = `${gameSession.state.fieldPosition}:${gameSession.state.playerY}:${gameSession.state.clockSeconds}:${gameSession.state.phase}`;
   function frame(now) {
     if (screen !== 'game' || !gameSession) return;
     const seconds = previousTime === null ? 0 : (now - previousTime) / 1000;
     previousTime = now;
-    gameSession.update(seconds, { up: movementKeys.has('w'), down: movementKeys.has('s') });
+    gameSession.update(seconds, {
+      up: movementKeys.has('w'), down: movementKeys.has('s'),
+      left: movementKeys.has('a'), right: movementKeys.has('d')
+    });
     gameSession.draw(context, canvas.width, canvas.height);
-    const yard = app.querySelector('#game-yard');
     const clock = app.querySelector('#game-clock');
-    if (yard) yard.textContent = `${Math.floor(gameSession.state.fieldPosition)} YD`;
     if (clock) clock.textContent = formatClock(gameSession.state.clockSeconds);
     if (lastSave === null) lastSave = now;
-    const position = `${gameSession.state.fieldPosition}:${gameSession.state.playerY}:${gameSession.state.clockSeconds}`;
+    const position = `${gameSession.state.fieldPosition}:${gameSession.state.playerY}:${gameSession.state.clockSeconds}:${gameSession.state.phase}`;
     if (now - lastSave >= 2000 && position !== savedPosition) {
       lastSave = now;
       savedPosition = position;
@@ -247,8 +247,8 @@ function beginNextGame() {
   } else {
     gameSession = playGame(seasonState.team, activeScheduledGame.opponent);
     gameSession.state.week = activeScheduledGame.week;
-    gameSession.state.isHome = activeScheduledGame.location === 'HOME';
   }
+  gameSession.state.isHome = activeScheduledGame.location === 'HOME';
   seasonState.currentGame = gameSession.state;
   screen = 'game';
 }
@@ -323,7 +323,7 @@ window.addEventListener('keydown', event => {
     persistState().catch(error => console.error(error));
     return;
   }
-  if (screen === 'game' && (key === 'w' || key === 's')) {
+  if (screen === 'game' && ['w', 's', 'a', 'd'].includes(key)) {
     event.preventDefault();
     movementKeys.add(key);
   }

@@ -5,32 +5,6 @@
     "city": "Arizona",
     "name": "Cardinals",
     "abbreviation": "ARI",
-    "colors": {
-      "primary": "#9b2743",
-      "secondary": "#ffffff",
-      "uniform": "#9b2743",
-      "field": "#397b43",
-      "home": {
-        "helmet": "#ffffff",
-        "logo": "#9b2743",
-        "shirt": "#9b2743",
-        "sleeve": "#ffffff",
-        "pants": "#9b2743",
-        "stripe": "#FFFFFF",
-        "socks1": "#e6e6e6",
-        "socks2": "#8c233c"
-      },
-      "away": {
-        "helmet": "#ffffff",
-        "logo": "#9b2743",
-        "shirt": "#ffffff",
-        "sleeve": "#9b2743",
-        "pants": "#ffffff",
-        "stripe": "#9b2743",
-        "socks1": "#e6e6e6",
-        "socks2": "#8c233c"
-      }
-    },
     "fans": 18420,
     "cap": 32,
     "ratingsScale": 10
@@ -51,32 +25,6 @@
         "city": "Tennessee",
         "name": "Tennessee",
         "abbreviation": "TEN",
-        "colors": {
-          "primary": "#0c2340",
-          "secondary": "#418fde",
-          "uniform": "#0c2340",
-          "field": "#397b43",
-          "home": {
-            "helmet": "#0c2340",
-            "logo": "#418fde",
-            "shirt": "#0c2340",
-            "sleeve": "#418fde",
-            "pants": "#0c2340",
-            "stripe": "#0c2340",
-            "socks1": "#0b203a",
-            "socks2": "#0b203a"
-          },
-          "away": {
-            "helmet": "#0c2340",
-            "logo": "#418fde",
-            "shirt": "#ffffff",
-            "sleeve": "#418fde",
-            "pants": "#0c2340",
-            "stripe": "#0c2340",
-            "socks1": "#e6e6e6",
-            "socks2": "#0b203a"
-          }
-        },
         "players": [
           {
             "id": "15-0",
@@ -171,32 +119,6 @@
         "city": "Minnesota",
         "name": "Minnesota",
         "abbreviation": "MIN",
-        "colors": {
-          "primary": "#582c83",
-          "secondary": "#ffc72c",
-          "uniform": "#582c83",
-          "field": "#397b43",
-          "home": {
-            "helmet": "#582c83",
-            "logo": "#ffffff",
-            "shirt": "#582c83",
-            "sleeve": "#ffc72c",
-            "pants": "#ffffff",
-            "stripe": "#582c83",
-            "socks1": "#e6e6e6",
-            "socks2": "#4f2876"
-          },
-          "away": {
-            "helmet": "#582c83",
-            "logo": "#ffffff",
-            "shirt": "#ffffff",
-            "sleeve": "#ffc72c",
-            "pants": "#582c83",
-            "stripe": "#ffc72c",
-            "socks1": "#4f2876",
-            "socks2": "#4f2876"
-          }
-        },
         "players": [
           {
             "id": "27-0",
@@ -291,32 +213,6 @@
         "city": "Jacksonville",
         "name": "Jacksonville",
         "abbreviation": "JAC",
-        "colors": {
-          "primary": "#006271",
-          "secondary": "#010101",
-          "uniform": "#006271",
-          "field": "#397b43",
-          "home": {
-            "helmet": "#010101",
-            "logo": "#8e7831",
-            "shirt": "#006271",
-            "sleeve": "#010101",
-            "pants": "#010101",
-            "stripe": "#010101",
-            "socks1": "#006271",
-            "socks2": "#006271"
-          },
-          "away": {
-            "helmet": "#010101",
-            "logo": "#8e7831",
-            "shirt": "#ffffff",
-            "sleeve": "#010101",
-            "pants": "#010101",
-            "stripe": "#010101",
-            "socks1": "#1a1a1a",
-            "socks2": "#1a1a1a"
-          }
-        },
         "players": [
           {
             "id": "14-0",
@@ -411,32 +307,6 @@
         "city": "Los Angeles R",
         "name": "Los Angeles R",
         "abbreviation": "LAR",
-        "colors": {
-          "primary": "#1e22aa",
-          "secondary": "#FFD100",
-          "uniform": "#1e22aa",
-          "field": "#397b43",
-          "home": {
-            "helmet": "#1e22aa",
-            "logo": "#ffd100",
-            "shirt": "#1e22aa",
-            "sleeve": "#FFD100",
-            "pants": "#FFD100",
-            "stripe": "#1e22aa",
-            "socks1": "#1b1f99",
-            "socks2": "#1b1f99"
-          },
-          "away": {
-            "helmet": "#1e22aa",
-            "logo": "#FFD100",
-            "shirt": "#d7d2cb",
-            "sleeve": "#1e22aa",
-            "pants": "#d7d2cb",
-            "stripe": "#FFD100",
-            "socks1": "#c2bdb7",
-            "socks2": "#c2bdb7"
-          }
-        },
         "players": [
           {
             "id": "21-0",
@@ -531,32 +401,6 @@
         "city": "San Francisco",
         "name": "San Francisco",
         "abbreviation": "SF",
-        "colors": {
-          "primary": "#a6192e",
-          "secondary": "#ffffff",
-          "uniform": "#a6192e",
-          "field": "#397b43",
-          "home": {
-            "helmet": "#89734c",
-            "logo": "#a6192e",
-            "shirt": "#a6192e",
-            "sleeve": "#ffffff",
-            "pants": "#c6aa76",
-            "stripe": "#a6192e",
-            "socks1": "#e6e6e6",
-            "socks2": "#951729"
-          },
-          "away": {
-            "helmet": "#89734c",
-            "logo": "#a6192e",
-            "shirt": "#ffffff",
-            "sleeve": "#a6192e",
-            "pants": "#c6aa76",
-            "stripe": "#a6192e",
-            "socks1": "#e6e6e6",
-            "socks2": "#951729"
-          }
-        },
         "players": [
           {
             "id": "22-0",
@@ -651,32 +495,6 @@
         "city": "Cleveland",
         "name": "Cleveland",
         "abbreviation": "CLE",
-        "colors": {
-          "primary": "#321c00",
-          "secondary": "#ffffff",
-          "uniform": "#321c00",
-          "field": "#397b43",
-          "home": {
-            "helmet": "#eb3300",
-            "logo": "#eb3300",
-            "shirt": "#321c00",
-            "sleeve": "#ffffff",
-            "pants": "#eb3300",
-            "stripe": "#321c00",
-            "socks1": "#e6e6e6",
-            "socks2": "#d42e00"
-          },
-          "away": {
-            "helmet": "#eb3300",
-            "logo": "#eb3300",
-            "shirt": "#ffffff",
-            "sleeve": "#321c00",
-            "pants": "#321c00",
-            "stripe": "#eb3300",
-            "socks1": "#e6e6e6",
-            "socks2": "#d42e00"
-          }
-        },
         "players": [
           {
             "id": "10-0",
@@ -771,32 +589,6 @@
         "city": "Houston",
         "name": "Houston",
         "abbreviation": "HOU",
-        "colors": {
-          "primary": "#091f2c",
-          "secondary": "#a6192e",
-          "uniform": "#091f2c",
-          "field": "#397b43",
-          "home": {
-            "helmet": "#091f2c",
-            "logo": "#a6192e",
-            "shirt": "#091f2c",
-            "sleeve": "#a6192e",
-            "pants": "#ffffff",
-            "stripe": "#091f2c",
-            "socks1": "#e6e6e6",
-            "socks2": "#081c28"
-          },
-          "away": {
-            "helmet": "#091f2c",
-            "logo": "#a6192e",
-            "shirt": "#ffffff",
-            "sleeve": "#091f2c",
-            "pants": "#091f2c",
-            "stripe": "#FFFFFF",
-            "socks1": "#e6e6e6",
-            "socks2": "#081c28"
-          }
-        },
         "players": [
           {
             "id": "12-0",
@@ -891,32 +683,6 @@
         "city": "Green Bay",
         "name": "Green Bay",
         "abbreviation": "GB",
-        "colors": {
-          "primary": "#183029",
-          "secondary": "#ffb81c",
-          "uniform": "#183029",
-          "field": "#397b43",
-          "home": {
-            "helmet": "#ffb81c",
-            "logo": "#183029",
-            "shirt": "#183029",
-            "sleeve": "#ffb81c",
-            "pants": "#ffb81c",
-            "stripe": "#183029",
-            "socks1": "#e6e6e6",
-            "socks2": "#162b25"
-          },
-          "away": {
-            "helmet": "#ffb81c",
-            "logo": "#183029",
-            "shirt": "#ffffff",
-            "sleeve": "#183029",
-            "pants": "#ffb81c",
-            "stripe": "#183029",
-            "socks1": "#e6e6e6",
-            "socks2": "#162b25"
-          }
-        },
         "players": [
           {
             "id": "26-0",
@@ -1011,32 +777,6 @@
         "city": "San Francisco",
         "name": "San Francisco",
         "abbreviation": "SF",
-        "colors": {
-          "primary": "#a6192e",
-          "secondary": "#ffffff",
-          "uniform": "#a6192e",
-          "field": "#397b43",
-          "home": {
-            "helmet": "#89734c",
-            "logo": "#a6192e",
-            "shirt": "#a6192e",
-            "sleeve": "#ffffff",
-            "pants": "#c6aa76",
-            "stripe": "#a6192e",
-            "socks1": "#e6e6e6",
-            "socks2": "#951729"
-          },
-          "away": {
-            "helmet": "#89734c",
-            "logo": "#a6192e",
-            "shirt": "#ffffff",
-            "sleeve": "#a6192e",
-            "pants": "#c6aa76",
-            "stripe": "#a6192e",
-            "socks1": "#e6e6e6",
-            "socks2": "#951729"
-          }
-        },
         "players": [
           {
             "id": "22-0",
@@ -1131,32 +871,6 @@
         "city": "Carolina",
         "name": "Carolina",
         "abbreviation": "CAR",
-        "colors": {
-          "primary": "#101820",
-          "secondary": "#0085CA",
-          "uniform": "#101820",
-          "field": "#397b43",
-          "home": {
-            "helmet": "#8d9093",
-            "logo": "#101820",
-            "shirt": "#101820",
-            "sleeve": "#0085CA",
-            "pants": "#b2b4b2",
-            "stripe": "#0085CA",
-            "socks1": "#e6e6e6",
-            "socks2": "#101820"
-          },
-          "away": {
-            "helmet": "#8d9093",
-            "logo": "#101820",
-            "shirt": "#ffffff",
-            "sleeve": "#0085CA",
-            "pants": "#ffffff",
-            "stripe": "#0085CA",
-            "socks1": "#e6e6e6",
-            "socks2": "#0078b6"
-          }
-        },
         "players": [
           {
             "id": "29-0",
@@ -1251,32 +965,6 @@
         "city": "Seattle",
         "name": "Seattle",
         "abbreviation": "SEA",
-        "colors": {
-          "primary": "#0c2340",
-          "secondary": "#78be21",
-          "uniform": "#0c2340",
-          "field": "#397b43",
-          "home": {
-            "helmet": "#0c2340",
-            "logo": "#7c878e",
-            "shirt": "#0c2340",
-            "sleeve": "#78be21",
-            "pants": "#0c2340",
-            "stripe": "#78be21",
-            "socks1": "#e6e6e6",
-            "socks2": "#0b203a"
-          },
-          "away": {
-            "helmet": "#0c2340",
-            "logo": "#7c878e",
-            "shirt": "#ffffff",
-            "sleeve": "#0c2340",
-            "pants": "#0c2340",
-            "stripe": "#78be21",
-            "socks1": "#e6e6e6",
-            "socks2": "#0b203a"
-          }
-        },
         "players": [
           {
             "id": "23-0",
@@ -1371,32 +1059,6 @@
         "city": "Chicago",
         "name": "Chicago",
         "abbreviation": "CHI",
-        "colors": {
-          "primary": "#091f2c",
-          "secondary": "#dc4405",
-          "uniform": "#091f2c",
-          "field": "#397b43",
-          "home": {
-            "helmet": "#091f2c",
-            "logo": "#dc4405",
-            "shirt": "#091f2c",
-            "sleeve": "#dc4405",
-            "pants": "#ffffff",
-            "stripe": "#dc4405",
-            "socks1": "#e6e6e6",
-            "socks2": "#091f2c"
-          },
-          "away": {
-            "helmet": "#091f2c",
-            "logo": "#dc4405",
-            "shirt": "#ffffff",
-            "sleeve": "#dc4405",
-            "pants": "#091f2c",
-            "stripe": "#dc4405",
-            "socks1": "#e6e6e6",
-            "socks2": "#c63d05"
-          }
-        },
         "players": [
           {
             "id": "24-0",
@@ -1491,32 +1153,6 @@
         "city": "Los Angeles R",
         "name": "Los Angeles R",
         "abbreviation": "LAR",
-        "colors": {
-          "primary": "#1e22aa",
-          "secondary": "#FFD100",
-          "uniform": "#1e22aa",
-          "field": "#397b43",
-          "home": {
-            "helmet": "#1e22aa",
-            "logo": "#ffd100",
-            "shirt": "#1e22aa",
-            "sleeve": "#FFD100",
-            "pants": "#FFD100",
-            "stripe": "#1e22aa",
-            "socks1": "#1b1f99",
-            "socks2": "#1b1f99"
-          },
-          "away": {
-            "helmet": "#1e22aa",
-            "logo": "#FFD100",
-            "shirt": "#d7d2cb",
-            "sleeve": "#1e22aa",
-            "pants": "#d7d2cb",
-            "stripe": "#FFD100",
-            "socks1": "#c2bdb7",
-            "socks2": "#c2bdb7"
-          }
-        },
         "players": [
           {
             "id": "21-0",
@@ -1611,32 +1247,6 @@
         "city": "Detroit",
         "name": "Detroit",
         "abbreviation": "DET",
-        "colors": {
-          "primary": "#0069b1",
-          "secondary": "#a2aaad",
-          "uniform": "#0069b1",
-          "field": "#397b43",
-          "home": {
-            "helmet": "#87909a",
-            "logo": "#0069b1",
-            "shirt": "#0069b1",
-            "sleeve": "#a2aaad",
-            "pants": "#a2aaad",
-            "stripe": "#0069b1",
-            "socks1": "#e6e6e6",
-            "socks2": "#005f9f"
-          },
-          "away": {
-            "helmet": "#87909a",
-            "logo": "#0069b1",
-            "shirt": "#ffffff",
-            "sleeve": "#0069b1",
-            "pants": "#0069b1",
-            "stripe": "#a2aaad",
-            "socks1": "#e6e6e6",
-            "socks2": "#005f9f"
-          }
-        },
         "players": [
           {
             "id": "25-0",
@@ -1731,32 +1341,6 @@
         "city": "Indianapolis",
         "name": "Indianapolis",
         "abbreviation": "IND",
-        "colors": {
-          "primary": "#003a70",
-          "secondary": "#ffffff",
-          "uniform": "#003a70",
-          "field": "#397b43",
-          "home": {
-            "helmet": "#ffffff",
-            "logo": "#003a70",
-            "shirt": "#003a70",
-            "sleeve": "#ffffff",
-            "pants": "#ffffff",
-            "stripe": "#003a70",
-            "socks1": "#e6e6e6",
-            "socks2": "#003465"
-          },
-          "away": {
-            "helmet": "#ffffff",
-            "logo": "#003a70",
-            "shirt": "#ffffff",
-            "sleeve": "#003a70",
-            "pants": "#ffffff",
-            "stripe": "#003a70",
-            "socks1": "#e6e6e6",
-            "socks2": "#003465"
-          }
-        },
         "players": [
           {
             "id": "13-0",
@@ -1851,32 +1435,6 @@
         "city": "Dallas",
         "name": "Dallas",
         "abbreviation": "DAL",
-        "colors": {
-          "primary": "#ffffff",
-          "secondary": "#003087",
-          "uniform": "#ffffff",
-          "field": "#397b43",
-          "home": {
-            "helmet": "#87909a",
-            "logo": "#0c2340",
-            "shirt": "#ffffff",
-            "sleeve": "#003087",
-            "pants": "#aecbd1",
-            "stripe": "#003087",
-            "socks1": "#e6e6e6",
-            "socks2": "#002b7a"
-          },
-          "away": {
-            "helmet": "#87909a",
-            "logo": "#0c2340",
-            "shirt": "#0c2340",
-            "sleeve": "#a2aaad",
-            "pants": "#a2aaad",
-            "stripe": "#0c2340",
-            "socks1": "#e6e6e6",
-            "socks2": "#0b203a"
-          }
-        },
         "players": [
           {
             "id": "16-0",
@@ -1971,32 +1529,6 @@
         "city": "Seattle",
         "name": "Seattle",
         "abbreviation": "SEA",
-        "colors": {
-          "primary": "#0c2340",
-          "secondary": "#78be21",
-          "uniform": "#0c2340",
-          "field": "#397b43",
-          "home": {
-            "helmet": "#0c2340",
-            "logo": "#7c878e",
-            "shirt": "#0c2340",
-            "sleeve": "#78be21",
-            "pants": "#0c2340",
-            "stripe": "#78be21",
-            "socks1": "#e6e6e6",
-            "socks2": "#0b203a"
-          },
-          "away": {
-            "helmet": "#0c2340",
-            "logo": "#7c878e",
-            "shirt": "#ffffff",
-            "sleeve": "#0c2340",
-            "pants": "#0c2340",
-            "stripe": "#78be21",
-            "socks1": "#e6e6e6",
-            "socks2": "#0b203a"
-          }
-        },
         "players": [
           {
             "id": "23-0",
@@ -2087,42 +1619,17 @@
   "currentGame": {
     "score1": 0,
     "score2": 0,
-    "fieldPosition": 100,
-    "playerY": 0.6925000000000073,
+    "fieldPosition": 22,
+    "playerY": 0.5,
     "clockSeconds": 900,
     "quarter": 1,
     "isHome": false,
+    "phase": "preplay",
     "team1": {
       "id": 20,
       "city": "Arizona",
       "name": "Cardinals",
       "abbreviation": "ARI",
-      "colors": {
-        "primary": "#9b2743",
-        "secondary": "#ffffff",
-        "uniform": "#9b2743",
-        "field": "#397b43",
-        "home": {
-          "helmet": "#ffffff",
-          "logo": "#9b2743",
-          "shirt": "#9b2743",
-          "sleeve": "#ffffff",
-          "pants": "#9b2743",
-          "stripe": "#FFFFFF",
-          "socks1": "#e6e6e6",
-          "socks2": "#8c233c"
-        },
-        "away": {
-          "helmet": "#ffffff",
-          "logo": "#9b2743",
-          "shirt": "#ffffff",
-          "sleeve": "#9b2743",
-          "pants": "#ffffff",
-          "stripe": "#9b2743",
-          "socks1": "#e6e6e6",
-          "socks2": "#8c233c"
-        }
-      },
       "fans": 18420,
       "cap": 32,
       "ratingsScale": 10
@@ -2132,32 +1639,6 @@
       "city": "Tennessee",
       "name": "Tennessee",
       "abbreviation": "TEN",
-      "colors": {
-        "primary": "#0c2340",
-        "secondary": "#418fde",
-        "uniform": "#0c2340",
-        "field": "#397b43",
-        "home": {
-          "helmet": "#0c2340",
-          "logo": "#418fde",
-          "shirt": "#0c2340",
-          "sleeve": "#418fde",
-          "pants": "#0c2340",
-          "stripe": "#0c2340",
-          "socks1": "#0b203a",
-          "socks2": "#0b203a"
-        },
-        "away": {
-          "helmet": "#0c2340",
-          "logo": "#418fde",
-          "shirt": "#ffffff",
-          "sleeve": "#418fde",
-          "pants": "#0c2340",
-          "stripe": "#0c2340",
-          "socks1": "#e6e6e6",
-          "socks2": "#0b203a"
-        }
-      },
       "players": [
         {
           "id": "15-0",
@@ -2240,7 +1721,8 @@
       ],
       "ratingsScale": 10
     },
-    "week": 1
+    "week": 1,
+    "scrimmagePosition": 22
   },
   "ratingsScale": 10
 }

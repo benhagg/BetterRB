@@ -10,3 +10,5 @@ The current game is stored in `data/save_1/`:
 - `archives/` contains earlier season snapshots.
 
 `rb/shared/schedule.txt` is the shared schedule template used to start a season. `rb/shared/uniforms.txt` stores uniform colors, indexed by team ID; the server reads it when loading a save. The game currently supports one save.
+
+The editable field, portraits, and running frames are in `images/`; see `images/README.md` for the image sizes and uniform color masks.

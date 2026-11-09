@@ -1,31 +1,48 @@
-/* Coordinates below refer to pixels in RetroBowl_texture_2.webp. */
+/* The PNG files keep their original placeholder colors for uniform recoloring. */
 window.RetroSprites = (() => {
-  const atlas = new Image();
-  const atlasReady = new Promise((resolve, reject) => {
-    atlas.onload = resolve;
-    atlas.onerror = () => reject(new Error('Could not load the character atlas'));
-  });
-  atlas.src = '/rb/shared/RetroBowl_texture_2.webp';
-
+  const images = new Map();
   const cache = new Map();
   const runnerFrames = [
-    { x: 2024, y: 297, width: 13, height: 21 },
-    { x: 2024, y: 320, width: 13, height: 19 }
+    '/images/running/run_01.png',
+    '/images/running/run_02.png',
+    '/images/running/run_03.png',
+    '/images/running/run_04.png',
+    '/images/running/run_05.png',
+    '/images/running/run_06.png'
   ];
 
-  function rgb(value, fallback) {
-    const color = /^#[0-9a-f]{6}$/i.test(value || '') ? value : fallback;
-    return [1, 3, 5].map(index => parseInt(color.slice(index, index + 2), 16));
+  function loadImage(src) {
+    if (images.has(src)) return images.get(src);
+    const image = new Image();
+    const ready = new Promise((resolve, reject) => {
+      image.onload = resolve;
+      image.onerror = () => reject(new Error(`Could not load image: ${src}`));
+    });
+    ready.catch(error => console.error(error));
+    const entry = { image, ready };
+    images.set(src, entry);
+    image.src = src;
+    return entry;
+  }
+
+  const fieldImage = loadImage('/images/field.png').image;
+  const prePlayFrames = { lineman: '/images/pre_play/lineman.png', center: '/images/pre_play/center.png', skill: '/images/pre_play/skill.png' };
+  Object.values(prePlayFrames).forEach(loadImage);
+  runnerFrames.forEach(loadImage);
+
+  function rgb(value, part) {
+    if (!/^#[0-9a-f]{6}$/i.test(value || '')) throw new Error(`Missing or invalid uniform color: ${part}`);
+    return [1, 3, 5].map(index => parseInt(value.slice(index, index + 2), 16));
   }
 
   function colorsFor(uniform = {}) {
     return {
-      helmet: rgb(uniform.helmet, '#ffffff'),
-      shirt: rgb(uniform.shirt || uniform.uniform, '#9b2743'),
-      sleeve: rgb(uniform.sleeve, '#ffffff'),
-      pants: rgb(uniform.pants, '#ffffff'),
-      stripe: rgb(uniform.stripe, '#ffffff'),
-      socks: rgb(uniform.socks1, '#e6e6e6')
+      helmet: rgb(uniform.helmet, 'helmet'),
+      shirt: rgb(uniform.shirt, 'shirt'),
+      sleeve: rgb(uniform.sleeve, 'sleeve'),
+      pants: rgb(uniform.pants, 'pants'),
+      stripe: rgb(uniform.stripe, 'stripe'),
+      socks: rgb(uniform.socks1, 'socks1')
     };
   }
 
@@ -59,20 +76,21 @@ window.RetroSprites = (() => {
   }
 
   function sprite(kind, index, uniform) {
-    const frame = kind === 'portrait'
-      ? { x: 909 + 31 * index, y: 701, width: 29, height: 37 }
-      : runnerFrames[index];
+    const source = kind === 'portrait'
+      ? `/images/portraits/portrait_${String(index).padStart(2, '0')}.png`
+      : kind === 'runner' ? runnerFrames[index] : prePlayFrames[kind];
+    const sourceImage = loadImage(source);
     const colors = colorsFor(uniform);
     const key = `${kind}:${index}:${JSON.stringify(colors)}`;
     if (cache.has(key)) return cache.get(key);
     const canvas = document.createElement('canvas');
-    canvas.width = frame.width;
-    canvas.height = kind === 'runner' ? 21 : frame.height;
+    canvas.width = kind === 'portrait' ? 29 : 16;
+    canvas.height = kind === 'portrait' ? 37 : kind === 'runner' ? 17 : 16;
     const entry = { canvas, ready: false };
-    entry.promise = atlasReady.then(() => {
+    entry.promise = sourceImage.ready.then(() => {
       const context = canvas.getContext('2d', { willReadFrequently: true });
       context.imageSmoothingEnabled = false;
-      context.drawImage(atlas, frame.x, frame.y, frame.width, frame.height, 0, 0, frame.width, frame.height);
+      context.drawImage(sourceImage.image, 0, 0, canvas.width, canvas.height);
       const image = context.getImageData(0, 0, canvas.width, canvas.height);
       recolor(image.data, canvas.width, kind, colors);
       context.putImageData(image, 0, 0);
@@ -94,10 +112,33 @@ window.RetroSprites = (() => {
     });
   }
 
-  function drawRunner(context, x, y, pixelSize, uniform, frameIndex) {
+  function drawRunner(context, x, y, pixelSize, uniform, frameIndex, flip = false) {
     const entry = sprite('runner', frameIndex % runnerFrames.length, uniform);
-    if (entry.ready) context.drawImage(entry.canvas, x, y, entry.canvas.width * pixelSize, entry.canvas.height * pixelSize);
+    if (!entry.ready) return;
+    const width = entry.canvas.width * pixelSize;
+    const height = entry.canvas.height * pixelSize;
+    if (flip) {
+      context.save();
+      context.translate(x + width, y);
+      context.scale(-1, 1);
+      context.drawImage(entry.canvas, 0, 0, width, height);
+      context.restore();
+    } else context.drawImage(entry.canvas, x, y, width, height);
   }
 
-  return { atlas, paintPortrait, drawRunner };
+  function drawPrePlay(context, x, y, pixelSize, uniform, kind, flip = false) {
+    const entry = sprite(kind, 0, uniform);
+    if (!entry.ready) return;
+    const width = entry.canvas.width * pixelSize;
+    const height = entry.canvas.height * pixelSize;
+    if (flip) {
+      context.save();
+      context.translate(x + width, y);
+      context.scale(-1, 1);
+      context.drawImage(entry.canvas, 0, 0, width, height);
+      context.restore();
+    } else context.drawImage(entry.canvas, x, y, width, height);
+  }
+
+  return { fieldImage, paintPortrait, drawRunner, drawPrePlay };
 })();

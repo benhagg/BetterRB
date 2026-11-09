@@ -1,0 +1,607 @@
+[
+  {
+    "file": "unfilterd_1.png",
+    "source": "spr_stand",
+    "texture_page": 543
+  },
+  {
+    "file": "unfilterd_2.png",
+    "source": "spr_stand",
+    "texture_page": 556
+  },
+  {
+    "file": "unfilterd_3.png",
+    "source": "spr_stand",
+    "texture_page": 542
+  },
+  {
+    "file": "unfilterd_4.png",
+    "source": "spr_stand_ball",
+    "texture_page": 544
+  },
+  {
+    "file": "unfilterd_5.png",
+    "source": "spr_stand_ball",
+    "texture_page": 557
+  },
+  {
+    "file": "unfilterd_6.png",
+    "source": "spr_stand_ball2",
+    "texture_page": 546
+  },
+  {
+    "file": "unfilterd_7.png",
+    "source": "spr_stand_ball2",
+    "texture_page": 558
+  },
+  {
+    "file": "unfilterd_8.png",
+    "source": "spr_qb_walk",
+    "texture_page": 526
+  },
+  {
+    "file": "unfilterd_9.png",
+    "source": "spr_qb_walk",
+    "texture_page": 442
+  },
+  {
+    "file": "unfilterd_10.png",
+    "source": "spr_qb_aim_old",
+    "texture_page": 381
+  },
+  {
+    "file": "unfilterd_11.png",
+    "source": "spr_qb_aim",
+    "texture_page": 374
+  },
+  {
+    "file": "unfilterd_12.png",
+    "source": "spr_qb_aim",
+    "texture_page": 379
+  },
+  {
+    "file": "unfilterd_13.png",
+    "source": "spr_qb_aim",
+    "texture_page": 377
+  },
+  {
+    "file": "unfilterd_14.png",
+    "source": "spr_qb_aim",
+    "texture_page": 380
+  },
+  {
+    "file": "unfilterd_15.png",
+    "source": "spr_qb_aim",
+    "texture_page": 375
+  },
+  {
+    "file": "unfilterd_16.png",
+    "source": "spr_qb_aim",
+    "texture_page": 376
+  },
+  {
+    "file": "unfilterd_17.png",
+    "source": "spr_qb_aim",
+    "texture_page": 378
+  },
+  {
+    "file": "unfilterd_18.png",
+    "source": "spr_qb_throw",
+    "texture_page": 412
+  },
+  {
+    "file": "unfilterd_19.png",
+    "source": "spr_handoff",
+    "texture_page": 515
+  },
+  {
+    "file": "unfilterd_20.png",
+    "source": "spr_run",
+    "texture_page": 571
+  },
+  {
+    "file": "unfilterd_21.png",
+    "source": "spr_run",
+    "texture_page": 443
+  },
+  {
+    "file": "unfilterd_22.png",
+    "source": "spr_run",
+    "texture_page": 414
+  },
+  {
+    "file": "unfilterd_23.png",
+    "source": "spr_run",
+    "texture_page": 570
+  },
+  {
+    "file": "unfilterd_24.png",
+    "source": "spr_run",
+    "texture_page": 444
+  },
+  {
+    "file": "unfilterd_25.png",
+    "source": "spr_run",
+    "texture_page": 413
+  },
+  {
+    "file": "unfilterd_26.png",
+    "source": "spr_run_ball",
+    "texture_page": 581
+  },
+  {
+    "file": "unfilterd_27.png",
+    "source": "spr_run_ball",
+    "texture_page": 507
+  },
+  {
+    "file": "unfilterd_28.png",
+    "source": "spr_run_ball",
+    "texture_page": 458
+  },
+  {
+    "file": "unfilterd_29.png",
+    "source": "spr_run_ball",
+    "texture_page": 582
+  },
+  {
+    "file": "unfilterd_30.png",
+    "source": "spr_run_ball",
+    "texture_page": 508
+  },
+  {
+    "file": "unfilterd_31.png",
+    "source": "spr_run_ball",
+    "texture_page": 459
+  },
+  {
+    "file": "unfilterd_32.png",
+    "source": "spr_run_ball2",
+    "texture_page": 584
+  },
+  {
+    "file": "unfilterd_33.png",
+    "source": "spr_run_ball2",
+    "texture_page": 510
+  },
+  {
+    "file": "unfilterd_34.png",
+    "source": "spr_run_ball2",
+    "texture_page": 460
+  },
+  {
+    "file": "unfilterd_35.png",
+    "source": "spr_run_ball2",
+    "texture_page": 583
+  },
+  {
+    "file": "unfilterd_36.png",
+    "source": "spr_run_ball2",
+    "texture_page": 509
+  },
+  {
+    "file": "unfilterd_37.png",
+    "source": "spr_run_ball2",
+    "texture_page": 461
+  },
+  {
+    "file": "unfilterd_38.png",
+    "source": "spr_getup",
+    "texture_page": 536
+  },
+  {
+    "file": "unfilterd_39.png",
+    "source": "spr_getup_ball",
+    "texture_page": 554
+  },
+  {
+    "file": "unfilterd_40.png",
+    "source": "spr_getup_ball",
+    "texture_page": 534
+  },
+  {
+    "file": "unfilterd_41.png",
+    "source": "spr_getup_ball2",
+    "texture_page": 555
+  },
+  {
+    "file": "unfilterd_42.png",
+    "source": "spr_getup_ball2",
+    "texture_page": 535
+  },
+  {
+    "file": "unfilterd_43.png",
+    "source": "spr_stiffarm",
+    "texture_page": 548
+  },
+  {
+    "file": "unfilterd_44.png",
+    "source": "spr_stiffarm",
+    "texture_page": 416
+  },
+  {
+    "file": "unfilterd_45.png",
+    "source": "spr_stiffarm",
+    "texture_page": 415
+  },
+  {
+    "file": "unfilterd_46.png",
+    "source": "spr_stiffarm",
+    "texture_page": 549
+  },
+  {
+    "file": "unfilterd_47.png",
+    "source": "spr_stiffarm",
+    "texture_page": 417
+  },
+  {
+    "file": "unfilterd_48.png",
+    "source": "spr_stiffarm",
+    "texture_page": 418
+  },
+  {
+    "file": "unfilterd_49.png",
+    "source": "spr_stiffarm2",
+    "texture_page": 551
+  },
+  {
+    "file": "unfilterd_50.png",
+    "source": "spr_stiffarm2",
+    "texture_page": 421
+  },
+  {
+    "file": "unfilterd_51.png",
+    "source": "spr_stiffarm2",
+    "texture_page": 420
+  },
+  {
+    "file": "unfilterd_52.png",
+    "source": "spr_stiffarm2",
+    "texture_page": 550
+  },
+  {
+    "file": "unfilterd_53.png",
+    "source": "spr_stiffarm2",
+    "texture_page": 422
+  },
+  {
+    "file": "unfilterd_54.png",
+    "source": "spr_stiffarm2",
+    "texture_page": 419
+  },
+  {
+    "file": "unfilterd_55.png",
+    "source": "spr_jump_catch",
+    "texture_page": 620
+  },
+  {
+    "file": "unfilterd_56.png",
+    "source": "spr_jump_catch",
+    "texture_page": 573
+  },
+  {
+    "file": "unfilterd_57.png",
+    "source": "spr_jump_catch",
+    "texture_page": 580
+  },
+  {
+    "file": "unfilterd_58.png",
+    "source": "spr_jump_catch_ball",
+    "texture_page": 576
+  },
+  {
+    "file": "unfilterd_59.png",
+    "source": "spr_jump_catch_ball",
+    "texture_page": 575
+  },
+  {
+    "file": "unfilterd_60.png",
+    "source": "spr_jump_catch_ball",
+    "texture_page": 609
+  },
+  {
+    "file": "unfilterd_61.png",
+    "source": "spr_jump_catch_ball2",
+    "texture_page": 578
+  },
+  {
+    "file": "unfilterd_62.png",
+    "source": "spr_jump_catch_ball2",
+    "texture_page": 577
+  },
+  {
+    "file": "unfilterd_63.png",
+    "source": "spr_jump_catch_ball2",
+    "texture_page": 610
+  },
+  {
+    "file": "unfilterd_64.png",
+    "source": "spr_jump",
+    "texture_page": 407
+  },
+  {
+    "file": "unfilterd_65.png",
+    "source": "spr_jump",
+    "texture_page": 453
+  },
+  {
+    "file": "unfilterd_66.png",
+    "source": "spr_jump",
+    "texture_page": 406
+  },
+  {
+    "file": "unfilterd_67.png",
+    "source": "spr_jump2",
+    "texture_page": 409
+  },
+  {
+    "file": "unfilterd_68.png",
+    "source": "spr_jump2",
+    "texture_page": 454
+  },
+  {
+    "file": "unfilterd_69.png",
+    "source": "spr_jump2",
+    "texture_page": 408
+  },
+  {
+    "file": "unfilterd_70.png",
+    "source": "spr_jockey",
+    "texture_page": 568
+  },
+  {
+    "file": "unfilterd_71.png",
+    "source": "spr_jockey",
+    "texture_page": 441
+  },
+  {
+    "file": "unfilterd_72.png",
+    "source": "spr_jockey",
+    "texture_page": 567
+  },
+  {
+    "file": "unfilterd_73.png",
+    "source": "spr_jockey",
+    "texture_page": 440
+  },
+  {
+    "file": "unfilterd_74.png",
+    "source": "spr_wrestle",
+    "texture_page": 517
+  },
+  {
+    "file": "unfilterd_75.png",
+    "source": "spr_wrestle",
+    "texture_page": 563
+  },
+  {
+    "file": "unfilterd_76.png",
+    "source": "spr_falling",
+    "texture_page": 614
+  },
+  {
+    "file": "unfilterd_77.png",
+    "source": "spr_falling",
+    "texture_page": 625
+  },
+  {
+    "file": "unfilterd_78.png",
+    "source": "spr_falling_ball",
+    "texture_page": 612
+  },
+  {
+    "file": "unfilterd_79.png",
+    "source": "spr_falling_ball",
+    "texture_page": 659
+  },
+  {
+    "file": "unfilterd_80.png",
+    "source": "spr_falling_ball2",
+    "texture_page": 613
+  },
+  {
+    "file": "unfilterd_81.png",
+    "source": "spr_dive",
+    "texture_page": 511
+  },
+  {
+    "file": "unfilterd_82.png",
+    "source": "spr_dive",
+    "texture_page": 437
+  },
+  {
+    "file": "unfilterd_83.png",
+    "source": "spr_dive",
+    "texture_page": 485
+  },
+  {
+    "file": "unfilterd_84.png",
+    "source": "spr_dive_ball",
+    "texture_page": 480
+  },
+  {
+    "file": "unfilterd_85.png",
+    "source": "spr_dive_ball",
+    "texture_page": 438
+  },
+  {
+    "file": "unfilterd_86.png",
+    "source": "spr_dive_ball",
+    "texture_page": 477
+  },
+  {
+    "file": "unfilterd_87.png",
+    "source": "spr_dive_ball2",
+    "texture_page": 481
+  },
+  {
+    "file": "unfilterd_88.png",
+    "source": "spr_dive_ball2",
+    "texture_page": 439
+  },
+  {
+    "file": "unfilterd_89.png",
+    "source": "spr_dive_ball2",
+    "texture_page": 478
+  },
+  {
+    "file": "unfilterd_90.png",
+    "source": "spr_kick1",
+    "texture_page": 410
+  },
+  {
+    "file": "unfilterd_91.png",
+    "source": "spr_kick1",
+    "texture_page": 569
+  },
+  {
+    "file": "unfilterd_92.png",
+    "source": "spr_kick1",
+    "texture_page": 395
+  },
+  {
+    "file": "unfilterd_93.png",
+    "source": "spr_kick2",
+    "texture_page": 411
+  },
+  {
+    "file": "unfilterd_94.png",
+    "source": "spr_kick2",
+    "texture_page": 396
+  },
+  {
+    "file": "unfilterd_95.png",
+    "source": "spr_kick2",
+    "texture_page": 516
+  },
+  {
+    "file": "unfilterd_96.png",
+    "source": "spr_kick2",
+    "texture_page": 482
+  },
+  {
+    "file": "unfilterd_97.png",
+    "source": "spr_kick2",
+    "texture_page": 538
+  },
+  {
+    "file": "unfilterd_98.png",
+    "source": "spr_place",
+    "texture_page": 518
+  },
+  {
+    "file": "unfilterd_99.png",
+    "source": "spr_place",
+    "texture_page": 608
+  },
+  {
+    "file": "unfilterd_100.png",
+    "source": "spr_spike",
+    "texture_page": 360
+  },
+  {
+    "file": "unfilterd_101.png",
+    "source": "spr_spike",
+    "texture_page": 455
+  },
+  {
+    "file": "unfilterd_102.png",
+    "source": "spr_spike",
+    "texture_page": 559
+  },
+  {
+    "file": "unfilterd_103.png",
+    "source": "spr_spike2",
+    "texture_page": 361
+  },
+  {
+    "file": "unfilterd_104.png",
+    "source": "spr_spike2",
+    "texture_page": 456
+  },
+  {
+    "file": "unfilterd_105.png",
+    "source": "spr_spike2",
+    "texture_page": 560
+  },
+  {
+    "file": "unfilterd_106.png",
+    "source": "spr_celebrate",
+    "texture_page": 564
+  },
+  {
+    "file": "unfilterd_107.png",
+    "source": "spr_celebrate",
+    "texture_page": 532
+  },
+  {
+    "file": "unfilterd_108.png",
+    "source": "spr_player_edit",
+    "texture_page": 326
+  },
+  {
+    "file": "unfilterd_109.png",
+    "source": "spr_player_edit",
+    "texture_page": 397
+  },
+  {
+    "file": "unfilterd_110.png",
+    "source": "spr_firstdown",
+    "texture_page": 552
+  },
+  {
+    "file": "unfilterd_111.png",
+    "source": "spr_firstdown",
+    "texture_page": 533
+  },
+  {
+    "file": "unfilterd_112.png",
+    "source": "spr_firstdown",
+    "texture_page": 525
+  },
+  {
+    "file": "unfilterd_113.png",
+    "source": "spr_firstdown",
+    "texture_page": 405
+  },
+  {
+    "file": "unfilterd_114.png",
+    "source": "spr_firstdown_kneel",
+    "texture_page": 524
+  },
+  {
+    "file": "unfilterd_115.png",
+    "source": "spr_firstdown_kneel",
+    "texture_page": 402
+  },
+  {
+    "file": "unfilterd_116.png",
+    "source": "spr_firstdown_kneel",
+    "texture_page": 449
+  },
+  {
+    "file": "unfilterd_117.png",
+    "source": "spr_firstdown_kneel",
+    "texture_page": 451
+  },
+  {
+    "file": "unfilterd_118.png",
+    "source": "spr_taunt",
+    "texture_page": 447
+  },
+  {
+    "file": "unfilterd_119.png",
+    "source": "spr_taunt",
+    "texture_page": 424
+  },
+  {
+    "file": "unfilterd_120.png",
+    "source": "spr_taunt",
+    "texture_page": 446
+  },
+  {
+    "file": "unfilterd_121.png",
+    "source": "spr_taunt",
+    "texture_page": 398
+  }
+]
