@@ -61,8 +61,8 @@
       this.skills = this.ratings;
       this.portrait = Number.isFinite(config.portrait) ? config.portrait : null;
       // Base speed physics coefficients
-      const BASE_SPEED = 4.0;
-      const SPEED_RATING_COEFF = 0.25;
+      const BASE_SPEED = 5.5;
+      const SPEED_RATING_COEFF = 0.15;
       this.speedMultiplier = speedMultiplier(this.position);
       this.speed = (BASE_SPEED + speedRating * SPEED_RATING_COEFF) * this.speedMultiplier;
       this.kind = config.kind ?? kindForPosition(this.position);

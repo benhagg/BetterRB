@@ -20,8 +20,12 @@
   * Drop to assigned zone center (Flat, Hook/Curl, Deep Zone).
   * Bracket/contest any receiver that enters the **$3.0\text{ yds}$ zone radius**.
   * Hand off and re-center if receiver leaves zone.
-* **Run Recognition**:
-  * If handoff occurs or QB scrambles across LOS, all coverage players abort pass assignments and flow to ball carrier.
+* **Run Recognition Delay ($0.0\text{s} - 0.3\text{s}$)**:
+  * When a handoff occurs (or QB scrambles across LOS), coverage defenders abort pass assignments and flow to the ball carrier with a momentum-based recognition delay.
+  * Uses the identical delay formula ($0.15 \times (1.0 - k)$) relative to the ball carrier:
+    * Moving forward toward carrier / mesh ($k = 1.0$): $\text{Delay} = \mathbf{0.00\text{s}}$ (instant downhill trigger).
+    * Moving laterally ($k = 0.0$): $\text{Delay} = \mathbf{0.15\text{s}}$.
+    * Backpedaling away in deep coverage ($k = -1.0$): $\text{Delay} = \mathbf{0.30\text{s}}$ (must plant and change direction).
 
 ---
 
