@@ -114,11 +114,13 @@
 
       if (magnitude < 0.0001) {
         if (!movement.deceleration) {
-          movement.deceleration = { elapsed: 0, startFactor: movement.speedFactor };
+          const maxDecelTime = 0.7 * Math.max(0.5, 1 - agility * 0.04);
+          const tStop = Math.max(0.04, maxDecelTime * (movement.speedFactor ** 2));
+          movement.deceleration = { elapsed: 0, startFactor: movement.speedFactor, tStop };
         }
         movement.deceleration.elapsed += delta;
-        const t = movement.deceleration.elapsed;
-        movement.speedFactor = t >= 1.2 ? 0 : movement.deceleration.startFactor * (1 - (t / 1.2) ** 2);
+        const progress = Math.min(1, movement.deceleration.elapsed / movement.deceleration.tStop);
+        movement.speedFactor = progress >= 1 ? 0 : movement.deceleration.startFactor * (1 - progress ** 2);
         if (movement.speedFactor <= 0.001) {
           movement.speedFactor = 0;
           movement.deceleration = null;
@@ -143,8 +145,8 @@
       }
 
       const factor = Math.max(0, Math.min(1, movement.speedFactor));
-      this.velocityX = movement.direction.x * this.speed * factor;
-      this.velocityY = (movement.direction.y * this.speed * factor) / LATERAL_YARDS;
+      this.velocityX = (movement.direction.x * this.speed * factor) || 0;
+      this.velocityY = ((movement.direction.y * this.speed * factor) / LATERAL_YARDS) || 0;
       this.lastDirX = movement.direction.x;
       this.lastDirY = movement.direction.y;
       return { direction: movement.direction, step: this.speed * factor * delta, isMoving: factor > 0.001 };
