@@ -20,9 +20,7 @@ Relative displacement to ball: \(\Delta \vec{d} = (x_b - x_p, (y_b - y_p) \cdot 
   $$D_{xy}(t) = \sqrt{\left(\frac{d_{\parallel}(t)}{R_x}\right)^2 + \left(\frac{d_{\perp}(t)}{R_{\text{lateral}}}\right)^2} \le 1.0$$
 
 ### Vertical Reach (Feet)
-### Low catches
-
-When the ball is between 0 and 2 feet, the receiver must make a diving catch. The `images/actions/dive_catch.png`, `dive_catch_1.png`, and `dive_catch_2.png` frames are used for this animation. A successful low catch leaves the receiver down at the exact location where the catch was completed; the play does not continue as a normal upright run.
+* **Low / Diving Reach Zone**: \(0\text{ ft} < z_b(t) < 2\text{ ft}\) (successful catch uses the dive animation and leaves the receiver down at the catch location).
 * **Standard Reach Zone**: \(2\text{ ft} \le z_b(t) \le 8.5\text{ ft}\) (standing / running hands catch).
 * **Jumping Reach Zone**: \(8.5\text{ ft} < z_b(t) \le 10\text{ ft}\) (jump catch only).
 * **Out of Reach**: \(z_b(t) > 10\text{ ft}\) (sails overhead) or \(z_b(t) \le 0\text{ ft}\) (hits ground).

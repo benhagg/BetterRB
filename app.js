@@ -87,6 +87,7 @@ async function initialize() {
 // route preview continue to receive the existing array-of-waypoints format.
 function expandPlaybookRoutes(playbook) {
   const routes = playbook?.routes || {};
+  const offensiveLines = playbook?.offensiveLines || {};
   const expand = value => {
     if (Array.isArray(value)) return value.map(expand);
     if (!value || typeof value !== 'object') return value;
@@ -94,6 +95,9 @@ function expandPlaybookRoutes(playbook) {
     for (const [key, child] of Object.entries(value)) copy[key] = expand(child);
     if (typeof copy.route === 'string' && Array.isArray(routes[copy.route])) {
       copy.route = routes[copy.route].map(waypoint => ({ ...waypoint }));
+    }
+    if (typeof copy.offensiveLine === 'string' && Array.isArray(offensiveLines[copy.offensiveLine])) {
+      copy.offensiveLine = offensiveLines[copy.offensiveLine].map(lineman => ({ ...lineman }));
     }
     return copy;
   };

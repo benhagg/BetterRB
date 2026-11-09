@@ -10,10 +10,10 @@
       },
       "formation": {
         "defenders": [
-          { "position": "DL", "role": "rush", "across": -0.09, "offset": 0.5 },
-          { "position": "DL", "role": "rush", "across": -0.03, "offset": 0.5 },
-          { "position": "DL", "role": "rush", "across": 0.03, "offset": 0.5 },
-          { "position": "DL", "role": "rush", "across": 0.09, "offset": 0.5 },
+          { "position": "DL", "role": "rush", "across": -0.09, "offset": 0.6 },
+          { "position": "DL", "role": "rush", "across": -0.03, "offset": 0.6 },
+          { "position": "DL", "role": "rush", "across": 0.03, "offset": 0.6 },
+          { "position": "DL", "role": "rush", "across": 0.09, "offset": 0.6 },
           { "position": "LB", "role": "zone", "zone": "flat_top", "across": -0.30, "offset": 3.0 },
           { "position": "LB", "role": "zone", "zone": "hook_top", "across": -0.10, "offset": 3.5 },
           { "position": "LB", "role": "zone", "zone": "hook_bottom", "across": 0.10, "offset": 3.5 },
@@ -34,10 +34,10 @@
       },
       "formation": {
         "defenders": [
-          { "position": "DL", "role": "rush", "across": -0.09, "offset": 0.5 },
-          { "position": "DL", "role": "rush", "across": -0.03, "offset": 0.5 },
-          { "position": "DL", "role": "rush", "across": 0.03, "offset": 0.5 },
-          { "position": "DL", "role": "rush", "across": 0.09, "offset": 0.5 },
+          { "position": "DL", "role": "rush", "across": -0.09, "offset": 0.6 },
+          { "position": "DL", "role": "rush", "across": -0.03, "offset": 0.6 },
+          { "position": "DL", "role": "rush", "across": 0.03, "offset": 0.6 },
+          { "position": "DL", "role": "rush", "across": 0.09, "offset": 0.6 },
           { "position": "LB", "role": "man", "manTarget": "RB", "across": -0.15, "offset": 3.5 },
           { "position": "LB", "role": "man", "manTarget": "TE", "across": 0.15, "offset": 3.5 },
           { "position": "LB", "role": "rush", "across": -0.28, "offset": 3.0 },

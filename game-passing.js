@@ -81,7 +81,7 @@
       - 0.5 * gravityFeetPerSecondSquared * elapsed * elapsed;
   }
 
-  function create({ state, lateralYards, fieldBounds, passTarget, quarterbackIsBehindLineOfScrimmage }) {
+  function create({ state, lateralYards, fieldBounds, passTarget, quarterbackIsBehindLineOfScrimmage, onPassReleased }) {
     function getQbStrength() {
       const qb = state.quarterback;
       return qb?.rating?.strength ?? qb?.ratings?.strength ?? qb?.strength ?? 5;
@@ -164,6 +164,7 @@
       state.quarterback.hasBall = false;
       state.quarterback.phase = 'thrown';
       state.phase = 'thrown';
+      onPassReleased?.(state.pass);
     }
 
     function release(receiverNum, isRunningThrow = false) {
@@ -234,6 +235,7 @@
       state.quarterback.hasBall = false;
       state.quarterback.phase = 'thrown';
       state.phase = 'thrown';
+      onPassReleased?.(state.pass);
     }
 
     function queue(data) {

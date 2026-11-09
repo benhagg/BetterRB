@@ -26,7 +26,7 @@
       const lineX = (state.scrimmagePosition - cameraOriginYard) * field.pixelsPerYard * horizontalScale;
       const top = field.topSideline * verticalScale;
       const bottom = field.bottomSideline * verticalScale;
-      ctx.fillStyle = 'rgba(92, 174, 255, .65)';
+      ctx.fillStyle = 'rgba(46, 92, 138, .72)';
       ctx.fillRect(lineX, top, Math.max(1, pixel), bottom - top);
       const screenCoordinates = actor => ({
         screenX: (actor.x - cameraOriginYard) * field.pixelsPerYard * horizontalScale,

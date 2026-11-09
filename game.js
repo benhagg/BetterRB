@@ -26,16 +26,16 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
   state.playerY = Number.isFinite(state.playerY) ? Math.max(0.08, Math.min(0.92, state.playerY)) : 0.5;
   state.clockSeconds = Number.isFinite(state.clockSeconds) ? Math.max(0, state.clockSeconds) : 900;
   state.scrimmagePosition = Number.isFinite(state.scrimmagePosition) ? state.scrimmagePosition : state.fieldPosition;
-  if (!['preplay', 'passing', 'running', 'thrown', 'bouncing', 'complete'].includes(state.phase)) {
+  if (!['preplay', 'passing', 'running', 'thrown', 'catching', 'bouncing', 'complete'].includes(state.phase)) {
     state.phase = 'preplay';
     state.scrimmagePosition = state.fieldPosition;
   }
 
   const defaultDefensiveFormationSlots = [
-    { position: 'DT', across: -.09, offset: .5 },
-    { position: 'DT', across: -.03, offset: 0 },
-    { position: 'DT', across:  .03, offset: 0 },
-    { position: 'DT', across:  .09, offset: 0 },
+    { position: 'DT', across: -.09, offset: .6 },
+    { position: 'DT', across: -.03, offset: .1 },
+    { position: 'DT', across:  .03, offset: .1 },
+    { position: 'DT', across:  .09, offset: .1 },
     { position: 'LB', across: -.30, offset: 0 },
     { position: 'LB', across: -.10, offset: 0 },
     { position: 'LB', across:  .10, offset: 0 },
@@ -133,11 +133,11 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
   };
   const runningBackRoute = runningBackConfig.route;
   const offensiveLineSlots = selectedPlays.offense?.formation?.offensiveLine || [
-    { position: 'OL', across: -.08, offset: 0 },
-    { position: 'OL', across: -.04, offset: 0 },
-    { position: 'OL', across: 0, offset: 0, isCenter: true },
-    { position: 'OL', across: .04, offset: 0 },
-    { position: 'OL', across: .08, offset: 0 }
+    { position: 'OL', across: -.08, offset: -.1 },
+    { position: 'OL', across: -.04, offset: -.1 },
+    { position: 'OL', across: 0, offset: -.1, isCenter: true },
+    { position: 'OL', across: .04, offset: -.1 },
+    { position: 'OL', across: .08, offset: -.1 }
   ];
 
   function createReceivers(configs = (selectedPlays.offense?.formation?.receivers || receiverConfigs)) {
@@ -353,7 +353,9 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
 
   function ballCarrier() {
     return state.receivers.find(receiver => receiver.hasBall)
-      || (state.runningBack.hasBall ? state.runningBack : state.quarterback);
+      || (state.runningBack.hasBall ? state.runningBack : null)
+      || state.defenders.find(defender => defender.hasBall)
+      || state.quarterback;
   }
 
   function getBallCarrier() {
@@ -361,6 +363,8 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     const receiverWithBall = state.receivers.find(receiver => receiver.hasBall);
     if (receiverWithBall) return receiverWithBall;
     if (state.runningBack?.hasBall) return state.runningBack;
+    const defenderWithBall = state.defenders.find(defender => defender.hasBall);
+    if (defenderWithBall) return defenderWithBall;
     if (state.quarterback?.hasBall) return state.quarterback;
     return null;
   }
@@ -374,7 +378,46 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
   }
 
   const camera = GameCamera.create({ state, field, fieldBounds, cameraTrailingYards, runnerTrailingYards, ballCarrier });
-  const passing = GamePassing.create({ state, lateralYards, fieldBounds, passTarget, quarterbackIsBehindLineOfScrimmage });
+  let catching;
+  const passing = GamePassing.create({
+    state, lateralYards, fieldBounds, passTarget, quarterbackIsBehindLineOfScrimmage,
+    onPassReleased: pass => catching?.schedule(pass)
+  });
+  catching = GameCatching.create({ state, lateralYards });
+
+  function resolveCatch(contact, input) {
+    const { player, ball, catchType, interception } = contact;
+    state.pass.resolution = {
+      playerId: player.id,
+      playerName: player.name,
+      type: interception ? 'interception' : catchType,
+      time: contact.time
+    };
+    state.quarterback.hasBall = false;
+    player.x = ball.x;
+    player.y = ball.y;
+
+    if (interception) {
+      player.hasBall = true;
+      player.phase = 'interception';
+      state.possession = 'defense';
+      state.phase = 'complete';
+      return;
+    }
+
+    const velocityX = Number(player.velocityX) || Number(player.lastDirX) || 1;
+    const velocityY = (Number(player.velocityY) || 0) * lateralYards || Number(player.lastDirY) || 0;
+    player.beginCatch(catchType, { vx: velocityX, vy: velocityY });
+    state.fieldPosition = player.x;
+    state.playerY = player.y;
+    if (catchType === 'standard') {
+      state.phase = 'running';
+      movePlayer(0, input);
+    } else {
+      state.phase = 'catching';
+      state.catchingPlayer = player;
+    }
+  }
 
   function isTargetInFrontCone(player, targetX, targetY, maxDist = 5, coneAngleDeg = 60) {
     const dx = targetX - player.x;
@@ -512,6 +555,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
         movePlayer(delta, input);
       }
     } else if (state.phase === 'thrown') {
+      catching.schedule(state.pass);
       state.pass.progress = Math.min(1, state.pass.progress + delta / state.pass.duration);
       const currentHeight = passing.throwHeightAt(state.pass.progress, state.pass);
       state.pass.heightFeet = currentHeight;
@@ -533,43 +577,29 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
           }
         }
       }
-      if (state.pass.progress >= 1) {
-        let target = null;
-        if (state.pass.targetReceiverNumber) {
-          const intended = passTarget(state.pass.targetReceiverNumber);
-          if (intended) {
-            const intendedDistance = Math.hypot(
-              state.pass.targetX - intended.x,
-              (state.pass.targetY - intended.y) * lateralYards
-            );
-            if (intendedDistance <= 2.5) target = intended;
-          }
-        } else {
-          const eligible = [...state.receivers, state.runningBack];
-          let bestDist = Infinity;
-          let bestCandidate = null;
-          for (const player of eligible) {
-            const dist = Math.hypot(state.pass.targetX - player.x, (state.pass.targetY - player.y) * lateralYards);
-            if (dist < bestDist) {
-              bestDist = dist;
-              bestCandidate = player;
-            }
-          }
-          if (bestCandidate && bestDist <= 2.5) {
-            target = bestCandidate;
-          }
-        }
-        if (target) {
-          state.phase = 'running';
-          state.quarterback.hasBall = false;
-          target.catchBall({ vx: 1, vy: 0 });
-          state.fieldPosition = target.x;
-          state.playerY = target.y;
-          movePlayer(0, input);
-        } else {
-          state.quarterback.hasBall = false;
-          startIncompleteBounce();
-        }
+      const contact = catching.resolve(state.pass, state.pass.progress * state.pass.duration);
+      if (contact) {
+        resolveCatch(contact, input);
+      }
+      if (state.phase === 'thrown' && state.pass.progress >= 1) {
+        state.quarterback.hasBall = false;
+        startIncompleteBounce();
+      }
+    } else if (state.phase === 'catching') {
+      const player = state.catchingPlayer;
+      const result = player?.updateCatch(delta);
+      if (player) {
+        player.x = Math.max(fieldBounds.endZoneL, Math.min(fieldBounds.endZoneR, player.x));
+        player.y = Math.max(fieldBounds.top, Math.min(fieldBounds.bottom, player.y));
+        state.fieldPosition = player.x;
+        state.playerY = player.y;
+      }
+      if (result === 'landed') {
+        state.phase = 'running';
+        delete state.catchingPlayer;
+      } else if (result === 'down') {
+        state.phase = 'complete';
+        delete state.catchingPlayer;
       }
     } else if (state.phase === 'bouncing') {
       for (const player of [...state.receivers, state.runningBack]) {
@@ -667,6 +697,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     state.playType = String(selectedPlays.offense?.playType || selectedPlays.offense?.playtype || selectedPlays.offense?.type || 'pass').toLowerCase();
     delete state.pass;
     delete state.bounce;
+    delete state.catchingPlayer;
     delete state.throwWindup;
     state.quarterback = createQuarterback();
     state.defenders = createDefenders();

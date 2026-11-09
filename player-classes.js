@@ -349,6 +349,9 @@
       this.isTackled = Boolean(config.isTackled);
       this.receiverNumber = config.receiverNumber ?? null;
       this.autoRun = config.autoRun ?? null;
+      this.catchType = config.catchType ?? null;
+      this.catchElapsed = Number.isFinite(config.catchElapsed) ? config.catchElapsed : 0;
+      this.catchDirection = config.catchDirection ?? null;
     }
 
     dive() {
@@ -376,6 +379,41 @@
       } else {
         this.autoRun = { vx: 1, vy: 0 };
       }
+    }
+
+    beginCatch(type, dir = null) {
+      this.catchBall(dir);
+      if (type === 'standard') return;
+      this.catchType = type;
+      this.catchElapsed = 0;
+      this.catchDirection = this.autoRun || dir || { vx: this.lastDirX || 1, vy: this.lastDirY || 0 };
+      this.autoRun = null;
+      this.phase = 'catching';
+    }
+
+    updateCatch(delta) {
+      if (!this.catchType) return false;
+      const duration = this.catchType === 'jump' ? 0.55 : 0.45;
+      this.catchElapsed += delta;
+      if (this.catchType === 'jump') {
+        const dir = this.catchDirection || { vx: 1, vy: 0 };
+        const length = Math.hypot(dir.vx, dir.vy) || 1;
+        const step = this.speed * 0.5 * delta;
+        this.x += (dir.vx / length) * step;
+        this.y += ((dir.vy / length) * step) / LATERAL_YARDS;
+        this.animDistance += step;
+      }
+      if (this.catchElapsed < duration) return false;
+      const type = this.catchType;
+      this.catchType = null;
+      this.catchElapsed = 0;
+      if (type === 'dive') {
+        this.tackled();
+        return 'down';
+      }
+      this.phase = 'running';
+      this.catchBall(this.catchDirection);
+      return 'landed';
     }
 
     fumble() {
@@ -443,6 +481,12 @@
 
       if (this.phase === 'preplay') {
         RetroSprites.drawPrePlay(ctx, x, y, pixel, u, this.kind, this.facingLeft);
+      } else if (this.catchType === 'jump') {
+        const frame = this.catchElapsed < 0.27 ? 0 : 1;
+        RetroSprites.drawAction(ctx, x, y, pixel, u, 'jump_catch', frame, this.facingLeft);
+      } else if (this.catchType === 'dive') {
+        const frame = this.catchElapsed < 0.15 ? 0 : this.catchElapsed < 0.3 ? 1 : 2;
+        RetroSprites.drawAction(ctx, x, y, pixel, u, 'dive_catch', frame, this.facingLeft);
       } else if (this.isTackled) {
         if (RetroSprites.drawAction) RetroSprites.drawAction(ctx, x, y, pixel, u, 'tackled', 1, this.facingLeft);
         else RetroSprites.drawPrePlay(ctx, x, y, pixel, u, this.kind, this.facingLeft);
@@ -470,6 +514,7 @@
       this.diveProgress = Number.isFinite(config.diveProgress) ? config.diveProgress : 0;
       this.diveCooldownTimer = Number.isFinite(config.diveCooldownTimer) ? config.diveCooldownTimer : 0;
       this.target = null;
+      this.hasBall = Boolean(config.hasBall);
     }
 
     canTackle(targetPlayer) {
@@ -548,6 +593,8 @@
         const frame = this.diveProgress < 0.33 ? 0 : this.diveProgress < 0.66 ? 1 : 2;
         if (RetroSprites.drawAction) RetroSprites.drawAction(ctx, x, y, pixel, u, 'ddive', frame, this.facingLeft);
         else RetroSprites.drawRunner(ctx, x, y, pixel, u, 0, this.facingLeft);
+      } else if (this.hasBall) {
+        RetroSprites.drawRunner(ctx, x, y, pixel, u, Math.floor(this.animDistance * 1.5), this.facingLeft, true);
       } else if (this.diveCooldownTimer > 0.5) {
         if (RetroSprites.drawAction) RetroSprites.drawAction(ctx, x, y, pixel, u, 'resting', 0, this.facingLeft);
         else RetroSprites.drawPrePlay(ctx, x, y, pixel, u, this.kind, this.facingLeft);

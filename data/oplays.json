@@ -68,6 +68,15 @@
       { "dx": 6, "dy": 0.15 }
     ]
   },
+  "offensiveLines": {
+    "standard": [
+      { "position": "OL", "across": -0.08, "offset": -0.7 },
+      { "position": "OL", "across": -0.04, "offset": -0.6 },
+      { "position": "OL", "across": 0, "offset": -0.4, "isCenter": true },
+      { "position": "OL", "across": 0.04, "offset": -0.6 },
+      { "position": "OL", "across": 0.08, "offset": -0.7 }
+    ]
+  },
   "plays": [
     {
       "id": "ace-cross",
@@ -75,13 +84,7 @@
       "playtype": "pass",
       "formation": {
         "quarterback": { "position": "QB", "across": 0, "offset": -3 },
-        "offensiveLine": [
-          { "position": "OL", "across": -0.08, "offset": -0.6 },
-          { "position": "OL", "across": -0.04, "offset": -0.5 },
-          { "position": "OL", "across": 0, "offset": -0.3, "isCenter": true },
-          { "position": "OL", "across": 0.04, "offset": -0.5 },
-          { "position": "OL", "across": 0.08, "offset": -0.6 }
-        ],
+        "offensiveLine": "standard",
         "receivers": [
           { "receiverNumber": 1, "position": "WR", "across": -0.43, "offset": -0.5, "route": "post" },
           { "receiverNumber": 2, "position": "TE", "across": -0.28, "offset": -0.5, "route": "down_out_5" },
@@ -97,13 +100,7 @@
       "playtype": "pass",
       "formation": {
         "quarterback": { "position": "QB", "across": 0, "offset": -3 },
-        "offensiveLine": [
-          { "position": "OL", "across": -0.08, "offset": -0.6 },
-          { "position": "OL", "across": -0.04, "offset": -0.5 },
-          { "position": "OL", "across": 0, "offset": -0.3, "isCenter": true },
-          { "position": "OL", "across": 0.04, "offset": -0.5 },
-          { "position": "OL", "across": 0.08, "offset": -0.6 }
-        ],
+        "offensiveLine": "standard",
         "receivers": [
           {
             "receiverNumber": 1,
@@ -149,13 +146,7 @@
       "playtype": "run",
       "formation": {
         "quarterback": { "position": "QB", "across": 0, "offset": -1.5 },
-        "offensiveLine": [
-          { "position": "OL", "across": -0.08, "offset": -0.6 },
-          { "position": "OL", "across": -0.04, "offset": -0.5 },
-          { "position": "OL", "across": 0, "offset": -0.3, "isCenter": true },
-          { "position": "OL", "across": 0.04, "offset": -0.5 },
-          { "position": "OL", "across": 0.08, "offset": -0.6 }
-        ],
+        "offensiveLine": "standard",
         "receivers": [
           {
             "position": "WR",
@@ -199,13 +190,7 @@
       "playtype": "run",
       "formation": {
         "quarterback": { "position": "QB", "across": 0, "offset": -1.5 },
-        "offensiveLine": [
-          { "position": "OL", "across": -0.08, "offset": -0.6 },
-          { "position": "OL", "across": -0.04, "offset": -0.5 },
-          { "position": "OL", "across": 0, "offset": -0.3, "isCenter": true },
-          { "position": "OL", "across": 0.04, "offset": -0.5 },
-          { "position": "OL", "across": 0.08, "offset": -0.6 }
-        ],
+        "offensiveLine": "standard",
         "receivers": [
           {
             "position": "WR",
@@ -250,13 +235,7 @@
       "playtype": "pass",
       "formation": {
         "quarterback": { "position": "QB", "across": 0, "offset": -3 },
-        "offensiveLine": [
-          { "position": "OL", "across": -0.08, "offset": -0.6 },
-          { "position": "OL", "across": -0.04, "offset": -0.5 },
-          { "position": "OL", "across": 0, "offset": -0.3, "isCenter": true },
-          { "position": "OL", "across": 0.04, "offset": -0.5 },
-          { "position": "OL", "across": 0.08, "offset": -0.6 }
-        ],
+        "offensiveLine": "standard",
         "receivers": [
           {
             "receiverNumber": 1,
