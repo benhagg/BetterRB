@@ -112,3 +112,4 @@ const BLOCK_DISENGAGE_YARDS = 3.0; // Yards ball carrier must advance past to br
 const PANCAKE_THRESHOLD_DIFF = 5.0; // Rating advantage required for pancake knockdown
 const PANCAKE_GROUND_TIME = 1.0;   // Seconds defender remains on ground after pancake
 ```
+

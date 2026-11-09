@@ -20,7 +20,9 @@ Relative displacement to ball: \(\Delta \vec{d} = (x_b - x_p, (y_b - y_p) \cdot 
   $$D_{xy}(t) = \sqrt{\left(\frac{d_{\parallel}(t)}{R_x}\right)^2 + \left(\frac{d_{\perp}(t)}{R_{\text{lateral}}}\right)^2} \le 1.0$$
 
 ### Vertical Reach (Feet)
-* **Low / Ground Zone**: \(0\text{ ft} < z_b(t) < 2\text{ ft}\) (low catch; no jump).
+### Low catches
+
+When the ball is between 0 and 2 feet, the receiver must make a diving catch. The `images/actions/dive_catch.png`, `dive_catch_1.png`, and `dive_catch_2.png` frames are used for this animation. A successful low catch leaves the receiver down at the exact location where the catch was completed; the play does not continue as a normal upright run.
 * **Standard Reach Zone**: \(2\text{ ft} \le z_b(t) \le 8.5\text{ ft}\) (standing / running hands catch).
 * **Jumping Reach Zone**: \(8.5\text{ ft} < z_b(t) \le 10\text{ ft}\) (jump catch only).
 * **Out of Reach**: \(z_b(t) > 10\text{ ft}\) (sails overhead) or \(z_b(t) \le 0\text{ ft}\) (hits ground).
@@ -69,9 +71,25 @@ When a pass is incomplete (untouched, dropped, or swatted/PBU):
     * *Both win*: Higher \(P_{\text{peak}}\) wins (ties go to offense).
     * *Both fail*: Pass Break-Up (PBU) \(\implies\) incomplete ball bounce.
 
+## 6. Peak-Probability Catch Scheduling
+
+Catch attempts are not rolled immediately when the ball first enters a player's catch volume. Each eligible player gets one scheduled attempt at the best moment in their catch window:
+
+1. Simulate the ball and player positions frame-by-frame.
+2. Find when the ball enters the player's catch volume.
+3. Find when it leaves the player's catch volume.
+4. Calculate the player's catch probability at every frame in that window.
+5. Select the frame with the highest probability.
+6. Schedule one catch roll for that frame.
+7. Do not roll earlier or repeatedly for the same player and pass.
+
+For example, if the ball enters a receiver's range at `0.80s`, the receiver's best positioning occurs at `0.94s`, and the ball leaves at `1.02s`, the receiver rolls once at `0.94s` using the peak probability.
+
+For multiple players, calculate each player's best catch time independently and sort their attempts by scheduled contact time. The earliest scheduled opportunity resolves first. If that player succeeds, the pass ends. If they fail, the ball continues to the next scheduled opportunity. Nearly simultaneous attempts use distance, intended-target priority, and offense/defense status as tie-breakers.
+
 ---
 
-## 6. Tunable Parameters (Top of `game-catching.js`)
+## 7. Tunable Parameters (Top of `game-catching.js`)
 ```javascript
 // Horizontal Reach (Yards)
 const REACH_FORWARD_YARDS = 1.8;
