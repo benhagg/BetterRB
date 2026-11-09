@@ -1,29 +1,23 @@
 (function (root) {
-  const passSpeedYardsPerSecond = 12;
-  const throwArc = 0.7;
+  const throwArc = 0.4;
   const releaseHeightFeet = 6;
   const targetHeightFeet = 4;
+  const gravityFeetPerSecondSquared = 32.174;
 
-  function throwHeightAt(progress, distanceYards) {
-    const t = Math.max(0, Math.min(1, progress));
-    const straightHeight = releaseHeightFeet + (targetHeightFeet - releaseHeightFeet) * t;
-    return straightHeight + throwArc * distanceYards * 4 * t * (1 - t);
+  function throwProfile(distanceYards) {
+    // throwArc is extra apex height in feet per yard of horizontal throw distance.
+    const apexHeight = Math.max(releaseHeightFeet, targetHeightFeet) + Math.max(0, throwArc) * distanceYards;
+    const launchVelocity = Math.sqrt(2 * gravityFeetPerSecondSquared * (apexHeight - releaseHeightFeet));
+    const riseTime = launchVelocity / gravityFeetPerSecondSquared;
+    const fallTime = Math.sqrt(2 * (apexHeight - targetHeightFeet) / gravityFeetPerSecondSquared);
+    return { launchVelocity, duration: riseTime + fallTime };
   }
 
-  function throwArcLength(distanceYards) {
-    const samples = 16;
-    let length = 0;
-    let previousDistance = 0;
-    let previousHeight = throwHeightAt(0, distanceYards) / 3;
-    for (let index = 1; index <= samples; index++) {
-      const progress = index / samples;
-      const distance = distanceYards * progress;
-      const height = throwHeightAt(progress, distanceYards) / 3;
-      length += Math.hypot(distance - previousDistance, height - previousHeight);
-      previousDistance = distance;
-      previousHeight = height;
-    }
-    return length;
+  function throwHeightAt(progress, distanceYards) {
+    const profile = throwProfile(distanceYards);
+    const elapsed = Math.max(0, Math.min(1, progress)) * profile.duration;
+    return releaseHeightFeet + profile.launchVelocity * elapsed
+      - 0.5 * gravityFeetPerSecondSquared * elapsed * elapsed;
   }
 
   function create({ state, lateralYards, fieldBounds, passTarget, quarterbackIsBehindLineOfScrimmage }) {
@@ -34,13 +28,21 @@
       if (!player.isMoving || currentSpeed < 0.05 || !Number.isFinite(player.speed) || player.speed <= 0) {
         return { x: player.x, y: player.y };
       }
-      const directionX = velocityX / currentSpeed;
-      const directionY = velocityYards / currentSpeed;
-      const startFactor = Math.max(0, Math.min(1, currentSpeed / player.speed));
+      const movement = player._movement;
+      const directionX = movement?.direction?.x ?? (velocityX / currentSpeed);
+      const directionY = movement?.direction?.y ?? (velocityYards / currentSpeed);
+      let speedFactor = Math.max(0, Math.min(1, movement?.speedFactor ?? (currentSpeed / player.speed)));
       const agility = Math.max(0, Math.min(10, Number(player.agility ?? player.acceleration ?? player.rating) || 0));
       const accelerationRate = 1.3 / Math.max(0.5, 1 - agility * 0.05);
-      const travelYards = player.speed * (seconds
-        - ((1 - startFactor) * (1 - Math.exp(-accelerationRate * seconds))) / accelerationRate);
+      // Mirror Player.movementStep's per-frame update, including its end-of-frame speed.
+      let travelYards = 0;
+      let remaining = seconds;
+      while (remaining > 0.000001) {
+        const step = Math.min(1 / 60, remaining);
+        speedFactor = 1 - (1 - speedFactor) * Math.exp(-accelerationRate * step);
+        travelYards += player.speed * speedFactor * step;
+        remaining -= step;
+      }
       return { x: player.x + directionX * travelYards, y: player.y + (directionY * travelYards) / lateralYards };
     }
 
@@ -52,7 +54,7 @@
       state.quarterback.velocityX = 0;
       state.quarterback.velocityY = 0;
       const distance = Math.hypot(targetX - fromX, (targetY - fromY) * lateralYards);
-      const duration = Math.max(0.4, Math.min(2.5, throwArcLength(distance) / passSpeedYardsPerSecond));
+      const duration = throwProfile(distance).duration;
       state.pass = { fromX, fromY, targetX, targetY, duration, progress: 0, distanceYards: distance,
         heightFeet: releaseHeightFeet, heightfeet: releaseHeightFeet, targetReceiverNumber: null, wasTargetMoving: false };
       state.quarterback.phase = 'thrown';
@@ -81,11 +83,11 @@
           targetX = predicted.x;
           targetY = predicted.y;
           distance = Math.hypot(targetX - fromX, (targetY - fromY) * lateralYards);
-          duration = Math.max(0.4, Math.min(2.5, throwArcLength(distance) / passSpeedYardsPerSecond));
+          duration = throwProfile(distance).duration;
         }
       } else {
         distance = Math.hypot(targetX - fromX, (targetY - fromY) * lateralYards);
-        duration = Math.max(0.4, Math.min(2.5, throwArcLength(distance) / passSpeedYardsPerSecond));
+        duration = throwProfile(distance).duration;
       }
       state.pass = { fromX, fromY, targetX, targetY, duration, progress: 0, distanceYards: distance,
         heightFeet: releaseHeightFeet, heightfeet: releaseHeightFeet, targetReceiverNumber: targetReceiver.receiverNumber, wasTargetMoving: isMoving };
