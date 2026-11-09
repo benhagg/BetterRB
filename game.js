@@ -76,16 +76,13 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       if (player) used.add(player);
 
       const position = player?.position ? String(player.position).trim().toUpperCase() : slot.position;
-      const rating = Number.isFinite(player?.ratings?.speed)
-        ? player.ratings.speed
-        : (Number.isFinite(player?.rating) ? player.rating : 5);
       const DefenderClass = ['DT', 'DL'].includes(slot.position) ? DefensiveLineman
         : slot.position === 'LB' ? Linebacker : DefensiveBack;
       const defender = new DefenderClass({
         id: player?.id ?? index,
         name: player?.name ?? `${position} ${index + 1}`,
         position,
-        rating,
+        ratings: player?.ratings || { speed: 5, agility: 5, strength: 5, tackling: 5 },
         x: state.scrimmagePosition + slot.offset,
         y: 0.5 + slot.across,
         facingLeft: true
@@ -155,7 +152,6 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
         rosterPlayer = team1.players?.find(p => !used.has(p) && ['WR', 'TE', 'RB'].includes(p.position));
       }
       if (rosterPlayer) used.add(rosterPlayer);
-      const rating = Number.isFinite(rosterPlayer?.ratings?.speed) ? rosterPlayer.ratings.speed : 5;
       const ReceiverClass = cfg.position === 'TE' ? TightEnd : WideReceiver;
       const startX = state.scrimmagePosition + cfg.offset;
       const startY = 0.5 + cfg.across;
@@ -165,9 +161,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
           id: rosterPlayer?.id ?? `wr-${cfg.receiverNumber ?? index + 1}`,
           name: rosterPlayer?.name ?? cfg.name,
           position: cfg.position,
-          rating,
-          strength: Number.isFinite(rosterPlayer?.ratings?.strength) ? rosterPlayer.ratings.strength : 5,
-          agility: Number.isFinite(rosterPlayer?.ratings?.agility) ? rosterPlayer.ratings.agility : 5,
+          ratings: rosterPlayer?.ratings || { speed: 5, agility: 5, strength: 5, catching: 5 },
           receiverNumber: isRunPlay ? null : (cfg.receiverNumber ?? null),
           x: startX,
           y: startY,
@@ -185,9 +179,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     const qb = new Quarterback({
       ...saved,
       id: rosterPlayer?.id ?? 'qb', name: rosterPlayer?.name ?? 'QB', position: 'QB',
-      rating: Number.isFinite(rosterPlayer?.ratings?.speed) ? rosterPlayer.ratings.speed : 5,
-      strength: Number.isFinite(rosterPlayer?.ratings?.strength) ? rosterPlayer.ratings.strength : 5,
-      agility: Number.isFinite(rosterPlayer?.ratings?.agility) ? rosterPlayer.ratings.agility : 5,
+      ratings: saved.ratings || saved.rating || rosterPlayer?.ratings || { speed: 5, agility: 5, strength: 5, accuracy: 5 },
       x: Number.isFinite(saved.x) ? saved.x : state.scrimmagePosition + (quarterbackConfig.offset ?? -3),
       y: Number.isFinite(saved.y) ? saved.y : 0.5 + (quarterbackConfig.across ?? 0)
     });
@@ -200,7 +192,8 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     return offensiveLineSlots.map((slot, index) => {
       const lineman = new OffensiveLineman({
         id: `ol-${index}`, name: slot.isCenter ? 'C' : `OL ${index + 1}`,
-        position: slot.position || 'OL', rating: 5,
+        position: slot.position || 'OL',
+        ratings: { speed: 5, agility: 5, strength: 5, blocking: 5 },
         x: state.scrimmagePosition + slot.offset, y: 0.5 + slot.across, isCenter: Boolean(slot.isCenter)
       });
       lineman.offset = slot.offset;
@@ -214,9 +207,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     const player = team1.players?.find(item => String(item.position).trim().toUpperCase() === 'RB');
     const back = new RunningBack({
       id: player?.id ?? 'rb', name: player?.name ?? 'RB', position: 'RB',
-      rating: Number.isFinite(player?.ratings?.speed) ? player.ratings.speed : 5,
-      strength: Number.isFinite(player?.ratings?.strength) ? player.ratings.strength : 5,
-      agility: Number.isFinite(player?.ratings?.agility) ? player.ratings.agility : 5,
+      ratings: player?.ratings || { speed: 5, agility: 5, strength: 5, catching: 5 },
       x: state.scrimmagePosition + runningBackConfig.offset, y: 0.5 + runningBackConfig.across,
       receiverNumber: isRunPlay ? null : (runningBackConfig.receiverNumber ?? 3),
       route: runningBackRoute
@@ -653,7 +644,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
         id: `rec-${config.receiverNumber ?? index + 1}`,
         name: `Receiver ${config.receiverNumber ?? index + 1}`,
         position: config.position || 'WR',
-        rating: 5,
+        ratings: state.receivers?.[index]?.ratings || { speed: 5, agility: 5, strength: 5, catching: 5 },
         x: state.scrimmagePosition + (config.offset ?? -0.5),
         y: 0.5 + (config.across ?? 0),
         receiverNumber: isRun ? null : (config.receiverNumber ?? null),

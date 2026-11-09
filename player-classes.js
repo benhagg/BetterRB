@@ -32,11 +32,32 @@
       this.position = String(config.position ?? 'WR').trim().toUpperCase();
       this.team = config.team ?? null;
       this.uniform = config.uniform ?? null;
-      this.rating = Number.isFinite(config.rating) ? config.rating : 5;
-      this.agility = Number.isFinite(config.agility) ? config.agility : (Number.isFinite(config.rating) ? config.rating : 5);
-      this.strength = Number.isFinite(config.strength) ? config.strength : 5;
+      const rawRatings = (config.ratings && typeof config.ratings === 'object')
+        ? config.ratings
+        : (config.rating && typeof config.rating === 'object')
+          ? config.rating
+          : null;
+      const fallbackRating = Number.isFinite(config.rating) ? config.rating : 5;
+
+      const speedRating = Number.isFinite(rawRatings?.speed)
+        ? rawRatings.speed
+        : (Number.isFinite(config.speed) ? config.speed : fallbackRating);
+      const agilityRating = Number.isFinite(rawRatings?.agility)
+        ? rawRatings.agility
+        : (Number.isFinite(config.agility) ? config.agility : fallbackRating);
+      const strengthRating = Number.isFinite(rawRatings?.strength)
+        ? rawRatings.strength
+        : (Number.isFinite(config.strength) ? config.strength : 5);
+
+      this.ratings = {
+        speed: speedRating,
+        agility: agilityRating,
+        strength: strengthRating,
+        ...(rawRatings || {})
+      };
+      this.rating = this.ratings;
       this.speedMultiplier = speedMultiplier(this.position);
-      this.speed = (5 + this.rating * 0.3) * this.speedMultiplier;
+      this.speed = (5 + speedRating * 0.3) * this.speedMultiplier;
       this.kind = config.kind ?? kindForPosition(this.position);
 
       this.x = Number.isFinite(config.x) ? config.x : 22;
@@ -54,11 +75,20 @@
       this.phase = config.phase ?? 'preplay';
     }
 
+    get agility() {
+      return this.ratings?.agility ?? 5;
+    }
+
+    get strength() {
+      return this.ratings?.strength ?? 5;
+    }
+
     // Class instances are re-created when a saved game loads. Keep saved data plain.
     toJSON() {
       return {
-        id: this.id, name: this.name, position: this.position, rating: this.rating,
-        agility: this.agility, strength: this.strength,
+        id: this.id, name: this.name, position: this.position,
+        rating: { ...this.ratings },
+        ratings: { ...this.ratings },
         kind: this.kind, x: this.x, y: this.y, startX: this.startX, startY: this.startY,
         velocityX: this.velocityX, velocityY: this.velocityY,
         lastDirX: this.lastDirX, lastDirY: this.lastDirY, autoRun: this.autoRun,
@@ -111,7 +141,7 @@
       }
 
       const magnitude = Math.hypot(requestedX, requestedY);
-      const agility = Math.max(0, Math.min(10, Number(this.agility ?? this.acceleration ?? this.rating) || 0));
+      const agility = Math.max(0, Math.min(10, Number(this.rating?.agility ?? this.ratings?.agility ?? this.agility ?? 5) || 0));
       // Level 0 uses f(t) = 1 - exp(-1.3t); each agility level shortens the time scale by 5%.
       const accelerationRate = 1.3 / Math.max(0.5, 1 - agility * 0.05);
 

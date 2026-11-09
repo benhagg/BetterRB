@@ -62,7 +62,8 @@
 
   function create({ state, lateralYards, fieldBounds, passTarget, quarterbackIsBehindLineOfScrimmage }) {
     function getQbStrength() {
-      return state.quarterback?.strength ?? state.quarterback?.rating ?? 5;
+      const qb = state.quarterback;
+      return qb?.rating?.strength ?? qb?.ratings?.strength ?? qb?.strength ?? 5;
     }
 
     function predictReceiverPosition(player, seconds) {
@@ -76,7 +77,7 @@
       const directionX = movement?.direction?.x ?? (velocityX / currentSpeed);
       const directionY = movement?.direction?.y ?? (velocityYards / currentSpeed);
       let speedFactor = Math.max(0, Math.min(1, movement?.speedFactor ?? (currentSpeed / player.speed)));
-      const agility = Math.max(0, Math.min(10, Number(player.agility ?? player.acceleration ?? player.rating) || 0));
+      const agility = Math.max(0, Math.min(10, Number(player.rating?.agility ?? player.ratings?.agility ?? player.agility ?? 5) || 0));
       const accelerationRate = 1.3 / Math.max(0.5, 1 - agility * 0.05);
       // Mirror Player.movementStep's per-frame update, including its end-of-frame speed.
       let travelYards = 0;
