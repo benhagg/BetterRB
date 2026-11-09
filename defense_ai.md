@@ -41,21 +41,41 @@
 ---
 
 ### 4. Phase 3: Ball Carrier Pursuit & Tackling
-* **Pursuit Angles**:
-  * DBs / Safeties take outside-in pursuit angles to prevent sideline breakouts.
-  * LBs take inside-out pursuit angles to seal cutbacks.
-* **Engagement & Resolution**:
-  * Blocks resolve via `blocking.md`.
-  * Standing vs dive tackle decisions resolve via `tackling.md`.
+
+#### Leading Pursuit Angle Calculation
+Rather than chasing the ball carrier's current position, defenders target a predicted intercept point $\vec{x}_{\text{aim}}$:
+1. **Time to Intercept ($t_{\text{int}}$)**:
+   $$t_{\text{int}} = \text{clamp}\left(0.1\text{s},\, 1.5\text{s},\, \frac{\|\vec{p}_{\text{carrier}} - \vec{p}_{\text{def}}\|}{v_{\text{def}} + 0.1}\right)$$
+2. **Base Intercept Point**:
+   $$\vec{x}_{\text{int}} = \vec{p}_{\text{carrier}} + \vec{v}_{\text{carrier}} \cdot t_{\text{int}}$$
+
+#### Role-Based Leverage Adjustments:
+* **Contain Defenders (CBs & Outside LBs)**:
+  * Aim toward the sideline shoulder of the intercept point to "cup" the runner and prevent perimeter breakouts:
+    $$y_{\text{aim}} = y_{\text{int}} + \text{sign}(y_{\text{carrier}} - 0.5) \times \text{CONTAIN\_OFFSET}$$
+* **Alley / Inside Defenders (Inside LBs & DL)**:
+  * Aim directly at $\vec{x}_{\text{int}}$ (inside-out angle) to close cutback lanes against the grain.
+* **Deep Safeties**:
+  * Maintain depth leverage: add $+1.5\text{ yds}$ downfield cushion to $x_{\text{int}}$ until the runner commits to a lane.
+
+#### Engagement & Resolution:
+* Blocker engagements resolve via `blocking.md`.
+* Tackles (standing vs dive) resolve via `tackling.md`.
 
 ---
 
 ### 5. Tunable Constants
 ```javascript
+// Coverage & Breaks
 const ZONE_CONTEST_RADIUS    = 3.00; // yds radius around zone anchor to contest receiver
 const MAN_CUSHION_DISTANCE   = 4.00; // yds cushion maintained during backpedal
 const MAN_CUT_REACTION_DELAY = 0.20; // sec delay when receiver cuts on route
 const RECEIVER_BREAK_DELAY   = 0.05; // sec delay before targeted receiver breaks to ball
 const DEF_MAX_BREAK_DELAY    = 0.30; // max sec delay for defender running away from QB
 const DEF_MIN_BREAK_DELAY    = 0.00; // min sec delay for defender running toward QB
+
+// Leading Pursuit
+const PURSUIT_CONTAIN_OFFSET = 0.08; // lateral offset (~1.36 yds) to force runner inside
+const PURSUIT_SAFETY_CUSHION = 1.50; // yds extra depth cushion kept by safeties
+const PURSUIT_MAX_LEAD_TIME  = 1.50; // max sec forward prediction window
 ```
