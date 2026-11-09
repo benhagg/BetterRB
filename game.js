@@ -31,26 +31,13 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     state.scrimmagePosition = state.fieldPosition;
   }
 
-  const defaultDefensiveFormationSlots = [
-    { position: 'DT', across: -.09, offset: .1 },
-    { position: 'DT', across: -.03, offset: .1 },
-    { position: 'DT', across:  .03, offset: .1 },
-    { position: 'DT', across:  .09, offset: .1 },
-    { position: 'LB', across: -.30, offset: 0 },
-    { position: 'LB', across: -.10, offset: 0 },
-    { position: 'LB', across:  .10, offset: 0 },
-    { position: 'LB', across:  .30, offset: 0 },
-    { position: 'DB', across: -.42, offset: 0 },
-    { position: 'DB', across:  0.0, offset: 0 },
-    { position: 'DB', across:  .42, offset: 0 }
-  ];
-  const defensiveFormationSlots = selectedPlays.defense?.formation?.defenders || defaultDefensiveFormationSlots;
+  const defensiveFormationSlots = selectedPlays.defense?.formation?.defenders || [];
 
-  function createDefenders() {
+  function createDefenders(slots = defensiveFormationSlots) {
     const roster = Array.isArray(team2?.players) ? team2.players : [];
     const used = new Set();
 
-    return defensiveFormationSlots.map((slot, index) => {
+    return slots.map((slot, index) => {
       // Look for a player on the opponent's roster matching this position
       let player = roster.find(p => !used.has(p) && String(p.position || '').trim().toUpperCase() === slot.position);
 
@@ -80,65 +67,25 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
         name: player?.name ?? `${position} ${index + 1}`,
         position,
         ratings: player?.ratings || { speed: 5, agility: 5, strength: 5, tackling: 5 },
-        x: state.scrimmagePosition + slot.offset,
-        y: 0.5 + slot.across,
+        x: state.scrimmagePosition + (slot.offset ?? 0),
+        y: 0.5 + (slot.across ?? 0),
         facingLeft: true
       });
-      defender.offset = slot.offset;
-      defender.across = slot.across;
+      defender.offset = slot.offset ?? 0;
+      defender.across = slot.across ?? 0;
       return defender;
     });
   }
 
-  const defaultReceiverConfigs = [
-    {
-      receiverNumber: 1,
-      across: -0.43,
-      offset: 0,
-      position: 'WR',
-      name: 'WR1',
-      route: [{ dx: 8, dy: 0 }, { dx: 22, dy: 0.18 }] // Post / In
-    },
-    {
-      receiverNumber: 2,
-      across: -0.28,
-      offset: 0,
-      position: 'TE',
-      name: 'TE',
-      route: [{ dx: 5, dy: 0 }, { dx: 14, dy: -0.12 }] // Out
-    },
-    {
-      receiverNumber: 4,
-      across: 0.28,
-      offset: 0,
-      position: 'WR',
-      name: 'SLOT',
-      route: [{ dx: 4, dy: 0 }, { dx: 16, dy: -0.18 }] // Slant
-    },
-    {
-      receiverNumber: 5,
-      across: 0.43,
-      offset: 0,
-      position: 'WR',
-      name: 'WR2',
-      route: [{ dx: 35, dy: 0 }] // Go / Streak
-    }
-  ];
-  const receiverConfigs = selectedPlays.offense?.formation?.receivers || defaultReceiverConfigs;
+  const receiverConfigs = selectedPlays.offense?.formation?.receivers || [];
   const quarterbackConfig = selectedPlays.offense?.formation?.quarterback || {
     position: 'QB', across: 0, offset: 0
   };
   const runningBackConfig = selectedPlays.offense?.formation?.runningBack || {
-    position: 'RB', across: 0.13, offset: -4.5, receiverNumber: 3, route: [{ dx: 3, dy: 0.12 }, { dx: 12, dy: 0.12 }]
+    position: 'RB', across: 0, offset: 0
   };
-  const runningBackRoute = runningBackConfig.route;
-  const offensiveLineSlots = selectedPlays.offense?.formation?.offensiveLine || [
-    { position: 'OL', across: -.08, offset: -.2 },
-    { position: 'OL', across: -.04, offset: -.2 },
-    { position: 'OL', across: 0, offset: -.2, isCenter: true },
-    { position: 'OL', across: .04, offset: -.2 },
-    { position: 'OL', across: .08, offset: -.2 }
-  ];
+  const runningBackRoute = runningBackConfig.route || [];
+  const offensiveLineSlots = selectedPlays.offense?.formation?.offensiveLine || [];
 
   function createReceivers(configs = (selectedPlays.offense?.formation?.receivers || receiverConfigs)) {
     const isRunPlay = (state.playType || playType) === 'run';
@@ -206,18 +153,18 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       rating: rosterPlayer?.rating ?? saved?.rating ?? fallbackRating,
       ratings,
       skills: ratings,
-      x: Number.isFinite(saved?.x) ? saved.x : state.scrimmagePosition + (quarterbackConfig.offset ?? -3),
+      x: Number.isFinite(saved?.x) ? saved.x : state.scrimmagePosition + (quarterbackConfig.offset ?? 0),
       y: Number.isFinite(saved?.y) ? saved.y : 0.5 + (quarterbackConfig.across ?? 0)
     });
-    qb.offset = quarterbackConfig.offset ?? -3;
+    qb.offset = quarterbackConfig.offset ?? 0;
     qb.across = quarterbackConfig.across ?? 0;
     return qb;
   }
 
-  function createOffensiveLine() {
+  function createOffensiveLine(slots = offensiveLineSlots) {
     const roster = Array.isArray(team1?.players) ? team1.players : [];
     const used = new Set();
-    return offensiveLineSlots.map((slot, index) => {
+    return slots.map((slot, index) => {
       let rosterPlayer = roster.find(p => !used.has(p) && String(p.position || '').trim().toUpperCase() === 'OL');
       if (rosterPlayer) used.add(rosterPlayer);
       const rawRatings = rosterPlayer?.ratings || {};
@@ -736,12 +683,12 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     selectedPlays.offense = play;
     state.playType = String(play.playtype || play.playType || play.type || 'pass').toLowerCase();
     const isRun = state.playType === 'run';
-    const qbCfg = play.formation?.quarterback || { position: 'QB', across: 0, offset: -3 };
-    const rbCfg = play.formation?.runningBack || { position: 'RB', across: 0.13, offset: -4.5 };
+    const qbCfg = play.formation?.quarterback || { position: 'QB', across: 0, offset: 0 };
+    const rbCfg = play.formation?.runningBack || { position: 'RB', across: 0, offset: 0 };
     const recCfgs = play.formation?.receivers || [];
 
     // Reconfigure Quarterback
-    state.quarterback.offset = qbCfg.offset ?? -3;
+    state.quarterback.offset = qbCfg.offset ?? 0;
     state.quarterback.across = qbCfg.across ?? 0;
     state.quarterback.x = state.scrimmagePosition + state.quarterback.offset;
     state.quarterback.y = 0.5 + state.quarterback.across;
@@ -751,8 +698,8 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     state.quarterback.isMoving = false;
 
     // Reconfigure Running Back
-    state.runningBack.offset = rbCfg.offset ?? -4.5;
-    state.runningBack.across = rbCfg.across ?? 0.13;
+    state.runningBack.offset = rbCfg.offset ?? 0;
+    state.runningBack.across = rbCfg.across ?? 0;
     state.runningBack.startX = state.scrimmagePosition + state.runningBack.offset;
     state.runningBack.startY = 0.5 + state.runningBack.across;
     state.runningBack.x = state.runningBack.startX;
@@ -761,6 +708,11 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     state.runningBack.hasBall = false;
     state.runningBack.receiverNumber = isRun ? null : (rbCfg.receiverNumber ?? null);
     state.runningBack.assignRoute(rbCfg.route || []);
+
+    // Reconfigure Offensive Line
+    if (Array.isArray(play.formation?.offensiveLine)) {
+      state.offensiveLine = createOffensiveLine(play.formation.offensiveLine);
+    }
 
     // Reconfigure Receivers from Roster with Play Routes
     state.receivers = createReceivers(recCfgs);
