@@ -381,8 +381,6 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
         }
       } else if (carrier.autoRun) {
         carrier.move(delta, carrier.autoRun.vx, carrier.autoRun.vy);
-      } else if (state.playType === 'run' && carrier === state.runningBack) {
-        carrier.move(delta, 1, 0);
       } else {
         carrier.velocityX = 0;
         carrier.velocityY = 0;
@@ -412,15 +410,15 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
           state.quarterback.hasBall = false;
           let catchDirX = state.runningBack.velocityX;
           let catchDirY = state.runningBack.velocityY * lateralYards;
-          if (Math.hypot(catchDirX, catchDirY) < 0.1) {
-            catchDirX = state.runningBack.lastDirX;
-            catchDirY = state.runningBack.lastDirY;
+          if (!Number.isFinite(catchDirX) || !Number.isFinite(catchDirY) || Math.hypot(catchDirX, catchDirY) < 0.1) {
+            catchDirX = Number.isFinite(state.runningBack.lastDirX) ? state.runningBack.lastDirX : 1;
+            catchDirY = Number.isFinite(state.runningBack.lastDirY) ? state.runningBack.lastDirY : 0;
           }
-          state.runningBack.catchBall(
-            Number.isFinite(catchDirX) && Number.isFinite(catchDirY)
-              ? { vx: catchDirX, vy: catchDirY }
-              : null
-          );
+          if (Math.hypot(catchDirX, catchDirY) < 0.1) {
+            catchDirX = 1;
+            catchDirY = 0;
+          }
+          state.runningBack.catchBall({ vx: catchDirX, vy: catchDirY });
           state.fieldPosition = state.runningBack.x;
           state.playerY = state.runningBack.y;
         }

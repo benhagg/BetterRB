@@ -600,7 +600,10 @@ window.addEventListener('keydown', event => {
   // Snapping the ball only happens when cards are NOT covering the field
   if (screen === 'game' && (event.code === 'Space' || key === ' ')) {
     event.preventDefault();
-    if (!event.repeat && gameSession) gameSession.pressSpace();
+    if (!event.repeat && gameSession) {
+      movementKeys.clear();
+      gameSession.pressSpace();
+    }
     return;
   }
   if (screen === 'game' && ['1', '2', '3'].includes(key) && !event.repeat && gameSession?.state?.phase === 'preplay') {
