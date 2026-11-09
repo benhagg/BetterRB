@@ -3,18 +3,29 @@
   const releaseHeightFeet = 6;
   const targetHeightFeet = 4;
   const gravityFeetPerSecondSquared = 32.174;
+  const inaccuracyYards = 1.0;
+  const feetPerYard = 3.0;
 
-  function throwProfile(distanceYards) {
+  function calculateInaccuracy(lateralYards) {
+    const inaccuracyX = (Math.random() * 2 - 1) * inaccuracyYards;
+    const inaccuracyY = ((Math.random() * 2 - 1) * inaccuracyYards) / lateralYards;
+    const inaccuracyHeightFeet = (Math.random() * 2 - 1) * (inaccuracyYards * feetPerYard);
+    return { inaccuracyX, inaccuracyY, inaccuracyHeightFeet };
+  }
+
+  function throwProfile(distanceYards, targetHeight = targetHeightFeet) {
+    const resolvedTargetHeight = Number.isFinite(targetHeight) ? targetHeight : targetHeightFeet;
     // throwArc is extra apex height in feet per yard of horizontal throw distance.
-    const apexHeight = Math.max(releaseHeightFeet, targetHeightFeet) + Math.max(0, throwArc) * distanceYards;
+    const apexHeight = Math.max(releaseHeightFeet, resolvedTargetHeight) + Math.max(0, throwArc) * distanceYards;
     const launchVelocity = Math.sqrt(2 * gravityFeetPerSecondSquared * (apexHeight - releaseHeightFeet));
     const riseTime = launchVelocity / gravityFeetPerSecondSquared;
-    const fallTime = Math.sqrt(2 * (apexHeight - targetHeightFeet) / gravityFeetPerSecondSquared);
+    const fallTime = Math.sqrt(2 * (apexHeight - resolvedTargetHeight) / gravityFeetPerSecondSquared);
     return { launchVelocity, duration: riseTime + fallTime };
   }
 
-  function throwHeightAt(progress, distanceYards) {
-    const profile = throwProfile(distanceYards);
+  function throwHeightAt(progress, distanceYards, targetHeight = targetHeightFeet) {
+    const resolvedTargetHeight = Number.isFinite(targetHeight) ? targetHeight : targetHeightFeet;
+    const profile = throwProfile(distanceYards, resolvedTargetHeight);
     const elapsed = Math.max(0, Math.min(1, progress)) * profile.duration;
     return releaseHeightFeet + profile.launchVelocity * elapsed
       - 0.5 * gravityFeetPerSecondSquared * elapsed * elapsed;
@@ -53,10 +64,30 @@
       state.quarterback.isMoving = false;
       state.quarterback.velocityX = 0;
       state.quarterback.velocityY = 0;
-      const distance = Math.hypot(targetX - fromX, (targetY - fromY) * lateralYards);
-      const duration = throwProfile(distance).duration;
-      state.pass = { fromX, fromY, targetX, targetY, duration, progress: 0, distanceYards: distance,
-        heightFeet: releaseHeightFeet, heightfeet: releaseHeightFeet, targetReceiverNumber: null, wasTargetMoving: false };
+
+      const { inaccuracyX, inaccuracyY, inaccuracyHeightFeet } = calculateInaccuracy(lateralYards);
+      const actualTargetX = Math.max(fieldBounds.endZoneL, Math.min(fieldBounds.endZoneR, targetX + inaccuracyX));
+      const actualTargetY = Math.max(fieldBounds.top, Math.min(fieldBounds.bottom, targetY + inaccuracyY));
+      const actualTargetHeightFeet = Math.max(1, targetHeightFeet + inaccuracyHeightFeet);
+
+      const distance = Math.hypot(actualTargetX - fromX, (actualTargetY - fromY) * lateralYards);
+      const duration = throwProfile(distance, actualTargetHeightFeet).duration;
+      state.pass = {
+        fromX,
+        fromY,
+        targetX: actualTargetX,
+        targetY: actualTargetY,
+        targetHeightFeet: actualTargetHeightFeet,
+        duration,
+        progress: 0,
+        distanceYards: distance,
+        heightFeet: releaseHeightFeet,
+        heightfeet: releaseHeightFeet,
+        targetReceiverNumber: null,
+        wasTargetMoving: false,
+        intendedTargetX: targetX,
+        intendedTargetY: targetY
+      };
       state.quarterback.phase = 'thrown';
       state.phase = 'thrown';
     }
@@ -83,14 +114,36 @@
           targetX = predicted.x;
           targetY = predicted.y;
           distance = Math.hypot(targetX - fromX, (targetY - fromY) * lateralYards);
-          duration = throwProfile(distance).duration;
+          duration = throwProfile(distance, targetHeightFeet).duration;
         }
       } else {
         distance = Math.hypot(targetX - fromX, (targetY - fromY) * lateralYards);
-        duration = throwProfile(distance).duration;
+        duration = throwProfile(distance, targetHeightFeet).duration;
       }
-      state.pass = { fromX, fromY, targetX, targetY, duration, progress: 0, distanceYards: distance,
-        heightFeet: releaseHeightFeet, heightfeet: releaseHeightFeet, targetReceiverNumber: targetReceiver.receiverNumber, wasTargetMoving: isMoving };
+
+      const { inaccuracyX, inaccuracyY, inaccuracyHeightFeet } = calculateInaccuracy(lateralYards);
+      const actualTargetX = Math.max(fieldBounds.endZoneL, Math.min(fieldBounds.endZoneR, targetX + inaccuracyX));
+      const actualTargetY = Math.max(fieldBounds.top, Math.min(fieldBounds.bottom, targetY + inaccuracyY));
+      const actualTargetHeightFeet = Math.max(1, targetHeightFeet + inaccuracyHeightFeet);
+      const actualDistance = Math.hypot(actualTargetX - fromX, (actualTargetY - fromY) * lateralYards);
+      const actualDuration = throwProfile(actualDistance, actualTargetHeightFeet).duration;
+
+      state.pass = {
+        fromX,
+        fromY,
+        targetX: actualTargetX,
+        targetY: actualTargetY,
+        targetHeightFeet: actualTargetHeightFeet,
+        duration: actualDuration,
+        progress: 0,
+        distanceYards: actualDistance,
+        heightFeet: releaseHeightFeet,
+        heightfeet: releaseHeightFeet,
+        targetReceiverNumber: targetReceiver.receiverNumber,
+        wasTargetMoving: isMoving,
+        intendedTargetX: targetX,
+        intendedTargetY: targetY
+      };
       state.quarterback.phase = 'thrown';
       state.phase = 'thrown';
     }
@@ -152,8 +205,26 @@
       else releaseToLocation(windup.targetX, windup.targetY);
     }
 
-    return { throwHeightAt, throwPass, throwPassToLocation, updateWindup };
+    return {
+      throwHeightAt,
+      throwProfile,
+      throwPass,
+      throwPassToLocation,
+      updateWindup,
+      calculateInaccuracy
+    };
   }
 
-  root.GamePassing = { create };
-})(window);
+  const api = {
+    create,
+    throwProfile,
+    throwHeightAt,
+    calculateInaccuracy,
+    throwArc,
+    releaseHeightFeet,
+    targetHeightFeet,
+    inaccuracyYards
+  };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  if (root) root.GamePassing = api;
+})(typeof window !== 'undefined' ? window : globalThis);

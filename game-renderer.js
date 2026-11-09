@@ -79,7 +79,7 @@
       const ballX = (ballWorldX - cameraOriginYard) * field.pixelsPerYard * horizontalScale;
       const groundY = top + ballWorldY * (bottom - top);
       const heightFeet = typeof state.pass.heightFeet === 'number'
-        ? state.pass.heightFeet : throwHeightAt(passProgress, state.pass.distanceYards || 0);
+        ? state.pass.heightFeet : throwHeightAt(passProgress, state.pass.distanceYards || 0, state.pass.targetHeightFeet);
       const ballY = groundY - heightFeet * ((16 * pixel) / 6);
       ctx.save();
       ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';

@@ -434,7 +434,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       }
     } else if (state.phase === 'thrown') {
       state.pass.progress = Math.min(1, state.pass.progress + delta / state.pass.duration);
-      const currentHeight = passing.throwHeightAt(state.pass.progress, state.pass.distanceYards);
+      const currentHeight = passing.throwHeightAt(state.pass.progress, state.pass.distanceYards, state.pass.targetHeightFeet);
       state.pass.heightFeet = currentHeight;
       state.pass.heightfeet = currentHeight;
       for (const player of [...state.receivers, state.runningBack]) {
