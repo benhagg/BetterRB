@@ -1,0 +1,25 @@
+{
+  "plays": [
+    {
+      "id": "ace-cross",
+      "name": "Ace Cross",
+      "formation": {
+        "quarterback": { "position": "QB", "across": 0, "offset": -3, "dropback": false },
+        "offensiveLine": [
+          { "position": "OL", "across": -0.08, "offset": -0.6 },
+          { "position": "OL", "across": -0.04, "offset": -0.5 },
+          { "position": "OL", "across": 0, "offset": -0.3, "isCenter": true },
+          { "position": "OL", "across": 0.04, "offset": -0.5 },
+          { "position": "OL", "across": 0.08, "offset": -0.6 }
+        ],
+        "receivers": [
+          { "receiverNumber": 1, "position": "WR", "across": -0.43, "offset": -0.5, "route": [{ "dx": 8, "dy": 0 }, { "dx": 22, "dy": 0.18 }] },
+          { "receiverNumber": 2, "position": "TE", "across": -0.28, "offset": -0.5, "route": [{ "dx": 5, "dy": 0 }, { "dx": 14, "dy": -0.12 }] },
+          { "receiverNumber": 3, "position": "WR", "across": 0.28, "offset": -0.5, "route": [{ "dx": 4, "dy": 0 }, { "dx": 16, "dy": -0.18 }] },
+          { "receiverNumber": 4, "position": "WR", "across": 0.43, "offset": -0.5, "route": [{ "dx": 35, "dy": 0 }] }
+        ],
+        "runningBack": { "position": "RB", "across": 0.13, "offset": -4.5, "route": [{ "dx": 3, "dy": 0.12 }, { "dx": 12, "dy": 0.12 }] }
+      }
+    }
+  ]
+}

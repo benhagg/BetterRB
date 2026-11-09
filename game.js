@@ -2,7 +2,7 @@
 // currently the top bottom and each end zone of the field are these numbers. out of bounds is anything outside of the top / bottom range and a touchdown is anything in the end zone we are going towards
 const fieldBounds = {top: -.02, bottom: 0.95, endZoneL: 2.217644291800185, endZoneR: 101.66747130270615};
 
-window.playGame = function playGame(team1, team2, savedState = null) {
+window.playGame = function playGame(team1, team2, savedState = null, selectedPlays = {}) {
   const dropbackYards = 3;
   const state = {
     score1: 0,
@@ -30,8 +30,8 @@ window.playGame = function playGame(team1, team2, savedState = null) {
     state.dropbackRemaining = Number.isFinite(state.dropbackRemaining) ? Math.max(0, Math.min(state.dropbackRemaining, remaining)) : remaining;
   }
 
-  const defensiveFormationSlots = [
-    { position: 'DT', across: -.09, offset: 0 },
+  const defaultDefensiveFormationSlots = [
+    { position: 'DT', across: -.09, offset: .5 },
     { position: 'DT', across: -.03, offset: 0 },
     { position: 'DT', across:  .03, offset: 0 },
     { position: 'DT', across:  .09, offset: 0 },
@@ -43,6 +43,7 @@ window.playGame = function playGame(team1, team2, savedState = null) {
     { position: 'DB', across:  0.0, offset: 0 },
     { position: 'DB', across:  .42, offset: 0 }
   ];
+  const defensiveFormationSlots = selectedPlays.defense?.formation?.defenders || defaultDefensiveFormationSlots;
 
   function createDefenders() {
     const roster = Array.isArray(team2?.players) ? team2.players : [];
@@ -54,7 +55,7 @@ window.playGame = function playGame(team1, team2, savedState = null) {
 
       // If no exact match, match related positions
       if (!player) {
-        if (slot.position === 'DT') {
+        if (['DT', 'DL'].includes(slot.position)) {
           player = roster.find(p => !used.has(p) && ['DL', 'DE', 'NT', 'EDGE', 'LINEMAN'].includes(String(p.position || '').trim().toUpperCase()));
         } else if (slot.position === 'LB') {
           player = roster.find(p => !used.has(p) && ['ILB', 'MLB', 'OLB', 'SLB', 'WLB'].includes(String(p.position || '').trim().toUpperCase()));
@@ -74,7 +75,7 @@ window.playGame = function playGame(team1, team2, savedState = null) {
       const rating = Number.isFinite(player?.ratings?.speed)
         ? player.ratings.speed
         : (Number.isFinite(player?.rating) ? player.rating : 5);
-      const DefenderClass = slot.position === 'DT' ? DefensiveLineman
+      const DefenderClass = ['DT', 'DL'].includes(slot.position) ? DefensiveLineman
         : slot.position === 'LB' ? Linebacker : DefensiveBack;
       const defender = new DefenderClass({
         id: player?.id ?? index,
@@ -91,7 +92,7 @@ window.playGame = function playGame(team1, team2, savedState = null) {
     });
   }
 
-  const receiverConfigs = [
+  const defaultReceiverConfigs = [
     {
       receiverNumber: 1,
       across: -0.43,
@@ -125,7 +126,21 @@ window.playGame = function playGame(team1, team2, savedState = null) {
       route: [{ dx: 35, dy: 0 }] // Go / Streak
     }
   ];
-  const runningBackRoute = [{ dx: 3, dy: 0.12 }, { dx: 12, dy: 0.12 }];
+  const receiverConfigs = selectedPlays.offense?.formation?.receivers || defaultReceiverConfigs;
+  const quarterbackConfig = selectedPlays.offense?.formation?.quarterback || {
+    position: 'QB', across: 0, offset: 0, dropback: true
+  };
+  const runningBackConfig = selectedPlays.offense?.formation?.runningBack || {
+    position: 'RB', across: 0.13, offset: -4.5, route: [{ dx: 3, dy: 0.12 }, { dx: 12, dy: 0.12 }]
+  };
+  const runningBackRoute = runningBackConfig.route;
+  const offensiveLineSlots = selectedPlays.offense?.formation?.offensiveLine || [
+    { position: 'OL', across: -.08, offset: 0 },
+    { position: 'OL', across: -.04, offset: 0 },
+    { position: 'OL', across: 0, offset: 0, isCenter: true },
+    { position: 'OL', across: .04, offset: 0 },
+    { position: 'OL', across: .08, offset: 0 }
+  ];
 
   function createReceivers() {
     const used = new Set();
@@ -164,20 +179,20 @@ window.playGame = function playGame(team1, team2, savedState = null) {
       ...saved,
       id: rosterPlayer?.id ?? 'qb', name: rosterPlayer?.name ?? 'QB', position: 'QB',
       rating: Number.isFinite(rosterPlayer?.ratings?.speed) ? rosterPlayer.ratings.speed : 5,
-      x: Number.isFinite(saved.x) ? saved.x : state.fieldPosition,
-      y: Number.isFinite(saved.y) ? saved.y : state.playerY
+      x: Number.isFinite(saved.x) ? saved.x : state.scrimmagePosition + quarterbackConfig.offset,
+      y: Number.isFinite(saved.y) ? saved.y : 0.5 + quarterbackConfig.across
     });
   }
 
   function createOffensiveLine() {
-    return [-.08, -.04, 0, .04, .08].map((across, index) => {
+    return offensiveLineSlots.map((slot, index) => {
       const lineman = new OffensiveLineman({
-        id: `ol-${index}`, name: index === 2 ? 'C' : `OL ${index + 1}`,
-        position: index === 2 ? 'C' : 'OL', rating: 5,
-        x: state.scrimmagePosition, y: 0.5 + across, isCenter: index === 2
+        id: `ol-${index}`, name: slot.isCenter ? 'C' : `OL ${index + 1}`,
+        position: slot.position || 'OL', rating: 5,
+        x: state.scrimmagePosition + slot.offset, y: 0.5 + slot.across, isCenter: Boolean(slot.isCenter)
       });
-      lineman.offset = 0;
-      lineman.across = across;
+      lineman.offset = slot.offset;
+      lineman.across = slot.across;
       return lineman;
     });
   }
@@ -187,11 +202,11 @@ window.playGame = function playGame(team1, team2, savedState = null) {
     const back = new RunningBack({
       id: player?.id ?? 'rb', name: player?.name ?? 'RB', position: 'RB',
       rating: Number.isFinite(player?.ratings?.speed) ? player.ratings.speed : 5,
-      x: state.scrimmagePosition - 4.5, y: 0.63,
+      x: state.scrimmagePosition + runningBackConfig.offset, y: 0.5 + runningBackConfig.across,
       route: runningBackRoute
     });
-    back.offset = -4.5;
-    back.across = .13;
+    back.offset = runningBackConfig.offset;
+    back.across = runningBackConfig.across;
     return back;
   }
 
@@ -205,22 +220,22 @@ window.playGame = function playGame(team1, team2, savedState = null) {
   state.defenders = Array.isArray(state.defenders) && state.defenders.length
     ? state.defenders.map((saved, index) => {
       const slot = defensiveFormationSlots[index];
-      const DefenderClass = slot?.position === 'DT' ? DefensiveLineman : slot?.position === 'LB' ? Linebacker : DefensiveBack;
+      const DefenderClass = ['DT', 'DL'].includes(slot?.position) ? DefensiveLineman : slot?.position === 'LB' ? Linebacker : DefensiveBack;
       return new DefenderClass({ ...saved });
     }) : state.phase === 'preplay' ? createDefenders() : [];
   state.offensiveLine = Array.isArray(state.offensiveLine) && state.offensiveLine.length
     ? state.offensiveLine.map((saved, index) => {
       const lineman = new OffensiveLineman({ ...saved });
       lineman.offset = Number.isFinite(saved.offset) ? saved.offset : 0;
-      lineman.across = Number.isFinite(saved.across) ? saved.across : [-.08, -.04, 0, .04, .08][index];
+      lineman.across = Number.isFinite(saved.across) ? saved.across : offensiveLineSlots[index]?.across ?? 0;
       return lineman;
     }) : createOffensiveLine();
   state.runningBack = state.runningBack instanceof RunningBack ? state.runningBack
     : state.runningBack ? Object.assign(createRunningBack(), state.runningBack) : createRunningBack();
 
   if (state.phase === 'preplay') {
-    state.quarterback.x = state.fieldPosition;
-    state.quarterback.y = state.playerY;
+    state.quarterback.x = state.scrimmagePosition + quarterbackConfig.offset;
+    state.quarterback.y = 0.5 + quarterbackConfig.across;
     state.quarterback.phase = 'preplay';
     state.quarterback.hasBall = true;
     state.offensiveLine.forEach(lineman => {
@@ -234,6 +249,7 @@ window.playGame = function playGame(team1, team2, savedState = null) {
     state.runningBack.startY = state.runningBack.y;
     state.runningBack.route = runningBackRoute;
     state.runningBack.routeIndex = 0;
+    state.runningBack.routeElapsed = 0;
     state.runningBack.hasBall = false;
     state.runningBack.phase = 'preplay';
     state.defenders.forEach((def, index) => {
@@ -335,10 +351,16 @@ window.playGame = function playGame(team1, team2, savedState = null) {
   function pressSpace() {
     if (state.clockSeconds <= 0) return;
     if (state.phase === 'preplay') {
-      state.phase = 'dropback';
-      state.quarterback.dropback(dropbackYards);
-      state.dropbackRemaining = state.quarterback.dropbackRemaining;
       state.runAfterDropback = false;
+      if (quarterbackConfig.dropback === false) {
+        state.phase = 'passing';
+        state.quarterback.phase = 'passing';
+        state.dropbackRemaining = 0;
+      } else {
+        state.phase = 'dropback';
+        state.quarterback.dropback(dropbackYards);
+        state.dropbackRemaining = state.quarterback.dropbackRemaining;
+      }
       state.receivers.forEach(receiver => { receiver.phase = 'running'; });
       state.defenders.forEach(defender => { defender.phase = 'running'; });
       state.offensiveLine.forEach(lineman => { lineman.phase = 'running'; });
@@ -385,7 +407,7 @@ window.playGame = function playGame(team1, team2, savedState = null) {
     state.dropbackRemaining = 0;
     state.runAfterDropback = false;
     delete state.pass;
-    state.quarterback = createQuarterback({ x: state.fieldPosition, y: state.playerY });
+    state.quarterback = createQuarterback();
     state.defenders = createDefenders();
     state.receivers = createReceivers();
     state.offensiveLine = createOffensiveLine();

@@ -472,15 +472,18 @@
       this.receiverNumber = config.receiverNumber ?? null;
       this.route = config.route ?? [];
       this.routeIndex = 0;
+      this.routeElapsed = Number.isFinite(config.routeElapsed) ? config.routeElapsed : 0;
     }
 
     assignRoute(waypoints) {
       this.route = waypoints || [];
       this.routeIndex = 0;
+      this.routeElapsed = 0;
     }
 
     runRoute(delta) {
       if (this.hasBall || this.isTackled) return;
+      this.routeElapsed += delta;
       if (!this.route || this.routeIndex >= this.route.length) {
         this.isMoving = false;
         return;
@@ -494,7 +497,8 @@
         if (this.routeIndex >= this.route.length) return;
       }
       this.phase = 'running';
-      this.run(delta, targetX, targetY);
+      const speedMultiplier = this.routeElapsed < 1.5 ? 0.25 : 1;
+      this.run(delta * speedMultiplier, targetX, targetY);
     }
   }
 

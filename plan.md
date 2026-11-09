@@ -23,3 +23,8 @@
 - How receiver numbers are shown on the field.
 - How passes, catches, incompletions, and interceptions are resolved.
 - Whether receiver keys can be pressed during the dropback.
+
+## Future play selection
+
+- The defense will randomly select a defensive play from `data/dplays.json`.
+- The offense will let the player select from multiple offensive plays in `data/oplays.json` before the snap.

@@ -11,22 +11,28 @@ let gameFrame = null;
 let gameFullscreen = false;
 let saveQueue = Promise.resolve();
 const movementKeys = new Set();
+let playbooks = { offense: null, defense: null };
 
 async function initialize() {
   app.textContent = 'Loading season...';
   try {
     const responses = await Promise.all([
       fetch('/api/state', { cache: 'no-store' }),
+      fetch('/data/oplays.json', { cache: 'no-store' }),
+      fetch('/data/dplays.json', { cache: 'no-store' }),
       ...viewNames.map(name => fetch(`/views/${name}.html`, { cache: 'no-store' }))
     ]);
     if (responses.some(response => !response.ok)) throw new Error('Could not load season or view files');
-    const [state, ...markup] = await Promise.all([responses[0].json(), ...responses.slice(1).map(response => response.text())]);
+    const [state, offensePlays, defensePlays, ...markup] = await Promise.all([
+      responses[0].json(), responses[1].json(), responses[2].json(), ...responses.slice(3).map(response => response.text())
+    ]);
     for (let i = 0; i < viewNames.length; i++) {
       const template = document.createElement('template');
       template.innerHTML = markup[i];
       views.set(viewNames[i], template.content);
     }
     seasonState = state;
+    playbooks = { offense: offensePlays, defense: defensePlays };
     applyRoute();
     render();
   } catch (error) {
@@ -266,7 +272,10 @@ function render() {
 function beginNextGame() {
   activeScheduledGame = nextScheduledGame();
   if (!activeScheduledGame) return;
-  gameSession = playGame(seasonState.team, activeScheduledGame.opponent);
+  gameSession = playGame(seasonState.team, activeScheduledGame.opponent, null, {
+    offense: playbooks.offense?.plays?.[0],
+    defense: playbooks.defense?.plays?.[0]
+  });
   gameSession.state.week = activeScheduledGame.week;
   gameSession.state.isHome = activeScheduledGame.location === 'HOME';
   screen = 'game';

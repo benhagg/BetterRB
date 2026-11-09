@@ -1,0 +1,24 @@
+{
+  "plays": [
+    {
+      "id": "base-cover-2",
+      "name": "Base Cover 2",
+      "coverage": { "type": "cover-2-zone", "description": "Two deep defensive backs with underneath zone support." },
+      "formation": {
+        "defenders": [
+          { "position": "DL", "across": -0.09, "offset": 0.5 },
+          { "position": "DL", "across": -0.03, "offset": 0.5 },
+          { "position": "DL", "across": 0.03, "offset": 0.5 },
+          { "position": "DL", "across": 0.09, "offset": 0.5 },
+          { "position": "LB", "across": -0.30, "offset": 3 },
+          { "position": "LB", "across": -0.10, "offset": 3 },
+          { "position": "LB", "across": 0.10, "offset": 3 },
+          { "position": "LB", "across": 0.30, "offset": 3 },
+          { "position": "DB", "across": -0.42, "offset": 8 },
+          { "position": "DB", "across": 0, "offset": 8 },
+          { "position": "DB", "across": 0.42, "offset": 8 }
+        ]
+      }
+    }
+  ]
+}
