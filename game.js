@@ -81,6 +81,9 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       });
       defender.offset = slot.offset ?? 0;
       defender.across = slot.across ?? 0;
+      defender.role = slot.role ?? 'zone';
+      defender.zone = slot.zone ?? null;
+      defender.manTarget = slot.manTarget ?? null;
       return defender;
     });
   }
@@ -334,11 +337,12 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
 
   const camera = GameCamera.create({ state, field, fieldBounds, cameraTrailingYards, runnerTrailingYards, ballCarrier });
   let catching;
+  const defenseAI = GameDefenseAI.create({ state, lateralYards, fieldBounds });
   const passing = GamePassing.create({
     state, lateralYards, fieldBounds, passTarget, quarterbackIsBehindLineOfScrimmage,
-    onPassReleased: pass => catching?.schedule(pass)
+    onPassReleased: pass => { defenseAI.onPassReleased(pass); catching?.schedule(pass); }
   });
-  catching = GameCatching.create({ state, lateralYards });
+  catching = GameCatching.create({ state, lateralYards, defenseAI });
 
   function resolveCatch(contact, input) {
     const { player, ball, catchType, interception } = contact;
@@ -543,7 +547,11 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
           if (state.pass.targetReceiverNumber && player.receiverNumber === state.pass.targetReceiverNumber) {
             // The targeted receiver always adjusts toward the predicted ball
             // location, including passes thrown behind their current route.
-            player.run(delta, state.pass.targetX, state.pass.targetY);
+            if (state.pass.progress * state.pass.duration >= GameDefenseAI.RECEIVER_BREAK_DELAY) {
+              player.run(delta, state.pass.targetX, state.pass.targetY);
+            } else {
+              player.runRoute(delta);
+            }
           } else {
             // Non-targeted receivers keep running their assigned routes while
             // the ball is airborne. Catch-volume contests can be layered on
@@ -620,6 +628,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
         state.runningBack.runRoute(delta);
       }
     }
+    defenseAI.update(delta);
     passing.updateWindup(delta);
     if (state.phase !== 'complete') {
       state.clockSeconds = Math.max(0, state.clockSeconds - delta);
@@ -631,6 +640,15 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
   function pressSpace() {
     if (state.clockSeconds <= 0) return;
     if (state.phase === 'preplay') {
+      const options = selectedPlays.defenseOptions;
+      if (Array.isArray(options) && options.length) {
+        const chosen = options[Math.floor(Math.random() * options.length)];
+        selectedPlays.defense = chosen;
+        const line = Array.isArray(chosen.formation?.defensiveLine) ? chosen.formation.defensiveLine : [];
+        const coverage = Array.isArray(chosen.formation?.defenders) ? chosen.formation.defenders : [];
+        state.defenders = createDefenders(coverage.length === 11 ? coverage : [...line, ...coverage]);
+      }
+      defenseAI.initialize(state.defenders);
       if (state.playType === 'run') {
         state.phase = 'running';
         state.quarterback.phase = 'passing';

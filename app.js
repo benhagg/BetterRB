@@ -599,7 +599,8 @@ function beginNextGame() {
   setupPreSnapPlays();
   gameSession = playGame(seasonState.team, activeScheduledGame.opponent, null, {
     offense: activePlay || playbooks.offense?.plays?.[0],
-    defense: randomDefensePlay()
+    defense: randomDefensePlay(),
+    defenseOptions: playbooks.defense?.plays || []
   });
   gameSession.state.week = activeScheduledGame.week;
   gameSession.state.isHome = activeScheduledGame.location === 'HOME';
@@ -759,7 +760,8 @@ window.addEventListener('keydown', event => {
         scrimmagePosition: currentFieldPos
       }, {
         offense: plays[selectedOffensivePlayIndex],
-        defense: randomDefensePlay()
+        defense: randomDefensePlay(),
+        defenseOptions: playbooks.defense?.plays || []
       });
       gameSession.state.week = currentWeek;
       gameSession.state.isHome = currentHome;

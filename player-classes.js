@@ -598,6 +598,9 @@
       } else if (this.diveCooldownTimer > 0.5) {
         if (RetroSprites.drawAction) RetroSprites.drawAction(ctx, x, y, pixel, u, 'resting', 0, this.facingLeft);
         else RetroSprites.drawPrePlay(ctx, x, y, pixel, u, this.kind, this.facingLeft);
+      } else if (this.isBackpedaling && this.isMoving) {
+        const frame = 5 - (Math.floor(this.animDistance * 1.5) % 6);
+        RetroSprites.drawRunner(ctx, x, y, pixel, u, frame, true);
       } else {
         super.draw(ctx, coords, pixel, uniform);
       }

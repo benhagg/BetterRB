@@ -16,7 +16,7 @@
     return Math.max(0, Math.min(10, Number.isFinite(Number(value)) ? Number(value) : fallback));
   }
 
-  function create({ state, lateralYards }) {
+  function create({ state, lateralYards, defenseAI }) {
     function eligiblePlayers() {
       const offense = [...(state.receivers || []), state.runningBack].filter(Boolean)
         .map(player => ({ player, side: 'offense' }));
@@ -106,7 +106,15 @@
     function schedule(pass) {
       if (!pass || pass.catchPlan) return pass?.catchPlan;
       const candidates = eligiblePlayers();
-      const sims = new Map(candidates.map(({ player }) => [player, snapshot(player)]));
+      const sims = new Map(candidates.map(({ player, side }) => {
+        if (side === 'defense' && defenseAI && player.defenseAI) {
+          const clone = Object.assign(Object.create(Object.getPrototypeOf(player)), player);
+          clone.defenseAI = structuredClone(player.defenseAI);
+          clone._movement = player._movement ? structuredClone(player._movement) : null;
+          return [player, clone];
+        }
+        return [player, snapshot(player)];
+      }));
       const best = new Map();
 
       for (let time = 0; time <= pass.duration + 0.0001; time += SIMULATION_STEP) {
@@ -115,12 +123,17 @@
           const sim = sims.get(player);
           // At release, players continue in their current heading. This mirrors
           // the existing route engine without mutating live player objects.
-          const shouldPursueTarget = player.receiverNumber === pass.targetReceiverNumber;
+          const shouldPursueTarget = side === 'offense' && player.receiverNumber === pass.targetReceiverNumber
+            && time >= (globalThis.GameDefenseAI?.RECEIVER_BREAK_DELAY ?? 0.05);
           const target = shouldPursueTarget
             ? { x: pass.targetX, y: pass.targetY }
             : null;
-          if (time > 0) advance(sim, SIMULATION_STEP, playerRating(player, 'agility'), target);
-          const simulatedPlayer = { ...player, x: sim.x, y: sim.y, velocityX: sim.direction.x * sim.speed * sim.speedFactor, velocityY: sim.direction.y * sim.speed * sim.speedFactor / lateralYards };
+          const isDefenseClone = side === 'defense' && defenseAI && player.defenseAI;
+          if (time > 0) {
+            if (isDefenseClone) defenseAI.updateDefender(sim, SIMULATION_STEP, 'thrown', pass, null);
+            else advance(sim, SIMULATION_STEP, playerRating(player, 'agility'), target);
+          }
+          const simulatedPlayer = isDefenseClone ? sim : { ...player, x: sim.x, y: sim.y, velocityX: sim.direction.x * sim.speed * sim.speedFactor, velocityY: sim.direction.y * sim.speed * sim.speedFactor / lateralYards };
           const result = probability(simulatedPlayer, ball);
           if (!result) continue;
           const previous = best.get(player);
