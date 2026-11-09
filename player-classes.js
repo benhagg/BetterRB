@@ -1,5 +1,7 @@
 (function (root) {
   const LATERAL_YARDS = 17; // Playable sideline-to-sideline width used for movement scaling.
+  // The visible sideline area renders vertical yards at a smaller pixel scale than horizontal yards.
+  const SCREEN_DIAGONAL_YARD_SCALE = 1.38;
 
   function speedMultiplier(position) {
     if (typeof PlayerSkills !== 'undefined' && typeof PlayerSkills.speedMultiplier === 'function') {
@@ -154,7 +156,7 @@
     }
 
     move(delta, vx, vy) {
-      const movement = this.movementStep(delta, vx, vy);
+      const movement = this.movementStep(delta, vx, vy * SCREEN_DIAGONAL_YARD_SCALE);
       this.x += movement.direction.x * movement.step;
       this.y += (movement.direction.y * movement.step) / LATERAL_YARDS;
       this.animDistance += movement.step;

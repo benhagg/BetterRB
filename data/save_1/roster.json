@@ -34,8 +34,8 @@
       "potentialSkillCredits": 18,
       "ratings": {
         "strength": 4,
-        "speed": 6,
-        "agility": 5,
+        "speed": 10,
+        "agility": 10,
         "catching": 3
       },
       "potentialRatings": {

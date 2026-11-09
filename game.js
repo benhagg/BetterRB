@@ -1,7 +1,7 @@
 /* The first team is the user-controlled team; the second is its opponent. */
 // currently the top bottom and each end zone of the field are these numbers. out of bounds is anything outside of the top / bottom range and a touchdown is anything in the end zone we are going towards
 const fieldBounds = {top: -.02, bottom: 0.95, endZoneL: 2.217644291800185, endZoneR: 101.66747130270615};
-const cameraTrailingYards = 6;
+const cameraTrailingYards = 8;
 const lateralYards = 17;
 const passSpeedYardsPerSecond = 12;
 const throw_arc = 0.7;
@@ -333,6 +333,15 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       || (state.runningBack.hasBall ? state.runningBack : state.quarterback);
   }
 
+  function getCameraOriginYard() {
+    const passProgress = (state.phase === 'thrown' || state.phase === 'complete') && state.pass ? state.pass.progress : null;
+    const trackingYard = passProgress === null
+      ? (ballCarrier()?.x ?? state.fieldPosition)
+      : state.pass.fromX + (state.pass.targetX - state.pass.fromX) * passProgress;
+    const cameraYard = Math.max(state.scrimmagePosition, trackingYard);
+    return cameraYard - cameraTrailingYards;
+  }
+
   function passTarget(receiverNumber) {
     return [...state.receivers, state.runningBack].find(player => player.receiverNumber === receiverNumber);
   }
@@ -395,21 +404,19 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
         if (dx !== 0 || dy !== 0) {
           carrier.move(delta, dx, dy);
         } else {
-          carrier.velocityX = 0;
-          carrier.velocityY = 0;
-          carrier.isMoving = false;
+          carrier.move(delta, 0, 0);
         }
       } else if (carrier.autoRun) {
         carrier.move(delta, carrier.autoRun.vx, carrier.autoRun.vy);
       } else {
-        carrier.velocityX = 0;
-        carrier.velocityY = 0;
-        carrier.isMoving = false;
+        carrier.move(delta, 0, 0);
       }
       carrier.x = Math.max(fieldBounds.endZoneL, Math.min(fieldBounds.endZoneR, carrier.x));
       carrier.y = Math.max(fieldBounds.top, Math.min(fieldBounds.bottom, carrier.y));
       state.fieldPosition = carrier.x;
       state.playerY = carrier.y;
+      const speed = Math.hypot(carrier.velocityX || 0, (carrier.velocityY || 0) * lateralYards);
+      console.log(`[Ball carrier] ${carrier.name} ${speed.toFixed(2)} yd/s`);
     }
   }
 
@@ -625,11 +632,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
   function canvasCoordsToField(canvasX, canvasY, width = 960, height = 540) {
     const horizontalScale = width / 300;
     const verticalScale = height / field.height;
-    const passProgress = (state.phase === 'thrown' || state.phase === 'complete') && state.pass ? state.pass.progress : null;
-    const cameraYard = passProgress === null
-      ? (ballCarrier()?.x ?? state.fieldPosition)
-      : state.pass.fromX + (state.pass.targetX - state.pass.fromX) * passProgress;
-    const cameraOriginYard = cameraYard - cameraTrailingYards;
+    const cameraOriginYard = getCameraOriginYard();
     const top = field.topSideline * verticalScale;
     const bottom = field.bottomSideline * verticalScale;
 
@@ -852,10 +855,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     const verticalScale = height / field.height;
     const { pixel } = camera(width, height);
     const passProgress = (state.phase === 'thrown' || state.phase === 'complete') && state.pass ? state.pass.progress : null;
-    const cameraYard = passProgress === null
-      ? ballCarrier().x
-      : state.pass.fromX + (state.pass.targetX - state.pass.fromX) * passProgress;
-    const cameraOriginYard = cameraYard - cameraTrailingYards;
+    const cameraOriginYard = getCameraOriginYard();
     const fieldOrigin = field.goalLine + cameraOriginYard * field.pixelsPerYard;
     if (fieldImage.complete && fieldImage.naturalWidth) {
       ctx.save();
