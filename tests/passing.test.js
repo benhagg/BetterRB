@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import Passing from '../game-passing.js';
 
 describe('high-clearance pass arc', () => {
-  it('keeps the legacy ground-travel duration while raising a 15-yard throw above 10 ft', () => {
+  it('keeps ground-travel duration and places the deep-pass apex at 75%', () => {
     const distance = 15;
     const strength = 5;
     const targetHeight = 4;
@@ -18,9 +18,15 @@ describe('high-clearance pass arc', () => {
       + Math.sqrt(2 * (legacyApex - targetHeight) / gravity);
 
     expect(profile.duration).toBeCloseTo(legacyDuration, 8);
-    expect(Passing.throwHeightAt(0.25, profile)).toBeGreaterThan(10);
-    expect(Passing.throwHeightAt(0.5, profile)).toBeGreaterThan(12);
-    expect(Passing.throwHeightAt(0.75, profile)).toBeGreaterThan(10);
+    expect(profile.apexAt).toBe(0.75);
+    expect(Passing.throwHeightAt(0.75, profile)).toBeCloseTo(profile.apexHeight, 8);
+    expect(Passing.throwHeightAt(0.5, profile)).toBeLessThan(Passing.throwHeightAt(0.75, profile));
     expect(Passing.throwHeightAt(1, profile)).toBeCloseTo(targetHeight, 8);
+  });
+
+  it('places short-pass apex at 55%', () => {
+    const profile = Passing.throwProfile(5, 4, 5);
+    expect(profile.apexAt).toBe(0.55);
+    expect(Passing.throwHeightAt(0.55, profile)).toBeCloseTo(profile.apexHeight, 8);
   });
 });

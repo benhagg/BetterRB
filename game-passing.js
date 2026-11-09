@@ -1,14 +1,14 @@
 (function (root) {
   // --- Tunable Throw & Accuracy Physics Coefficients ---
-  const releaseHeightFeet = 6;
+  const releaseHeightFeet = 8;
   const targetHeightFeet = 4;
   const gravityFeetPerSecondSquared = 32.174;
   const feetPerYard = 3.0;
 
   // Vertical clearance is intentionally independent from horizontal travel time.
   // A pass needs to clear defenders without becoming slower downfield.
-  const ARC_BASE_FEET = 5.0;
-  const ARC_FEET_PER_YARD = 0.20;
+  const ARC_BASE_FEET = 0;
+  const ARC_FEET_PER_YARD = 0.30;
   const ARC_STRENGTH_REDUCTION = 0.015;
 
   // Inaccuracy base & distance coefficients (less is more accurate)
@@ -23,7 +23,9 @@
     const d = Math.max(0, Number(distanceYards) || 0);
     const numStrength = Number(strength);
     const s = Math.max(0, Math.min(10, Number.isFinite(numStrength) ? numStrength : 5));
-    return Math.max(0, (ARC_BASE_FEET + ARC_FEET_PER_YARD * d) * (1 - ARC_STRENGTH_REDUCTION * s));
+    const arc = (ARC_BASE_FEET + ARC_FEET_PER_YARD * d) * (1 - ARC_STRENGTH_REDUCTION * s);
+    console.log("arc", arc);
+    return arc
   }
 
   // Retains the legacy flight-time relationship so changing the visual arc
@@ -74,24 +76,34 @@
     // clearance arc while arriving at the same time as the legacy throw.
     const gravity = (8 * arc) / (duration * duration);
     const launchVelocity = (resolvedTargetHeight - releaseHeightFeet + 4 * arc) / duration;
-    const apexHeight = (releaseHeightFeet + resolvedTargetHeight) / 2 + arc;
-    return { launchVelocity, duration, apexHeight, arc, gravity };
+    const apexAt = Math.max(0.55, Math.min(0.75, Number(distanceYards) < 8 ? 0.55 : 0.75));
+    const apexHeight = Math.max(releaseHeightFeet, resolvedTargetHeight) + arc;
+    console.log(`[Pass arc] apex height: ${apexHeight.toFixed(2)} ft at ${(apexAt * 100).toFixed(0)}% flight`);
+    return { launchVelocity, duration, apexHeight, arc, gravity, apexAt,
+      releaseHeight: releaseHeightFeet, targetHeight: resolvedTargetHeight };
+  }
+
+  function arcHeightAt(progress, profile) {
+    const p = Math.max(0, Math.min(1, progress));
+    const apexAt = profile.apexAt ?? 0.5;
+    if (p <= apexAt) {
+      const t = p / apexAt;
+      return profile.releaseHeight + (profile.apexHeight - profile.releaseHeight) * t * t;
+    }
+    const t = (p - apexAt) / (1 - apexAt);
+    return profile.apexHeight + (profile.targetHeight - profile.apexHeight) * t * t;
   }
 
   function throwHeightAt(progress, distanceYards, targetHeight = targetHeightFeet, strength = 5) {
     if (typeof distanceYards === 'object' && distanceYards !== null) {
       const p = distanceYards.profile || distanceYards;
       if (Number.isFinite(p.launchVelocity) && Number.isFinite(p.duration)) {
-        const elapsed = Math.max(0, Math.min(1, progress)) * p.duration;
-        return releaseHeightFeet + p.launchVelocity * elapsed
-          - 0.5 * (p.gravity ?? gravityFeetPerSecondSquared) * elapsed * elapsed;
+        return arcHeightAt(progress, p);
       }
     }
     const resolvedTargetHeight = Number.isFinite(targetHeight) ? targetHeight : targetHeightFeet;
     const profile = throwProfile(distanceYards, resolvedTargetHeight, strength);
-    const elapsed = Math.max(0, Math.min(1, progress)) * profile.duration;
-    return releaseHeightFeet + profile.launchVelocity * elapsed
-      - 0.5 * profile.gravity * elapsed * elapsed;
+    return arcHeightAt(progress, profile);
   }
 
   function create({ state, lateralYards, fieldBounds, passTarget, quarterbackIsBehindLineOfScrimmage, onPassReleased }) {
@@ -311,8 +323,7 @@
       throwHeightAt: (progress, distanceYards, targetHeight) => {
         if (state.pass?.profile) {
           const p = state.pass.profile;
-          const elapsed = Math.max(0, Math.min(1, progress)) * p.duration;
-          return releaseHeightFeet + p.launchVelocity * elapsed - 0.5 * (p.gravity ?? gravityFeetPerSecondSquared) * elapsed * elapsed;
+          return arcHeightAt(progress, p);
         }
         return throwHeightAt(progress, distanceYards, targetHeight, getQbStrength());
       },

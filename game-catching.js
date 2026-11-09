@@ -90,11 +90,15 @@
 
     function ballAt(pass, time) {
       const progress = Math.max(0, Math.min(1, time / pass.duration));
+      const profile = pass.profile;
+      const apexAt = profile.apexAt ?? 0.5;
+      const height = progress <= apexAt
+        ? profile.releaseHeight + (profile.apexHeight - profile.releaseHeight) * Math.pow(progress / apexAt, 2)
+        : profile.apexHeight + (profile.targetHeight - profile.apexHeight) * Math.pow((progress - apexAt) / (1 - apexAt), 2);
       return {
         x: pass.fromX + (pass.targetX - pass.fromX) * progress,
         y: pass.fromY + (pass.targetY - pass.fromY) * progress,
-        z: 6 + pass.profile.launchVelocity * time
-          - 0.5 * (pass.profile.gravity ?? GRAVITY) * time * time
+        z: height
       };
     }
 
