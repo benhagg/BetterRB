@@ -364,6 +364,26 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     return dot >= minCos;
   }
 
+  function blockNearestDefender(player, delta) {
+    let nearestDefender = null;
+    let minDefenderDist = Infinity;
+    if (state.defenders && state.defenders.length) {
+      for (const defender of state.defenders) {
+        const dist = Math.hypot(defender.x - player.x, (defender.y - player.y) * lateralYards);
+        if (dist < minDefenderDist) {
+          minDefenderDist = dist;
+          nearestDefender = defender;
+        }
+      }
+    }
+    if (nearestDefender) {
+      player.run(delta, nearestDefender.x, nearestDefender.y);
+      player.block(nearestDefender);
+    } else {
+      player.runRoute(delta);
+    }
+  }
+
   function movePlayer(delta, input) {
     const hasInput = Boolean(input.right || input.left || input.down || input.up);
     let dx = Number(Boolean(input.right)) - Number(Boolean(input.left));
@@ -457,23 +477,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
           } else if (isTargetInFrontCone(player, state.pass.targetX, state.pass.targetY, 5, 60)) {
             player.run(delta, state.pass.targetX, state.pass.targetY);
           } else {
-            let nearestDefender = null;
-            let minDefenderDist = Infinity;
-            if (state.defenders && state.defenders.length) {
-              for (const defender of state.defenders) {
-                const dist = Math.hypot(defender.x - player.x, (defender.y - player.y) * lateralYards);
-                if (dist < minDefenderDist) {
-                  minDefenderDist = dist;
-                  nearestDefender = defender;
-                }
-              }
-            }
-            if (nearestDefender) {
-              player.run(delta, nearestDefender.x, nearestDefender.y);
-              player.block(nearestDefender);
-            } else {
-              player.runRoute(delta);
-            }
+            blockNearestDefender(player, delta);
           }
         }
       }
@@ -527,10 +531,22 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       }
     }
 
-    // Update receiver routes during active pass or run plays
-    if (['dropback', 'passing', 'running'].includes(state.phase) && state.receivers) {
-      for (const rec of state.receivers) {
-        rec.runRoute(delta);
+    // Update receivers and blockers (blocking continues in-flight and after-flight to end of play)
+    if (state.phase === 'running') {
+      const eligibleBlockers = [...(state.receivers || [])];
+      if (state.runningBack && (state.playType !== 'run' || state.runningBack.hasBall)) {
+        eligibleBlockers.push(state.runningBack);
+      }
+      for (const player of eligibleBlockers) {
+        if (!player.hasBall) {
+          blockNearestDefender(player, delta);
+        }
+      }
+    } else if (['dropback', 'passing'].includes(state.phase)) {
+      if (state.receivers) {
+        for (const rec of state.receivers) {
+          rec.runRoute(delta);
+        }
       }
       if (state.playType !== 'run' && !state.runningBack.hasBall) {
         state.runningBack.runRoute(delta);

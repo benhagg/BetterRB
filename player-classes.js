@@ -88,52 +88,78 @@
       this.autoRun = null;
     }
 
+    movementStep(delta, requestedX, requestedY) {
+      const movement = this._movement ||= {
+        direction: { x: this.lastDirX, y: this.lastDirY },
+        speedFactor: 0,
+        hasDirection: false,
+        deceleration: null
+      };
+      const magnitude = Math.hypot(requestedX, requestedY);
+      const agility = Math.max(0, Math.min(10, Number(this.agility ?? this.acceleration ?? this.rating) || 0));
+      // Level 0 uses f(t) = 1 - exp(-1.3t); each agility level shortens the time scale by 5%.
+      const accelerationRate = 1.3 / Math.max(0.5, 1 - agility * 0.05);
+
+      if (magnitude < 0.0001) {
+        if (!movement.deceleration) {
+          movement.deceleration = { elapsed: 0, startFactor: movement.speedFactor };
+        }
+        movement.deceleration.elapsed += delta;
+        const t = movement.deceleration.elapsed;
+        movement.speedFactor = t >= 1.2 ? 0 : movement.deceleration.startFactor * (1 - (t / 1.2) ** 2);
+      } else {
+        const direction = { x: requestedX / magnitude, y: requestedY / magnitude };
+        const dot = movement.direction.x * direction.x + movement.direction.y * direction.y;
+        const changedDirection = movement.hasDirection && dot < 0.9999;
+        movement.deceleration = null;
+
+        if (changedDirection) {
+          // v_cut = v_max * cos(theta / 2), where theta is the direction-change angle.
+          const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
+          movement.speedFactor *= Math.cos(angle / 2);
+          movement.direction = direction;
+        } else {
+          movement.direction = direction;
+          // Exponential saturation from the current speed preserves cuts and restarts smoothly.
+          movement.speedFactor = 1 - (1 - movement.speedFactor) * Math.exp(-accelerationRate * delta);
+        }
+        movement.hasDirection = true;
+      }
+
+      const factor = Math.max(0, Math.min(1, movement.speedFactor));
+      this.velocityX = movement.direction.x * this.speed * factor;
+      this.velocityY = (movement.direction.y * this.speed * factor) / LATERAL_YARDS;
+      this.lastDirX = movement.direction.x;
+      this.lastDirY = movement.direction.y;
+      return { direction: movement.direction, step: this.speed * factor * delta, isMoving: factor > 0.001 };
+    }
+
     run(delta, targetX, targetY) {
       const dx = targetX - this.x;
       const dyYards = (targetY - this.y) * LATERAL_YARDS;
       const dist = Math.hypot(dx, dyYards);
 
       if (dist > 0.05) {
-        const vx = dx / dist;
-        const vyYards = dyYards / dist;
-        const step = Math.min(dist, this.speed * delta);
-
-        this.x += vx * step;
-        this.y += (vyYards / LATERAL_YARDS) * step;
-        this.velocityX = vx * this.speed;
-        this.velocityY = (vyYards / LATERAL_YARDS) * this.speed;
-        this.lastDirX = vx;
-        this.lastDirY = vyYards;
+        const movement = this.movementStep(delta, dx, dyYards);
+        const step = Math.min(dist, movement.step);
+        this.x += movement.direction.x * step;
+        this.y += (movement.direction.y * step) / LATERAL_YARDS;
         this.animDistance += step;
-        this.facingLeft = vx < 0;
-        this.isMoving = true;
+        this.facingLeft = movement.direction.x < 0;
+        this.isMoving = movement.isMoving;
       } else {
-        this.velocityX = 0;
-        this.velocityY = 0;
+        this.movementStep(delta, 0, 0);
         this.isMoving = false;
       }
     }
 
     move(delta, vx, vy) {
-      const len = Math.hypot(vx, vy);
-      if (len > 0) {
-        const dirX = vx / len;
-        const dirY = vy / len;
-        const step = this.speed * delta;
-        this.x += dirX * step;
-        this.y += (dirY * step) / LATERAL_YARDS;
-        this.velocityX = dirX * this.speed;
-        this.velocityY = (dirY * this.speed) / LATERAL_YARDS;
-        this.lastDirX = dirX;
-        this.lastDirY = dirY;
-        this.animDistance += step;
-        this.facingLeft = dirX < 0;
-        this.isMoving = true;
-      } else {
-        this.velocityX = 0;
-        this.velocityY = 0;
-        this.isMoving = false;
-      }
+      const movement = this.movementStep(delta, vx, vy);
+      this.x += movement.direction.x * movement.step;
+      this.y += (movement.direction.y * movement.step) / LATERAL_YARDS;
+      this.animDistance += movement.step;
+      this.facingLeft = movement.direction.x < 0;
+      this.isMoving = movement.isMoving;
     }
 
     getScreenCoordinates(playerX, qbYard, top, bottom, horizontalScale, pixelsPerYard) {
