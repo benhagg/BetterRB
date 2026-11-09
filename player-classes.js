@@ -56,8 +56,11 @@
         ...(rawRatings || {})
       };
       this.rating = this.ratings;
+      // Base speed physics coefficients
+      const BASE_SPEED = 5.0;
+      const SPEED_RATING_COEFF = 0.3;
       this.speedMultiplier = speedMultiplier(this.position);
-      this.speed = (5 + speedRating * 0.3) * this.speedMultiplier;
+      this.speed = (BASE_SPEED + speedRating * SPEED_RATING_COEFF) * this.speedMultiplier;
       this.kind = config.kind ?? kindForPosition(this.position);
 
       this.x = Number.isFinite(config.x) ? config.x : 22;
@@ -126,6 +129,28 @@
     }
 
     movementStep(delta, requestedX, requestedY) {
+      // --- Tunable Physics Coefficients ---
+      // Acceleration
+      const BASE_ACCEL_RATE = 1.3;
+      const AGILITY_ACCEL_SCALE = 0.05;
+      const MIN_ACCEL_SCALE = 0.5;
+
+      // Stopping Deceleration
+      const BASE_MAX_DECEL_TIME = 0.7;
+      const AGILITY_DECEL_SCALE = 0.04;
+      const MIN_DECEL_TIME = 0.04;
+
+      // Cut Deceleration
+      const BASE_CUT_TIME_SCALE = 0.33;
+      const AGILITY_CUT_SCALE = 0.05;
+      const MIN_CUT_TIME = 0.02;
+
+      // Thresholds
+      const MIN_MAGNITUDE = 0.0001;
+      const MIN_SPEED_FACTOR = 0.001;
+      const STRAIGHT_DOT_THRESHOLD = 0.9999;
+      // ------------------------------------
+
       const movement = this._movement ||= {
         direction: { x: this.lastDirX, y: this.lastDirY },
         speedFactor: 0,
@@ -143,19 +168,19 @@
       const magnitude = Math.hypot(requestedX, requestedY);
       const agility = Math.max(0, Math.min(10, Number(this.rating?.agility ?? this.ratings?.agility ?? this.agility ?? 5) || 0));
       // Level 0 uses f(t) = 1 - exp(-1.3t); each agility level shortens the time scale by 5%.
-      const accelerationRate = 1.3 / Math.max(0.5, 1 - agility * 0.05);
+      const accelerationRate = BASE_ACCEL_RATE / Math.max(MIN_ACCEL_SCALE, 1 - agility * AGILITY_ACCEL_SCALE);
 
-      if (magnitude < 0.0001) {
+      if (magnitude < MIN_MAGNITUDE) {
         movement.cut = null;
         if (!movement.deceleration) {
-          const maxDecelTime = 0.7 * Math.max(0.5, 1 - agility * 0.04);
-          const tStop = Math.max(0.04, maxDecelTime * (movement.speedFactor ** 2));
+          const maxDecelTime = BASE_MAX_DECEL_TIME * Math.max(MIN_ACCEL_SCALE, 1 - agility * AGILITY_DECEL_SCALE);
+          const tStop = Math.max(MIN_DECEL_TIME, maxDecelTime * (movement.speedFactor ** 2));
           movement.deceleration = { elapsed: 0, startFactor: movement.speedFactor, tStop };
         }
         movement.deceleration.elapsed += delta;
         const progress = Math.min(1, movement.deceleration.elapsed / movement.deceleration.tStop);
         movement.speedFactor = progress >= 1 ? 0 : movement.deceleration.startFactor * (1 - progress ** 2);
-        if (movement.speedFactor <= 0.001) {
+        if (movement.speedFactor <= MIN_SPEED_FACTOR) {
           movement.speedFactor = 0;
           movement.deceleration = null;
         }
@@ -164,11 +189,11 @@
         const dot = movement.direction.x * direction.x + movement.direction.y * direction.y;
         movement.deceleration = null;
 
-        if (!movement.hasDirection || movement.speedFactor <= 0.001) {
+        if (!movement.hasDirection || movement.speedFactor <= MIN_SPEED_FACTOR) {
           movement.direction = direction;
           movement.cut = null;
           movement.speedFactor = 1 - (1 - movement.speedFactor) * Math.exp(-accelerationRate * delta);
-        } else if (dot >= 0.9999) {
+        } else if (dot >= STRAIGHT_DOT_THRESHOLD) {
           movement.direction = direction;
           movement.cut = null;
           movement.speedFactor = 1 - (1 - movement.speedFactor) * Math.exp(-accelerationRate * delta);
@@ -186,8 +211,8 @@
             // Decelerate along current momentum heading before changing direction
             if (!movement.cut || Math.abs(movement.cut.targetDir.x - direction.x) > 0.001 || Math.abs(movement.cut.targetDir.y - direction.y) > 0.001) {
               const speedDiff = movement.speedFactor - targetFactor;
-              const agilityScale = Math.max(0.5, 1 - agility * 0.05);
-              const tCut = Math.max(0.02, 0.33 * agilityScale * speedDiff);
+              const agilityScale = Math.max(MIN_ACCEL_SCALE, 1 - agility * AGILITY_CUT_SCALE);
+              const tCut = Math.max(MIN_CUT_TIME, BASE_CUT_TIME_SCALE * agilityScale * speedDiff);
               movement.cut = {
                 elapsed: 0,
                 startFactor: movement.speedFactor,

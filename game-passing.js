@@ -1,23 +1,33 @@
 (function (root) {
+  // --- Tunable Throw & Accuracy Physics Coefficients ---
   const releaseHeightFeet = 6;
   const targetHeightFeet = 4;
   const gravityFeetPerSecondSquared = 32.174;
-  const C_BASE = 0.15;
-  // inaccuracy coefficients (less is more accurate)
-  const ALPHA = 0.00417;
-  const BETA = 0.00192;
   const feetPerYard = 3.0;
 
+  // Inaccuracy base & distance coefficients (less is more accurate)
+  const C_BASE = 0.15;
+  const ALPHA = 0.00417;
+  const BETA = 0.00192;
+
+  // Running while throwing penalty multiplier (recommended 1.25, range 1.1 - 1.3)
+  const RUNNING_THROW_INACCURACY_MULTIPLIER = 1.25;
+
   function calculateThrowArc(distanceYards, strength = 5) {
+    // Tunable throw arc coefficients
+    const ARC_BASE = 0;
+    const ARC_DIST_COEFF = 0.01;
+    const ARC_STRENGTH_COEFF = 0.02;
+
     const d = Math.max(0, Number(distanceYards) || 0);
     const numStrength = Number(strength);
     const s = Math.max(0, Math.min(10, Number.isFinite(numStrength) ? numStrength : 5));
-    const arc = (0 + 0.01 * d) * (1 - 0.02 * s);
-    if (arc < 0){
+    let arc = (ARC_BASE + ARC_DIST_COEFF * d) * (1 - ARC_STRENGTH_COEFF * s);
+    if (arc < 0) {
       arc = 0;
     }
-    console.log("arc", arc)
-    return arc
+    console.log("arc", arc);
+    return arc;
   }
 
   function calculateSigma(distanceYards) {
@@ -37,13 +47,14 @@
     return Math.max(-maxStdDev, Math.min(maxStdDev, sample));
   }
 
-  function calculateInaccuracy(distanceYards, lateralYards) {
-    const sigma = calculateSigma(distanceYards);
-    const inaccuracyX = clampedGaussian() * sigma;
-    const inaccuracyY = (clampedGaussian() * sigma) / lateralYards;
-    const inaccuracyHeightFeet = clampedGaussian() * (sigma * feetPerYard);
+  function calculateInaccuracy(distanceYards, lateralYards, multiplier = 1.0) {
+    const MAX_STD_DEV = 3;
+    const sigma = calculateSigma(distanceYards) * multiplier;
+    const inaccuracyX = clampedGaussian(MAX_STD_DEV) * sigma;
+    const inaccuracyY = (clampedGaussian(MAX_STD_DEV) * sigma) / lateralYards;
+    const inaccuracyHeightFeet = clampedGaussian(MAX_STD_DEV) * (sigma * feetPerYard);
     //do not delete this log
-    console.log("hypot in accuracy", Math.hypot(inaccuracyX, inaccuracyY))
+    console.log("hypot in accuracy", Math.hypot(inaccuracyX, inaccuracyY));
     return { inaccuracyX, inaccuracyY, inaccuracyHeightFeet, sigma };
   }
 
@@ -80,6 +91,11 @@
     }
 
     function predictReceiverPosition(player, seconds) {
+      // Tunable receiver prediction acceleration coefficients
+      const BASE_ACCEL_RATE = 1.3;
+      const AGILITY_ACCEL_SCALE = 0.05;
+      const MIN_ACCEL_SCALE = 0.5;
+
       const velocityX = Number(player.velocityX) || 0;
       const velocityYards = (Number(player.velocityY) || 0) * lateralYards;
       const currentSpeed = Math.hypot(velocityX, velocityYards);
@@ -91,7 +107,7 @@
       const directionY = movement?.direction?.y ?? (velocityYards / currentSpeed);
       let speedFactor = Math.max(0, Math.min(1, movement?.speedFactor ?? (currentSpeed / player.speed)));
       const agility = Math.max(0, Math.min(10, Number(player.rating?.agility ?? player.ratings?.agility ?? player.agility ?? 5) || 0));
-      const accelerationRate = 1.3 / Math.max(0.5, 1 - agility * 0.05);
+      const accelerationRate = BASE_ACCEL_RATE / Math.max(MIN_ACCEL_SCALE, 1 - agility * AGILITY_ACCEL_SCALE);
       // Mirror Player.movementStep's per-frame update, including its end-of-frame speed.
       let travelYards = 0;
       let remaining = seconds;
@@ -104,7 +120,12 @@
       return { x: player.x + directionX * travelYards, y: player.y + (directionY * travelYards) / lateralYards };
     }
 
-    function releaseToLocation(targetX, targetY) {
+    function releaseToLocation(targetX, targetY, isRunningThrow = false) {
+      const qbWasMoving = Boolean(isRunningThrow)
+        || Boolean(state.throwWindup?.wasMoving)
+        || (Boolean(state.quarterback.isMoving) && Math.hypot(state.quarterback.velocityX || 0, (state.quarterback.velocityY || 0) * lateralYards) > 0.05);
+      const inaccuracyMultiplier = qbWasMoving ? RUNNING_THROW_INACCURACY_MULTIPLIER : 1.0;
+
       const fromX = state.quarterback.x;
       const fromY = state.quarterback.y;
       state.quarterback.facingLeft = targetX < fromX;
@@ -113,7 +134,7 @@
       state.quarterback.velocityY = 0;
 
       const intendedDistance = Math.hypot(targetX - fromX, (targetY - fromY) * lateralYards);
-      const { inaccuracyX, inaccuracyY, inaccuracyHeightFeet, sigma } = calculateInaccuracy(intendedDistance, lateralYards);
+      const { inaccuracyX, inaccuracyY, inaccuracyHeightFeet, sigma } = calculateInaccuracy(intendedDistance, lateralYards, inaccuracyMultiplier);
       const actualTargetX = Math.max(fieldBounds.endZoneL, Math.min(fieldBounds.endZoneR, targetX + inaccuracyX));
       const actualTargetY = Math.max(fieldBounds.top, Math.min(fieldBounds.bottom, targetY + inaccuracyY));
       const actualTargetHeightFeet = Math.max(1, targetHeightFeet + inaccuracyHeightFeet);
@@ -135,6 +156,8 @@
         wasTargetMoving: false,
         intendedTargetX: targetX,
         intendedTargetY: targetY,
+        isRunningThrow: qbWasMoving,
+        inaccuracyMultiplier,
         sigma,
         profile,
         launchVelocity: profile.launchVelocity,
@@ -146,7 +169,7 @@
       state.phase = 'thrown';
     }
 
-    function release(receiverNum) {
+    function release(receiverNum, isRunningThrow = false) {
       const targetReceiver = passTarget(receiverNum);
       if (!targetReceiver) { state.quarterback.phase = 'passing'; return; }
       const fromX = state.quarterback.x;
@@ -176,7 +199,12 @@
       }
 
       const intendedDistance = distance;
-      const { inaccuracyX, inaccuracyY, inaccuracyHeightFeet, sigma } = calculateInaccuracy(intendedDistance, lateralYards);
+      const qbWasMoving = Boolean(isRunningThrow)
+        || Boolean(state.throwWindup?.wasMoving)
+        || (Boolean(state.quarterback.isMoving) && Math.hypot(state.quarterback.velocityX || 0, (state.quarterback.velocityY || 0) * lateralYards) > 0.05);
+      const inaccuracyMultiplier = qbWasMoving ? RUNNING_THROW_INACCURACY_MULTIPLIER : 1.0;
+
+      const { inaccuracyX, inaccuracyY, inaccuracyHeightFeet, sigma } = calculateInaccuracy(intendedDistance, lateralYards, inaccuracyMultiplier);
       const actualTargetX = Math.max(fieldBounds.endZoneL, Math.min(fieldBounds.endZoneR, targetX + inaccuracyX));
       const actualTargetY = Math.max(fieldBounds.top, Math.min(fieldBounds.bottom, targetY + inaccuracyY));
       const actualTargetHeightFeet = Math.max(1, targetHeightFeet + inaccuracyHeightFeet);
@@ -198,6 +226,8 @@
         wasTargetMoving: isMoving,
         intendedTargetX: targetX,
         intendedTargetY: targetY,
+        isRunningThrow: qbWasMoving,
+        inaccuracyMultiplier,
         sigma,
         profile,
         launchVelocity: profile.launchVelocity,
@@ -259,11 +289,12 @@
         if (Number.isFinite(targetX)) state.quarterback.facingLeft = targetX < state.quarterback.x;
       }
       if (windup.elapsed < windup.delay) return;
+      const wasMoving = Boolean(windup.wasMoving);
       delete state.throwWindup;
       if (!quarterbackIsBehindLineOfScrimmage()) { state.quarterback.phase = 'running'; state.quarterback.isMoving = true; return; }
-      if (Number.isFinite(windup.targetX) && Number.isFinite(windup.targetY) && !windup.receiverNum) releaseToLocation(windup.targetX, windup.targetY);
-      else if (windup.receiverNum) release(windup.receiverNum);
-      else releaseToLocation(windup.targetX, windup.targetY);
+      if (Number.isFinite(windup.targetX) && Number.isFinite(windup.targetY) && !windup.receiverNum) releaseToLocation(windup.targetX, windup.targetY, wasMoving);
+      else if (windup.receiverNum) release(windup.receiverNum, wasMoving);
+      else releaseToLocation(windup.targetX, windup.targetY, wasMoving);
     }
 
     return {
@@ -296,7 +327,8 @@
     targetHeightFeet,
     C_BASE,
     ALPHA,
-    BETA
+    BETA,
+    RUNNING_THROW_INACCURACY_MULTIPLIER
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) root.GamePassing = api;
