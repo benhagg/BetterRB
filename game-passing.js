@@ -253,9 +253,8 @@
     }
 
     function throwPassToLocation(targetX, targetY) {
-      if (state.playType === 'run' || !['passing', 'dropback'].includes(state.phase) || state.throwWindup || !quarterbackIsBehindLineOfScrimmage()) return;
+      if (state.playType === 'run' || state.phase !== 'passing' || state.throwWindup || !quarterbackIsBehindLineOfScrimmage()) return;
       if (!Number.isFinite(targetX) || !Number.isFinite(targetY)) return;
-      if (state.phase === 'dropback') { state.phase = 'passing'; state.dropbackRemaining = 0; state.quarterback.dropbackRemaining = 0; }
       const clampedX = Math.max(fieldBounds.endZoneL, Math.min(fieldBounds.endZoneR, targetX));
       const clampedY = Math.max(fieldBounds.top, Math.min(fieldBounds.bottom, targetY));
       queue({ targetX: clampedX, targetY: clampedY });
@@ -264,10 +263,9 @@
     function throwPass(target, maybeY) {
       if (typeof target === 'number' && typeof maybeY === 'number') return throwPassToLocation(target, maybeY);
       if (typeof target === 'object' && target !== null) return throwPassToLocation(target.x, target.y);
-      if (state.playType === 'run' || !['passing', 'dropback'].includes(state.phase) || state.throwWindup || !quarterbackIsBehindLineOfScrimmage()) return;
+      if (state.playType === 'run' || state.phase !== 'passing' || state.throwWindup || !quarterbackIsBehindLineOfScrimmage()) return;
       const targetReceiver = passTarget(target);
       if (!targetReceiver?.receiverNumber) return;
-      if (state.phase === 'dropback') { state.phase = 'passing'; state.dropbackRemaining = 0; state.quarterback.dropbackRemaining = 0; }
       queue({ receiverNum: target, targetX: targetReceiver.x, targetY: targetReceiver.y });
     }
 

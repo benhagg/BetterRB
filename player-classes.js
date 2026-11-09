@@ -126,8 +126,7 @@
         diveProgress: this.diveProgress, diveCooldownTimer: this.diveCooldownTimer,
         isTackled: this.isTackled, receiverNumber: this.receiverNumber,
         route: this.route, routeIndex: this.routeIndex, offset: this.offset,
-        across: this.across, isCenter: this.isCenter,
-        dropbackRemaining: this.dropbackRemaining
+        across: this.across, isCenter: this.isCenter
       };
     }
 
@@ -564,27 +563,7 @@
   class Quarterback extends OffensivePlayer {
     constructor(config = {}) {
       super({ ...config, position: 'QB', kind: 'skill' });
-      this.dropbackRemaining = Number.isFinite(config.dropbackRemaining) ? config.dropbackRemaining : 0;
       this.hasBall = config.hasBall !== false;
-    }
-
-    dropback(yards = 3) {
-      this.dropbackRemaining = yards;
-      this.phase = 'dropback';
-    }
-
-    updateDropback(delta, dropbackRate = 2.5) {
-      if (this.dropbackRemaining <= 0) return false;
-      const dist = Math.min(this.dropbackRemaining, dropbackRate * delta);
-      this.x -= dist;
-      this.dropbackRemaining -= dist;
-      this.animDistance += dist;
-      if (this.dropbackRemaining <= 1e-9) {
-        this.dropbackRemaining = 0;
-        this.phase = 'passing';
-        return true;
-      }
-      return false;
     }
 
     draw(ctx, coords, pixel, uniform) {
@@ -599,13 +578,10 @@
         RetroSprites.drawAction(ctx, x, y, pixel, u, 'pass', frame, this.facingLeft);
       } else if (this.phase === 'thrown') {
         RetroSprites.drawAction(ctx, x, y, pixel, u, 'pass', 1, this.facingLeft);
-      } else if (this.phase === 'dropback') {
-        const frame = Math.floor(this.animDistance * 2) % 2;
-        RetroSprites.drawAction(ctx, x, y, pixel, u, 'dropback', frame, this.facingLeft);
       } else if (this.isMoving) {
         RetroSprites.drawRunner(ctx, x, y, pixel, u, Math.floor(this.animDistance * 1.5), this.facingLeft, true);
       } else if (this.phase === 'passing') {
-        RetroSprites.drawAction(ctx, x, y, pixel, u, 'dropback', 0, this.facingLeft);
+        RetroSprites.drawPrePlay(ctx, x, y, pixel, u, 'skill', this.facingLeft);
       } else {
         super.draw(ctx, coords, pixel, uniform);
       }

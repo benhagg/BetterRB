@@ -7,7 +7,6 @@ const lateralYards = 17;
 const passGravityFeetPerSecondSquared = 32.174;
 
 window.playGame = function playGame(team1, team2, savedState = null, selectedPlays = {}) {
-  const dropbackYards = 3;
   const playType = String(selectedPlays.offense?.playType || selectedPlays.offense?.playtype || selectedPlays.offense?.type || 'pass').toLowerCase();
   const state = {
     score1: 0,
@@ -27,13 +26,9 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
   state.playerY = Number.isFinite(state.playerY) ? Math.max(0.08, Math.min(0.92, state.playerY)) : 0.5;
   state.clockSeconds = Number.isFinite(state.clockSeconds) ? Math.max(0, state.clockSeconds) : 900;
   state.scrimmagePosition = Number.isFinite(state.scrimmagePosition) ? state.scrimmagePosition : state.fieldPosition;
-  if (!['preplay', 'dropback', 'passing', 'running', 'thrown', 'bouncing', 'complete'].includes(state.phase)) {
+  if (!['preplay', 'passing', 'running', 'thrown', 'bouncing', 'complete'].includes(state.phase)) {
     state.phase = 'preplay';
     state.scrimmagePosition = state.fieldPosition;
-  }
-  if (state.phase === 'dropback') {
-    const remaining = Math.max(0, dropbackYards - Math.max(0, state.scrimmagePosition - state.fieldPosition));
-    state.dropbackRemaining = Number.isFinite(state.dropbackRemaining) ? Math.max(0, Math.min(state.dropbackRemaining, remaining)) : remaining;
   }
 
   const defaultDefensiveFormationSlots = [
@@ -131,7 +126,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
   ];
   const receiverConfigs = selectedPlays.offense?.formation?.receivers || defaultReceiverConfigs;
   const quarterbackConfig = selectedPlays.offense?.formation?.quarterback || {
-    position: 'QB', across: 0, offset: 0, dropback: true
+    position: 'QB', across: 0, offset: 0
   };
   const runningBackConfig = selectedPlays.offense?.formation?.runningBack || {
     position: 'RB', across: 0.13, offset: -4.5, receiverNumber: 3, route: [{ dx: 3, dy: 0.12 }, { dx: 12, dy: 0.12 }]
@@ -481,14 +476,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
   function update(seconds, input = {}) {
     const delta = Number.isFinite(seconds) ? Math.max(0, Math.min(seconds, 0.1)) : 0;
     if (state.phase === 'preplay' || state.phase === 'complete' || state.clockSeconds <= 0) return state;
-    if (state.phase === 'dropback') {
-      if (state.quarterback.updateDropback(delta)) {
-        state.phase = 'passing';
-        state.quarterback.phase = state.phase;
-      }
-      state.dropbackRemaining = state.quarterback.dropbackRemaining;
-      syncQuarterbackState();
-    } else if (state.phase === 'passing' || state.phase === 'running') {
+    if (state.phase === 'passing' || state.phase === 'running') {
       if (state.playType === 'run' && !state.runningBack.hasBall) {
         state.runningBack.runRoute(delta);
         if (state.runningBack.x >= state.quarterback.x - 0.1) {
@@ -535,14 +523,13 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
             if (state.pass.wasTargetMoving || distToTarget <= 5) {
               player.run(delta, state.pass.targetX, state.pass.targetY);
             } else {
-              player.velocityX = 0;
-              player.velocityY = 0;
-              player.isMoving = false;
+              player.runRoute(delta);
             }
-          } else if (isTargetInFrontCone(player, state.pass.targetX, state.pass.targetY, 5, 60)) {
-            player.run(delta, state.pass.targetX, state.pass.targetY);
           } else {
-            blockNearestDefender(player, delta);
+            // Non-targeted receivers keep running their assigned routes while
+            // the ball is airborne. Catch-volume contests can be layered on
+            // later without turning every route runner into a blocker.
+            player.runRoute(delta);
           }
         }
       }
@@ -585,6 +572,9 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
         }
       }
     } else if (state.phase === 'bouncing') {
+      for (const player of [...state.receivers, state.runningBack]) {
+        if (!player.hasBall) player.coastToStop(delta);
+      }
       const bounce = state.bounce;
       if (bounce) {
         bounce.x += bounce.velocityX * delta;
@@ -615,7 +605,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
           blockNearestDefender(player, delta);
         }
       }
-    } else if (['dropback', 'passing'].includes(state.phase)) {
+    } else if (state.phase === 'passing') {
       if (state.receivers) {
         for (const rec of state.receivers) {
           rec.runRoute(delta);
@@ -639,15 +629,9 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       if (state.playType === 'run') {
         state.phase = 'running';
         state.quarterback.phase = 'passing';
-        state.dropbackRemaining = 0;
-      } else if (quarterbackConfig.dropback === false) {
+      } else {
         state.phase = 'passing';
         state.quarterback.phase = 'passing';
-        state.dropbackRemaining = 0;
-      } else {
-        state.phase = 'dropback';
-        state.quarterback.dropback(dropbackYards);
-        state.dropbackRemaining = state.quarterback.dropbackRemaining;
       }
       state.receivers.forEach(receiver => { receiver.phase = 'running'; });
       state.defenders.forEach(defender => { defender.phase = 'running'; });
@@ -681,7 +665,6 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     state.scrimmagePosition = state.fieldPosition;
     state.phase = 'preplay';
     state.playType = String(selectedPlays.offense?.playType || selectedPlays.offense?.playtype || selectedPlays.offense?.type || 'pass').toLowerCase();
-    state.dropbackRemaining = 0;
     delete state.pass;
     delete state.bounce;
     delete state.throwWindup;
@@ -722,7 +705,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     selectedPlays.offense = play;
     state.playType = String(play.playtype || play.playType || play.type || 'pass').toLowerCase();
     const isRun = state.playType === 'run';
-    const qbCfg = play.formation?.quarterback || { position: 'QB', across: 0, offset: -3, dropback: false };
+    const qbCfg = play.formation?.quarterback || { position: 'QB', across: 0, offset: -3 };
     const rbCfg = play.formation?.runningBack || { position: 'RB', across: 0.13, offset: -4.5 };
     const recCfgs = play.formation?.receivers || [];
 

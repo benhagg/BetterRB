@@ -74,7 +74,7 @@
       "name": "Ace Cross",
       "playtype": "pass",
       "formation": {
-        "quarterback": { "position": "QB", "across": 0, "offset": -3, "dropback": false },
+        "quarterback": { "position": "QB", "across": 0, "offset": -3 },
         "offensiveLine": [
           { "position": "OL", "across": -0.08, "offset": -0.6 },
           { "position": "OL", "across": -0.04, "offset": -0.5 },
@@ -96,7 +96,7 @@
       "name": "Pro Post Dig",
       "playtype": "pass",
       "formation": {
-        "quarterback": { "position": "QB", "across": 0, "offset": -3, "dropback": false },
+        "quarterback": { "position": "QB", "across": 0, "offset": -3 },
         "offensiveLine": [
           { "position": "OL", "across": -0.08, "offset": -0.6 },
           { "position": "OL", "across": -0.04, "offset": -0.5 },
@@ -148,7 +148,7 @@
       "name": "HB Dive",
       "playtype": "run",
       "formation": {
-        "quarterback": { "position": "QB", "across": 0, "offset": -1.5, "dropback": false },
+        "quarterback": { "position": "QB", "across": 0, "offset": -1.5 },
         "offensiveLine": [
           { "position": "OL", "across": -0.08, "offset": -0.6 },
           { "position": "OL", "across": -0.04, "offset": -0.5 },
@@ -198,7 +198,7 @@
       "name": "HB Sweep",
       "playtype": "run",
       "formation": {
-        "quarterback": { "position": "QB", "across": 0, "offset": -1.5, "dropback": false },
+        "quarterback": { "position": "QB", "across": 0, "offset": -1.5 },
         "offensiveLine": [
           { "position": "OL", "across": -0.08, "offset": -0.6 },
           { "position": "OL", "across": -0.04, "offset": -0.5 },
@@ -249,7 +249,7 @@
       "name": "Four Verts",
       "playtype": "pass",
       "formation": {
-        "quarterback": { "position": "QB", "across": 0, "offset": -3, "dropback": false },
+        "quarterback": { "position": "QB", "across": 0, "offset": -3 },
         "offensiveLine": [
           { "position": "OL", "across": -0.08, "offset": -0.6 },
           { "position": "OL", "across": -0.04, "offset": -0.5 },
