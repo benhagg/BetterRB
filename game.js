@@ -144,45 +144,74 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     { position: 'OL', across: .08, offset: 0 }
   ];
 
-  function createReceivers() {
-    const isRunPlay = playType === 'run';
+  function createReceivers(configs = (selectedPlays.offense?.formation?.receivers || receiverConfigs)) {
+    const isRunPlay = (state.playType || playType) === 'run';
+    const roster = Array.isArray(team1?.players) ? team1.players : [];
     const used = new Set();
-    return receiverConfigs.map((cfg, index) => {
-      let rosterPlayer = team1.players?.find(p => !used.has(p) && p.position === cfg.position);
+    return configs.map((cfg, index) => {
+      const position = String(cfg.position || 'WR').trim().toUpperCase();
+      let rosterPlayer = roster.find(p => !used.has(p) && String(p.position || '').trim().toUpperCase() === position);
       if (!rosterPlayer) {
-        rosterPlayer = team1.players?.find(p => !used.has(p) && ['WR', 'TE', 'RB'].includes(p.position));
+        rosterPlayer = roster.find(p => !used.has(p) && ['WR', 'TE', 'RB'].includes(String(p.position || '').trim().toUpperCase()));
       }
       if (rosterPlayer) used.add(rosterPlayer);
-      const ReceiverClass = cfg.position === 'TE' ? TightEnd : WideReceiver;
-      const startX = state.scrimmagePosition + cfg.offset;
-      const startY = 0.5 + cfg.across;
 
-      {
-        const receiver = new ReceiverClass({
-          id: rosterPlayer?.id ?? `wr-${cfg.receiverNumber ?? index + 1}`,
-          name: rosterPlayer?.name ?? cfg.name,
-          position: cfg.position,
-          ratings: rosterPlayer?.ratings || { speed: 5, agility: 5, strength: 5, catching: 5 },
-          receiverNumber: isRunPlay ? null : (cfg.receiverNumber ?? null),
-          x: startX,
-          y: startY,
-          route: cfg.route
-        });
-        receiver.offset = cfg.offset;
-        receiver.across = cfg.across;
-        return receiver;
-      }
+      const ReceiverClass = position === 'TE' ? TightEnd : WideReceiver;
+      const startX = state.scrimmagePosition + (cfg.offset ?? -0.5);
+      const startY = 0.5 + (cfg.across ?? 0);
+
+      const rawRatings = rosterPlayer?.ratings || {};
+      const fallbackRating = Number.isFinite(rosterPlayer?.rating) ? rosterPlayer.rating : 5;
+      const ratings = {
+        speed: Number.isFinite(rawRatings.speed) ? rawRatings.speed : fallbackRating,
+        agility: Number.isFinite(rawRatings.agility) ? rawRatings.agility : fallbackRating,
+        strength: Number.isFinite(rawRatings.strength) ? rawRatings.strength : fallbackRating,
+        catching: Number.isFinite(rawRatings.catching) ? rawRatings.catching : fallbackRating,
+        ...rawRatings
+      };
+
+      const receiver = new ReceiverClass({
+        id: rosterPlayer?.id ?? `wr-${cfg.receiverNumber ?? index + 1}`,
+        name: rosterPlayer?.name ?? (position === 'TE' ? `TE ${index + 1}` : `WR ${index + 1}`),
+        position,
+        portrait: Number.isFinite(rosterPlayer?.portrait) ? rosterPlayer.portrait : null,
+        rating: rosterPlayer?.rating ?? fallbackRating,
+        ratings,
+        skills: ratings,
+        receiverNumber: isRunPlay ? null : (cfg.receiverNumber ?? null),
+        x: startX,
+        y: startY,
+        route: cfg.route || []
+      });
+      receiver.offset = cfg.offset ?? -0.5;
+      receiver.across = cfg.across ?? 0;
+      return receiver;
     });
   }
 
   function createQuarterback(saved = {}) {
-    const rosterPlayer = team1.players?.find(player => String(player.position).trim().toUpperCase() === 'QB');
+    const roster = Array.isArray(team1?.players) ? team1.players : [];
+    const rosterPlayer = roster.find(player => String(player.position || '').trim().toUpperCase() === 'QB');
+    const rawRatings = rosterPlayer?.ratings || saved?.ratings || {};
+    const fallbackRating = Number.isFinite(rosterPlayer?.rating) ? rosterPlayer.rating : (Number.isFinite(saved?.rating) ? saved.rating : 5);
+    const ratings = {
+      speed: Number.isFinite(rawRatings.speed) ? rawRatings.speed : fallbackRating,
+      agility: Number.isFinite(rawRatings.agility) ? rawRatings.agility : fallbackRating,
+      strength: Number.isFinite(rawRatings.strength) ? rawRatings.strength : fallbackRating,
+      accuracy: Number.isFinite(rawRatings.accuracy) ? rawRatings.accuracy : fallbackRating,
+      ...rawRatings
+    };
     const qb = new Quarterback({
       ...saved,
-      id: rosterPlayer?.id ?? 'qb', name: rosterPlayer?.name ?? 'QB', position: 'QB',
-      ratings: saved.ratings || saved.rating || rosterPlayer?.ratings || { speed: 5, agility: 5, strength: 5, accuracy: 5 },
-      x: Number.isFinite(saved.x) ? saved.x : state.scrimmagePosition + (quarterbackConfig.offset ?? -3),
-      y: Number.isFinite(saved.y) ? saved.y : 0.5 + (quarterbackConfig.across ?? 0)
+      id: rosterPlayer?.id ?? saved?.id ?? 'qb',
+      name: rosterPlayer?.name ?? saved?.name ?? 'QB',
+      position: 'QB',
+      portrait: Number.isFinite(rosterPlayer?.portrait) ? rosterPlayer.portrait : null,
+      rating: rosterPlayer?.rating ?? saved?.rating ?? fallbackRating,
+      ratings,
+      skills: ratings,
+      x: Number.isFinite(saved?.x) ? saved.x : state.scrimmagePosition + (quarterbackConfig.offset ?? -3),
+      y: Number.isFinite(saved?.y) ? saved.y : 0.5 + (quarterbackConfig.across ?? 0)
     });
     qb.offset = quarterbackConfig.offset ?? -3;
     qb.across = quarterbackConfig.across ?? 0;
@@ -190,12 +219,31 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
   }
 
   function createOffensiveLine() {
+    const roster = Array.isArray(team1?.players) ? team1.players : [];
+    const used = new Set();
     return offensiveLineSlots.map((slot, index) => {
+      let rosterPlayer = roster.find(p => !used.has(p) && String(p.position || '').trim().toUpperCase() === 'OL');
+      if (rosterPlayer) used.add(rosterPlayer);
+      const rawRatings = rosterPlayer?.ratings || {};
+      const fallbackRating = Number.isFinite(rosterPlayer?.rating) ? rosterPlayer.rating : 5;
+      const ratings = {
+        speed: Number.isFinite(rawRatings.speed) ? rawRatings.speed : fallbackRating,
+        agility: Number.isFinite(rawRatings.agility) ? rawRatings.agility : fallbackRating,
+        strength: Number.isFinite(rawRatings.strength) ? rawRatings.strength : fallbackRating,
+        blocking: Number.isFinite(rawRatings.blocking) ? rawRatings.blocking : fallbackRating,
+        ...rawRatings
+      };
       const lineman = new OffensiveLineman({
-        id: `ol-${index}`, name: slot.isCenter ? 'C' : `OL ${index + 1}`,
+        id: rosterPlayer?.id ?? `ol-${index}`,
+        name: rosterPlayer?.name ?? (slot.isCenter ? 'C' : `OL ${index + 1}`),
         position: slot.position || 'OL',
-        ratings: { speed: 5, agility: 5, strength: 5, blocking: 5 },
-        x: state.scrimmagePosition + slot.offset, y: 0.5 + slot.across, isCenter: Boolean(slot.isCenter)
+        portrait: Number.isFinite(rosterPlayer?.portrait) ? rosterPlayer.portrait : null,
+        rating: rosterPlayer?.rating ?? fallbackRating,
+        ratings,
+        skills: ratings,
+        x: state.scrimmagePosition + slot.offset,
+        y: 0.5 + slot.across,
+        isCenter: Boolean(slot.isCenter)
       });
       lineman.offset = slot.offset;
       lineman.across = slot.across;
@@ -203,13 +251,30 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     });
   }
 
-  function createRunningBack() {
+  function createRunningBack(saved = {}) {
     const isRunPlay = playType === 'run';
-    const player = team1.players?.find(item => String(item.position).trim().toUpperCase() === 'RB');
+    const roster = Array.isArray(team1?.players) ? team1.players : [];
+    const player = roster.find(item => String(item.position || '').trim().toUpperCase() === 'RB');
+    const rawRatings = player?.ratings || saved?.ratings || {};
+    const fallbackRating = Number.isFinite(player?.rating) ? player.rating : (Number.isFinite(saved?.rating) ? saved.rating : 5);
+    const ratings = {
+      speed: Number.isFinite(rawRatings.speed) ? rawRatings.speed : fallbackRating,
+      agility: Number.isFinite(rawRatings.agility) ? rawRatings.agility : fallbackRating,
+      strength: Number.isFinite(rawRatings.strength) ? rawRatings.strength : fallbackRating,
+      catching: Number.isFinite(rawRatings.catching) ? rawRatings.catching : fallbackRating,
+      ...rawRatings
+    };
     const back = new RunningBack({
-      id: player?.id ?? 'rb', name: player?.name ?? 'RB', position: 'RB',
-      ratings: player?.ratings || { speed: 5, agility: 5, strength: 5, catching: 5 },
-      x: state.scrimmagePosition + runningBackConfig.offset, y: 0.5 + runningBackConfig.across,
+      ...saved,
+      id: player?.id ?? saved?.id ?? 'rb',
+      name: player?.name ?? saved?.name ?? 'RB',
+      position: 'RB',
+      portrait: Number.isFinite(player?.portrait) ? player.portrait : null,
+      rating: player?.rating ?? saved?.rating ?? fallbackRating,
+      ratings,
+      skills: ratings,
+      x: Number.isFinite(saved?.x) ? saved.x : state.scrimmagePosition + runningBackConfig.offset,
+      y: Number.isFinite(saved?.y) ? saved.y : 0.5 + runningBackConfig.across,
       receiverNumber: isRunPlay ? null : (runningBackConfig.receiverNumber ?? 3),
       route: runningBackRoute
     });
@@ -219,12 +284,9 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
   }
 
   state.quarterback = state.quarterback instanceof Quarterback ? state.quarterback : createQuarterback(state.quarterback);
-  state.receivers = Array.isArray(state.receivers) && state.receivers.length
-    ? state.receivers.map((saved, index) => {
-      const config = receiverConfigs[index];
-      const ReceiverClass = config?.position === 'TE' ? TightEnd : WideReceiver;
-      return new ReceiverClass({ ...config, ...saved });
-    }) : createReceivers();
+  state.receivers = (Array.isArray(state.receivers) && state.receivers.length && (state.receivers[0] instanceof Player))
+    ? state.receivers
+    : createReceivers(receiverConfigs);
   state.defenders = Array.isArray(state.defenders) && state.defenders.length
     ? state.defenders.map((saved, index) => {
       const slot = defensiveFormationSlots[index];
@@ -638,23 +700,8 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     state.runningBack.receiverNumber = isRun ? null : (rbCfg.receiverNumber ?? null);
     state.runningBack.assignRoute(rbCfg.route || []);
 
-    // Reconfigure Receivers
-    state.receivers = recCfgs.map((config, index) => {
-      const ReceiverClass = config?.position === 'TE' ? TightEnd : WideReceiver;
-      const rec = new ReceiverClass({
-        id: `rec-${config.receiverNumber ?? index + 1}`,
-        name: `Receiver ${config.receiverNumber ?? index + 1}`,
-        position: config.position || 'WR',
-        ratings: state.receivers?.[index]?.ratings || { speed: 5, agility: 5, strength: 5, catching: 5 },
-        x: state.scrimmagePosition + (config.offset ?? -0.5),
-        y: 0.5 + (config.across ?? 0),
-        receiverNumber: isRun ? null : (config.receiverNumber ?? null),
-        route: config.route || []
-      });
-      rec.offset = config.offset ?? -0.5;
-      rec.across = config.across ?? 0;
-      return rec;
-    });
+    // Reconfigure Receivers from Roster with Play Routes
+    state.receivers = createReceivers(recCfgs);
 
     state.fieldPosition = state.quarterback.x;
     state.playerY = state.quarterback.y;

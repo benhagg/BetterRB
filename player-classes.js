@@ -34,9 +34,11 @@
       this.uniform = config.uniform ?? null;
       const rawRatings = (config.ratings && typeof config.ratings === 'object')
         ? config.ratings
-        : (config.rating && typeof config.rating === 'object')
-          ? config.rating
-          : null;
+        : (config.skills && typeof config.skills === 'object')
+          ? config.skills
+          : (config.rating && typeof config.rating === 'object')
+            ? config.rating
+            : null;
       const fallbackRating = Number.isFinite(config.rating) ? config.rating : 5;
 
       const speedRating = Number.isFinite(rawRatings?.speed)
@@ -56,6 +58,8 @@
         ...(rawRatings || {})
       };
       this.rating = this.ratings;
+      this.skills = this.ratings;
+      this.portrait = Number.isFinite(config.portrait) ? config.portrait : null;
       // Base speed physics coefficients
       const BASE_SPEED = 5.0;
       const SPEED_RATING_COEFF = 0.3;
@@ -78,6 +82,10 @@
       this.phase = config.phase ?? 'preplay';
     }
 
+    get speedRating() {
+      return this.ratings?.speed ?? 5;
+    }
+
     get agility() {
       return this.ratings?.agility ?? 5;
     }
@@ -86,12 +94,30 @@
       return this.ratings?.strength ?? 5;
     }
 
+    get catching() {
+      return this.ratings?.catching ?? 5;
+    }
+
+    get accuracy() {
+      return this.ratings?.accuracy ?? 5;
+    }
+
+    get blocking() {
+      return this.ratings?.blocking ?? 5;
+    }
+
+    get tackling() {
+      return this.ratings?.tackling ?? 5;
+    }
+
     // Class instances are re-created when a saved game loads. Keep saved data plain.
     toJSON() {
       return {
         id: this.id, name: this.name, position: this.position,
         rating: { ...this.ratings },
         ratings: { ...this.ratings },
+        skills: { ...this.ratings },
+        portrait: this.portrait,
         kind: this.kind, x: this.x, y: this.y, startX: this.startX, startY: this.startY,
         velocityX: this.velocityX, velocityY: this.velocityY,
         lastDirX: this.lastDirX, lastDirY: this.lastDirY, autoRun: this.autoRun,
