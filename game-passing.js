@@ -1,12 +1,19 @@
 (function (root) {
-  const throwArc = 0.4;
   const releaseHeightFeet = 6;
   const targetHeightFeet = 4;
   const gravityFeetPerSecondSquared = 32.174;
   const C_BASE = 0.15;
+  // inaccuracy coefficients (less is more accurate)
   const ALPHA = 0.00417;
   const BETA = 0.00192;
   const feetPerYard = 3.0;
+
+  function calculateThrowArc(distanceYards, strength = 5) {
+    const d = Math.max(0, Number(distanceYards) || 0);
+    const numStrength = Number(strength);
+    const s = Math.max(0, Math.min(10, Number.isFinite(numStrength) ? numStrength : 5));
+    return Math.max(0.05, (0.14 + 0.007 * d) * (1 - 0.02 * s));
+  }
 
   function calculateSigma(distanceYards) {
     const d = Math.max(0, Number(distanceYards) || 0);
@@ -30,28 +37,34 @@
     const inaccuracyX = clampedGaussian() * sigma;
     const inaccuracyY = (clampedGaussian() * sigma) / lateralYards;
     const inaccuracyHeightFeet = clampedGaussian() * (sigma * feetPerYard);
+    //do not delete this log
+    console.log("hypot in accuracy", Math.hypot(inaccuracyX, inaccuracyY))
     return { inaccuracyX, inaccuracyY, inaccuracyHeightFeet, sigma };
   }
 
-  function throwProfile(distanceYards, targetHeight = targetHeightFeet) {
+  function throwProfile(distanceYards, targetHeight = targetHeightFeet, strength = 5) {
     const resolvedTargetHeight = Number.isFinite(targetHeight) ? targetHeight : targetHeightFeet;
-    // throwArc is extra apex height in feet per yard of horizontal throw distance.
-    const apexHeight = Math.max(releaseHeightFeet, resolvedTargetHeight) + Math.max(0, throwArc) * distanceYards;
+    const arc = calculateThrowArc(distanceYards, strength);
+    const apexHeight = Math.max(releaseHeightFeet, resolvedTargetHeight) + arc * distanceYards;
     const launchVelocity = Math.sqrt(2 * gravityFeetPerSecondSquared * (apexHeight - releaseHeightFeet));
     const riseTime = launchVelocity / gravityFeetPerSecondSquared;
     const fallTime = Math.sqrt(2 * (apexHeight - resolvedTargetHeight) / gravityFeetPerSecondSquared);
-    return { launchVelocity, duration: riseTime + fallTime };
+    return { launchVelocity, duration: riseTime + fallTime, apexHeight, arc };
   }
 
-  function throwHeightAt(progress, distanceYards, targetHeight = targetHeightFeet) {
+  function throwHeightAt(progress, distanceYards, targetHeight = targetHeightFeet, strength = 5) {
     const resolvedTargetHeight = Number.isFinite(targetHeight) ? targetHeight : targetHeightFeet;
-    const profile = throwProfile(distanceYards, resolvedTargetHeight);
+    const profile = throwProfile(distanceYards, resolvedTargetHeight, strength);
     const elapsed = Math.max(0, Math.min(1, progress)) * profile.duration;
     return releaseHeightFeet + profile.launchVelocity * elapsed
       - 0.5 * gravityFeetPerSecondSquared * elapsed * elapsed;
   }
 
   function create({ state, lateralYards, fieldBounds, passTarget, quarterbackIsBehindLineOfScrimmage }) {
+    function getQbStrength() {
+      return state.quarterback?.strength ?? state.quarterback?.rating ?? 5;
+    }
+
     function predictReceiverPosition(player, seconds) {
       const velocityX = Number(player.velocityX) || 0;
       const velocityYards = (Number(player.velocityY) || 0) * lateralYards;
@@ -92,7 +105,7 @@
       const actualTargetHeightFeet = Math.max(1, targetHeightFeet + inaccuracyHeightFeet);
 
       const distance = Math.hypot(actualTargetX - fromX, (actualTargetY - fromY) * lateralYards);
-      const duration = throwProfile(distance, actualTargetHeightFeet).duration;
+      const duration = throwProfile(distance, actualTargetHeightFeet, getQbStrength()).duration;
       state.pass = {
         fromX,
         fromY,
@@ -137,11 +150,11 @@
           targetX = predicted.x;
           targetY = predicted.y;
           distance = Math.hypot(targetX - fromX, (targetY - fromY) * lateralYards);
-          duration = throwProfile(distance, targetHeightFeet).duration;
+          duration = throwProfile(distance, targetHeightFeet, getQbStrength()).duration;
         }
       } else {
         distance = Math.hypot(targetX - fromX, (targetY - fromY) * lateralYards);
-        duration = throwProfile(distance, targetHeightFeet).duration;
+        duration = throwProfile(distance, targetHeightFeet, getQbStrength()).duration;
       }
 
       const intendedDistance = distance;
@@ -150,7 +163,7 @@
       const actualTargetY = Math.max(fieldBounds.top, Math.min(fieldBounds.bottom, targetY + inaccuracyY));
       const actualTargetHeightFeet = Math.max(1, targetHeightFeet + inaccuracyHeightFeet);
       const actualDistance = Math.hypot(actualTargetX - fromX, (actualTargetY - fromY) * lateralYards);
-      const actualDuration = throwProfile(actualDistance, actualTargetHeightFeet).duration;
+      const actualDuration = throwProfile(actualDistance, actualTargetHeightFeet, getQbStrength()).duration;
 
       state.pass = {
         fromX,
@@ -232,13 +245,14 @@
     }
 
     return {
-      throwHeightAt,
-      throwProfile,
+      throwHeightAt: (progress, distanceYards, targetHeight) => throwHeightAt(progress, distanceYards, targetHeight, getQbStrength()),
+      throwProfile: (distanceYards, targetHeight) => throwProfile(distanceYards, targetHeight, getQbStrength()),
       throwPass,
       throwPassToLocation,
       updateWindup,
       calculateSigma,
-      calculateInaccuracy
+      calculateInaccuracy,
+      calculateThrowArc
     };
   }
 
@@ -246,9 +260,9 @@
     create,
     throwProfile,
     throwHeightAt,
+    calculateThrowArc,
     calculateSigma,
     calculateInaccuracy,
-    throwArc,
     releaseHeightFeet,
     targetHeightFeet,
     C_BASE,

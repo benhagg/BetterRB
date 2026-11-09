@@ -33,6 +33,8 @@
       this.team = config.team ?? null;
       this.uniform = config.uniform ?? null;
       this.rating = Number.isFinite(config.rating) ? config.rating : 5;
+      this.agility = Number.isFinite(config.agility) ? config.agility : (Number.isFinite(config.rating) ? config.rating : 5);
+      this.strength = Number.isFinite(config.strength) ? config.strength : 5;
       this.speedMultiplier = speedMultiplier(this.position);
       this.speed = (5 + this.rating * 0.3) * this.speedMultiplier;
       this.kind = config.kind ?? kindForPosition(this.position);
@@ -56,6 +58,7 @@
     toJSON() {
       return {
         id: this.id, name: this.name, position: this.position, rating: this.rating,
+        agility: this.agility, strength: this.strength,
         kind: this.kind, x: this.x, y: this.y, startX: this.startX, startY: this.startY,
         velocityX: this.velocityX, velocityY: this.velocityY,
         lastDirX: this.lastDirX, lastDirY: this.lastDirY, autoRun: this.autoRun,

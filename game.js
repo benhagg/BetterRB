@@ -10,7 +10,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
   const state = {
     score1: 0,
     score2: 0,
-    fieldPosition: 22,
+    fieldPosition: 25,
     playerY: 0.5,
     clockSeconds: 900,
     quarter: 1,
@@ -166,6 +166,8 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
           name: rosterPlayer?.name ?? cfg.name,
           position: cfg.position,
           rating,
+          strength: Number.isFinite(rosterPlayer?.ratings?.strength) ? rosterPlayer.ratings.strength : 5,
+          agility: Number.isFinite(rosterPlayer?.ratings?.agility) ? rosterPlayer.ratings.agility : 5,
           receiverNumber: isRunPlay ? null : (cfg.receiverNumber ?? null),
           x: startX,
           y: startY,
@@ -184,6 +186,8 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       ...saved,
       id: rosterPlayer?.id ?? 'qb', name: rosterPlayer?.name ?? 'QB', position: 'QB',
       rating: Number.isFinite(rosterPlayer?.ratings?.speed) ? rosterPlayer.ratings.speed : 5,
+      strength: Number.isFinite(rosterPlayer?.ratings?.strength) ? rosterPlayer.ratings.strength : 5,
+      agility: Number.isFinite(rosterPlayer?.ratings?.agility) ? rosterPlayer.ratings.agility : 5,
       x: Number.isFinite(saved.x) ? saved.x : state.scrimmagePosition + (quarterbackConfig.offset ?? -3),
       y: Number.isFinite(saved.y) ? saved.y : 0.5 + (quarterbackConfig.across ?? 0)
     });
@@ -211,6 +215,8 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     const back = new RunningBack({
       id: player?.id ?? 'rb', name: player?.name ?? 'RB', position: 'RB',
       rating: Number.isFinite(player?.ratings?.speed) ? player.ratings.speed : 5,
+      strength: Number.isFinite(player?.ratings?.strength) ? player.ratings.strength : 5,
+      agility: Number.isFinite(player?.ratings?.agility) ? player.ratings.agility : 5,
       x: state.scrimmagePosition + runningBackConfig.offset, y: 0.5 + runningBackConfig.across,
       receiverNumber: isRunPlay ? null : (runningBackConfig.receiverNumber ?? 3),
       route: runningBackRoute
