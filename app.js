@@ -348,7 +348,7 @@ function renderPlayDiagramSVG(play) {
     if (r.receiverNumber && !isRun) {
       svg += `<text x="${(rx - 7).toFixed(1)}" y="${(ry + 2.5).toFixed(1)}" fill="#ffe18a" font-size="7" font-weight="bold" text-anchor="middle" font-family="monospace">${r.receiverNumber}</text>`;
     }
-    if (r.route && r.route.length) {
+    if (!isRun && r.route && r.route.length) {
       let curX = rx, curY = ry;
       let pathD = `M ${rx.toFixed(1)} ${ry.toFixed(1)}`;
       r.route.forEach(wp => {
@@ -372,7 +372,7 @@ function renderPlayDiagramSVG(play) {
     if (rb.receiverNumber && !isRun) {
       svg += `<text x="${(rbx - 8).toFixed(1)}" y="${(rby + 2.5).toFixed(1)}" fill="${isRun ? '#00e676' : '#80d8ff'}" font-size="7" font-weight="bold" text-anchor="middle" font-family="monospace">${rb.receiverNumber}</text>`;
     }
-    if (rb.route && rb.route.length) {
+    if (!isRun && rb.route && rb.route.length) {
       let curX = rbx, curY = rby;
       let pathD = `M ${rbx.toFixed(1)} ${rby.toFixed(1)}`;
       rb.route.forEach(wp => {

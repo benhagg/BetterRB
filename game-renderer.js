@@ -32,7 +32,7 @@
         screenY: top + actor.y * (bottom - top)
       });
 
-      if (state.phase === 'preplay') {
+      if (state.phase === 'preplay' && state.playType !== 'run') {
         const drawRoute = player => {
           if (!player.route?.length) return;
           ctx.save();
