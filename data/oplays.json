@@ -18,7 +18,7 @@
           { "receiverNumber": 3, "position": "WR", "across": 0.28, "offset": -0.5, "route": [{ "dx": 4, "dy": 0 }, { "dx": 16, "dy": -0.18 }] },
           { "receiverNumber": 4, "position": "WR", "across": 0.43, "offset": -0.5, "route": [{ "dx": 35, "dy": 0 }] }
         ],
-        "runningBack": { "position": "RB", "across": 0.13, "offset": -4.5, "route": [{ "dx": 3, "dy": 0.12 }, { "dx": 12, "dy": 0.12 }] }
+        "runningBack": { "receiverNumber": 5, "position": "RB", "across": 0.13, "offset": -4.5, "route": [{ "dx": 3, "dy": 0.12 }, { "dx": 12, "dy": 0.12 }] }
       }
     }
   ]

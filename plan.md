@@ -3,8 +3,8 @@
 ## Requested behavior
 
 - Press Space to snap the ball. The quarterback drops back three yards.
-- Receivers run routes, with receivers assigned the numbers 1 through 4.
-- Press 1, 2, 3, or 4 to throw to the corresponding receiver.
+- Receivers run routes, with eligible targets assigned the numbers 1 through 5.
+- Press 1, 2, 3, 4, or 5 to throw to the corresponding receiver.
 - Press Space again to let the quarterback run instead.
 - Remove the current click-to-throw control.
 

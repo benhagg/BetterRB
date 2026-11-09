@@ -356,7 +356,7 @@ window.addEventListener('keydown', event => {
     if (!event.repeat && gameSession) gameSession.pressSpace();
     return;
   }
-  if (screen === 'game' && ['1', '2', '3', '4'].includes(key) && !event.repeat && gameSession) {
+  if (screen === 'game' && ['1', '2', '3', '4', '5'].includes(key) && !event.repeat && gameSession) {
     event.preventDefault();
     gameSession.throwPass(parseInt(key, 10));
     return;

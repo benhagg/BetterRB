@@ -35,7 +35,7 @@ window.RetroSprites = (() => {
 
   const fieldImage = loadImage('/images/field.png').image;
   const footballImage = loadImage('/images/ball.png').image;
-  const prePlayFrames = { lineman: '/images/pre_play/lineman.png', center: '/images/pre_play/center.png', skill: '/images/pre_play/skill.png' };
+  const prePlayFrames = { lineman: '/images/pre_play/lineman.png', skill: '/images/pre_play/skill.png', waiting: '/images/pre_play/waiting.png' };
   const actionFrames = {
     dropback: ['/images/actions/dropback.png', '/images/actions/dropback1.png'],
     pass: ['/images/actions/pass.png', '/images/actions/pass1.png'],
