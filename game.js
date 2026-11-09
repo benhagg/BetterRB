@@ -300,6 +300,15 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       || (state.runningBack.hasBall ? state.runningBack : state.quarterback);
   }
 
+  function getBallCarrier() {
+    if (state.phase === 'thrown') return null;
+    const receiverWithBall = state.receivers.find(receiver => receiver.hasBall);
+    if (receiverWithBall) return receiverWithBall;
+    if (state.runningBack?.hasBall) return state.runningBack;
+    if (state.quarterback?.hasBall) return state.quarterback;
+    return null;
+  }
+
   function passTarget(receiverNumber) {
     return [...state.receivers, state.runningBack].find(player => player.receiverNumber === receiverNumber);
   }
@@ -602,7 +611,16 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     return uniform;
   }
 
-  const renderer = GameRenderer.create({ state, field, camera, team1, team2, uniformForTeam, throwHeightAt: passing.throwHeightAt });
+  const renderer = GameRenderer.create({
+    state,
+    field,
+    camera,
+    team1,
+    team2,
+    uniformForTeam,
+    throwHeightAt: passing.throwHeightAt,
+    getBallCarrier
+  });
 
   function draw(ctx, width, height) {
     return renderer.draw(ctx, width, height);
@@ -771,6 +789,8 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     draw,
     reset,
     uniformForTeam,
-    setOffensivePlay
+    setOffensivePlay,
+    ballCarrier,
+    getBallCarrier
   };
 };

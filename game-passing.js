@@ -88,6 +88,7 @@
         intendedTargetX: targetX,
         intendedTargetY: targetY
       };
+      state.quarterback.hasBall = false;
       state.quarterback.phase = 'thrown';
       state.phase = 'thrown';
     }
@@ -144,6 +145,7 @@
         intendedTargetX: targetX,
         intendedTargetY: targetY
       };
+      state.quarterback.hasBall = false;
       state.quarterback.phase = 'thrown';
       state.phase = 'thrown';
     }

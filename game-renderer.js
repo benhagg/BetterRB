@@ -1,5 +1,5 @@
 (function (root) {
-  function create({ state, field, camera, team1, team2, uniformForTeam, throwHeightAt }) {
+  function create({ state, field, camera, team1, team2, uniformForTeam, throwHeightAt, getBallCarrier }) {
     function draw(ctx, width, height) {
       ctx.imageSmoothingEnabled = false;
       ctx.clearRect(0, 0, width, height);
@@ -88,6 +88,27 @@
       ctx.fill();
       ctx.restore();
       ctx.drawImage(RetroSprites.footballImage, ballX - 5 * pixel, ballY - 2.5 * pixel, 10 * pixel, 5 * pixel);
+
+      if (typeof document === 'undefined' || !document.getElementById('ball-carrier-banner')) {
+        const carrier = typeof getBallCarrier === 'function'
+          ? getBallCarrier()
+          : (state.phase !== 'thrown' ? (state.receivers.find(r => r.hasBall) || (state.runningBack?.hasBall ? state.runningBack : (state.quarterback?.hasBall ? state.quarterback : null))) : null);
+        if (carrier && carrier.name && carrier.position) {
+          ctx.save();
+          const fontSize = Math.max(14, Math.round(11 * pixel));
+          ctx.font = `normal ${fontSize}px "VT323", monospace`;
+          ctx.textBaseline = 'bottom';
+          ctx.textAlign = 'left';
+          const text = `${carrier.name}  ${carrier.position}`;
+          const textX = 14 * pixel;
+          const textY = height - 8 * pixel;
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+          ctx.fillText(text, textX + 1, textY + 1);
+          ctx.fillStyle = '#f4f0d8';
+          ctx.fillText(text, textX, textY);
+          ctx.restore();
+        }
+      }
     }
     return { draw };
   }

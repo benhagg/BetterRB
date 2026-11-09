@@ -258,6 +258,17 @@ function gamePanel() {
   bindText(component, 'away-score', playerIsHome ? state.score2 : state.score1);
   bindText(component, 'quarter', `Qt${state.quarter}`);
   component.querySelector('#game-clock').textContent = formatClock(state.clockSeconds);
+  const carrierBanner = component.querySelector('#ball-carrier-banner');
+  if (carrierBanner) {
+    const carrier = typeof gameSession.getBallCarrier === 'function' ? gameSession.getBallCarrier() : null;
+    if (carrier && carrier.name && carrier.position) {
+      carrierBanner.classList.remove('hidden');
+      bindText(carrierBanner, 'carrier-name', carrier.name);
+      bindText(carrierBanner, 'carrier-pos', carrier.position);
+    } else {
+      carrierBanner.classList.add('hidden');
+    }
+  }
   renderPlayCards(component);
   return component;
 }
@@ -487,6 +498,19 @@ function startGameLoop() {
     gameSession.draw(context, canvas.width, canvas.height);
     const clock = app.querySelector('#game-clock');
     if (clock) clock.textContent = formatClock(gameSession.state.clockSeconds);
+    const carrierBanner = app.querySelector('#ball-carrier-banner');
+    if (carrierBanner) {
+      const carrier = typeof gameSession.getBallCarrier === 'function' ? gameSession.getBallCarrier() : null;
+      if (carrier && carrier.name && carrier.position) {
+        carrierBanner.classList.remove('hidden');
+        const nameEl = carrierBanner.querySelector('[data-bind="carrier-name"]');
+        const posEl = carrierBanner.querySelector('[data-bind="carrier-pos"]');
+        if (nameEl && nameEl.textContent !== carrier.name) nameEl.textContent = carrier.name;
+        if (posEl && posEl.textContent !== carrier.position) posEl.textContent = carrier.position;
+      } else {
+        carrierBanner.classList.add('hidden');
+      }
+    }
     if (gameSession.state.phase !== 'preplay') {
       const overlay = app.querySelector('#play-select-overlay');
       if (overlay && !overlay.classList.contains('hidden')) {
