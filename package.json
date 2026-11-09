@@ -4,7 +4,13 @@
   "private": true,
   "description": "better retro bowl",
   "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "start": "node server.js",
     "new-season": "node scripts/start-new-season.js"
+  },
+  "devDependencies": {
+    "vite": "^8.3.7"
   }
 }
