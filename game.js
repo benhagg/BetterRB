@@ -459,7 +459,23 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
           } else if (isTargetInFrontCone(player, state.pass.targetX, state.pass.targetY, 5, 60)) {
             player.run(delta, state.pass.targetX, state.pass.targetY);
           } else {
-            player.runRoute(delta);
+            let nearestDefender = null;
+            let minDefenderDist = Infinity;
+            if (state.defenders && state.defenders.length) {
+              for (const defender of state.defenders) {
+                const dist = Math.hypot(defender.x - player.x, (defender.y - player.y) * lateralYards);
+                if (dist < minDefenderDist) {
+                  minDefenderDist = dist;
+                  nearestDefender = defender;
+                }
+              }
+            }
+            if (nearestDefender) {
+              player.run(delta, nearestDefender.x, nearestDefender.y);
+              player.block(nearestDefender);
+            } else {
+              player.runRoute(delta);
+            }
           }
         }
       }

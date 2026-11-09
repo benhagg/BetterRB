@@ -210,6 +210,10 @@
       this.autoRun = null;
     }
 
+    block(target = null) {
+      // Empty for now; to be implemented later
+    }
+
     tackled() {
       this.isTackled = true;
       this.isMoving = false;
