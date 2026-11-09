@@ -1,9 +1,39 @@
 /* The first team is the user-controlled team; the second is its opponent. */
 // currently the top bottom and each end zone of the field are these numbers. out of bounds is anything outside of the top / bottom range and a touchdown is anything in the end zone we are going towards
 const fieldBounds = {top: -.02, bottom: 0.95, endZoneL: 2.217644291800185, endZoneR: 101.66747130270615};
+const cameraTrailingYards = 6;
+const lateralYards = 17;
+const passSpeedYardsPerSecond = 12;
+const throw_arc = 0.7;
+const throwArc = throw_arc;
+const releaseHeightFeet = 6;
+const targetHeightFeet = 4;
+
+function throwHeightAt(progress, distanceYards) {
+  const t = Math.max(0, Math.min(1, progress));
+  const straightHeight = releaseHeightFeet + (targetHeightFeet - releaseHeightFeet) * t;
+  return straightHeight + throw_arc * distanceYards * 4 * t * (1 - t);
+}
+
+function throwArcLength(distanceYards) {
+  const samples = 16;
+  let length = 0;
+  let previousDistance = 0;
+  let previousHeight = throwHeightAt(0, distanceYards) / 3;
+  for (let index = 1; index <= samples; index++) {
+    const progress = index / samples;
+    const distance = distanceYards * progress;
+    const height = throwHeightAt(progress, distanceYards) / 3;
+    length += Math.hypot(distance - previousDistance, height - previousHeight);
+    previousDistance = distance;
+    previousHeight = height;
+  }
+  return length;
+}
 
 window.playGame = function playGame(team1, team2, savedState = null, selectedPlays = {}) {
   const dropbackYards = 3;
+  const playType = String(selectedPlays.offense?.playType || selectedPlays.offense?.playtype || selectedPlays.offense?.type || 'pass').toLowerCase();
   const state = {
     score1: 0,
     score2: 0,
@@ -13,6 +43,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     quarter: 1,
     isHome: true,
     phase: 'preplay',
+    playType,
     ...savedState,
     team1,
     team2
@@ -110,7 +141,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       route: [{ dx: 5, dy: 0 }, { dx: 14, dy: -0.12 }] // Out
     },
     {
-      receiverNumber: 3,
+      receiverNumber: 4,
       across: 0.28,
       offset: 0,
       position: 'WR',
@@ -118,7 +149,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       route: [{ dx: 4, dy: 0 }, { dx: 16, dy: -0.18 }] // Slant
     },
     {
-      receiverNumber: 4,
+      receiverNumber: 5,
       across: 0.43,
       offset: 0,
       position: 'WR',
@@ -131,7 +162,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     position: 'QB', across: 0, offset: 0, dropback: true
   };
   const runningBackConfig = selectedPlays.offense?.formation?.runningBack || {
-    position: 'RB', across: 0.13, offset: -4.5, route: [{ dx: 3, dy: 0.12 }, { dx: 12, dy: 0.12 }]
+    position: 'RB', across: 0.13, offset: -4.5, receiverNumber: 3, route: [{ dx: 3, dy: 0.12 }, { dx: 12, dy: 0.12 }]
   };
   const runningBackRoute = runningBackConfig.route;
   const offensiveLineSlots = selectedPlays.offense?.formation?.offensiveLine || [
@@ -175,13 +206,16 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
 
   function createQuarterback(saved = {}) {
     const rosterPlayer = team1.players?.find(player => String(player.position).trim().toUpperCase() === 'QB');
-    return new Quarterback({
+    const qb = new Quarterback({
       ...saved,
       id: rosterPlayer?.id ?? 'qb', name: rosterPlayer?.name ?? 'QB', position: 'QB',
       rating: Number.isFinite(rosterPlayer?.ratings?.speed) ? rosterPlayer.ratings.speed : 5,
-      x: Number.isFinite(saved.x) ? saved.x : state.scrimmagePosition + quarterbackConfig.offset,
-      y: Number.isFinite(saved.y) ? saved.y : 0.5 + quarterbackConfig.across
+      x: Number.isFinite(saved.x) ? saved.x : state.scrimmagePosition + (quarterbackConfig.offset ?? -3),
+      y: Number.isFinite(saved.y) ? saved.y : 0.5 + (quarterbackConfig.across ?? 0)
     });
+    qb.offset = quarterbackConfig.offset ?? -3;
+    qb.across = quarterbackConfig.across ?? 0;
+    return qb;
   }
 
   function createOffensiveLine() {
@@ -203,6 +237,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       id: player?.id ?? 'rb', name: player?.name ?? 'RB', position: 'RB',
       rating: Number.isFinite(player?.ratings?.speed) ? player.ratings.speed : 5,
       x: state.scrimmagePosition + runningBackConfig.offset, y: 0.5 + runningBackConfig.across,
+      receiverNumber: runningBackConfig.receiverNumber ?? 3,
       route: runningBackRoute
     });
     back.offset = runningBackConfig.offset;
@@ -283,8 +318,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
 
   function camera(width, height) {
     const pixel = Math.max(1, Math.min(Math.round(height / 180), Math.floor(width / 360)));
-    const lineOffset = 30 * pixel;
-    return { pixel, lineOffset, playerX: width / 3 - lineOffset };
+    return { pixel };
   }
 
   function syncQuarterbackState() {
@@ -297,15 +331,29 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       || (state.runningBack.hasBall ? state.runningBack : state.quarterback);
   }
 
+  function passTarget(receiverNumber) {
+    return [...state.receivers, state.runningBack].find(player => player.receiverNumber === receiverNumber);
+  }
+
   function movePlayer(delta, input) {
     let dx = Number(Boolean(input.right)) - Number(Boolean(input.left));
     let dy = Number(Boolean(input.down)) - Number(Boolean(input.up));
     const carrier = ballCarrier();
-    carrier.move(delta, dx, dy);
-    carrier.x = Math.max(fieldBounds.endZoneL, Math.min(fieldBounds.endZoneR, carrier.x));
-    carrier.y = Math.max(fieldBounds.top, Math.min(fieldBounds.bottom, carrier.y));
-    state.fieldPosition = carrier.x;
-    state.playerY = carrier.y;
+    if (carrier) {
+      if (dx !== 0 || dy !== 0) {
+        carrier.move(delta, dx, dy);
+      } else if (state.playType === 'run' && carrier === state.runningBack) {
+        carrier.move(delta, 1, 0);
+      } else {
+        carrier.velocityX = 0;
+        carrier.velocityY = 0;
+        carrier.isMoving = false;
+      }
+      carrier.x = Math.max(fieldBounds.endZoneL, Math.min(fieldBounds.endZoneR, carrier.x));
+      carrier.y = Math.max(fieldBounds.top, Math.min(fieldBounds.bottom, carrier.y));
+      state.fieldPosition = carrier.x;
+      state.playerY = carrier.y;
+    }
   }
 
   function update(seconds, input = {}) {
@@ -313,18 +361,43 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     if (state.phase === 'preplay' || state.phase === 'complete' || state.clockSeconds <= 0) return state;
     if (state.phase === 'dropback') {
       if (state.quarterback.updateDropback(delta)) {
-        state.phase = state.runAfterDropback ? 'running' : 'passing';
+        state.phase = 'passing';
         state.quarterback.phase = state.phase;
       }
       state.dropbackRemaining = state.quarterback.dropbackRemaining;
       syncQuarterbackState();
-    } else if (state.phase === 'running') {
-      movePlayer(delta, input);
+    } else if (state.phase === 'passing' || state.phase === 'running') {
+      if (state.throwWindup) {
+        // QB is winding up to throw; keep position stable
+      } else if (state.playType === 'run' && !state.runningBack.hasBall) {
+        state.runningBack.runRoute(delta);
+        if (state.runningBack.x >= state.quarterback.x - 0.1) {
+          state.quarterback.hasBall = false;
+          state.runningBack.hasBall = true;
+          state.fieldPosition = state.runningBack.x;
+          state.playerY = state.runningBack.y;
+        }
+      } else {
+        movePlayer(delta, input);
+      }
     } else if (state.phase === 'thrown') {
       state.pass.progress = Math.min(1, state.pass.progress + delta / state.pass.duration);
+      const currentHeight = throwHeightAt(state.pass.progress, state.pass.distanceYards);
+      state.pass.heightFeet = currentHeight;
+      state.pass.heightfeet = currentHeight;
+      for (const player of [...state.receivers, state.runningBack]) {
+        if (!player.hasBall) {
+          const distToTarget = Math.hypot(state.pass.targetX - player.x, (state.pass.targetY - player.y) * lateralYards);
+          if (player.receiverNumber === state.pass.targetReceiverNumber || distToTarget <= 5) {
+            player.run(delta, state.pass.targetX, state.pass.targetY);
+          } else {
+            player.runRoute(delta);
+          }
+        }
+      }
       if (state.pass.progress >= 1) {
         state.phase = 'running';
-        const target = state.receivers.find(receiver => receiver.receiverNumber === state.pass.targetReceiverNumber);
+        const target = passTarget(state.pass.targetReceiverNumber);
         if (target) {
           state.quarterback.hasBall = false;
           target.catchBall();
@@ -334,12 +407,23 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       }
     }
 
-    // Update receiver routes during active pass plays
-    if (['dropback', 'passing', 'thrown'].includes(state.phase) && state.receivers) {
+    // Update receiver routes during active pass or run plays
+    if (['dropback', 'passing', 'running'].includes(state.phase) && state.receivers) {
       for (const rec of state.receivers) {
         rec.runRoute(delta);
       }
-      state.runningBack.runRoute(delta);
+      if (state.playType !== 'run' && !state.runningBack.hasBall) {
+        state.runningBack.runRoute(delta);
+      }
+    }
+    if (state.throwWindup) {
+      state.throwWindup.elapsed += delta;
+      state.quarterback.throwProgress = Math.min(1, state.throwWindup.elapsed / state.throwWindup.delay);
+      if (state.throwWindup.elapsed >= state.throwWindup.delay) {
+        const num = state.throwWindup.receiverNum;
+        delete state.throwWindup;
+        executePassRelease(num);
+      }
     }
     if (state.phase !== 'complete') {
       state.clockSeconds = Math.max(0, state.clockSeconds - delta);
@@ -351,8 +435,11 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
   function pressSpace() {
     if (state.clockSeconds <= 0) return;
     if (state.phase === 'preplay') {
-      state.runAfterDropback = false;
-      if (quarterbackConfig.dropback === false) {
+      if (state.playType === 'run') {
+        state.phase = 'running';
+        state.quarterback.phase = 'passing';
+        state.dropbackRemaining = 0;
+      } else if (quarterbackConfig.dropback === false) {
         state.phase = 'passing';
         state.quarterback.phase = 'passing';
         state.dropbackRemaining = 0;
@@ -364,25 +451,54 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       state.receivers.forEach(receiver => { receiver.phase = 'running'; });
       state.defenders.forEach(defender => { defender.phase = 'running'; });
       state.offensiveLine.forEach(lineman => { lineman.phase = 'running'; });
-    } else if (state.phase === 'dropback') {
-      state.runAfterDropback = true;
-    } else if (state.phase === 'passing') {
-      state.phase = 'running';
-      state.quarterback.phase = 'running';
+      state.runningBack.phase = 'running';
     }
   }
 
   function throwPass(receiverNum) {
+    if (state.playType === 'run') return;
     if (state.phase !== 'passing' && state.phase !== 'dropback') return;
-    const targetReceiver = state.receivers?.find(r => r.receiverNumber === receiverNum);
+    if (state.throwWindup) return;
+    const targetReceiver = passTarget(receiverNum);
     if (!targetReceiver) return;
+
+    const delay = state.quarterback.isMoving ? 0.4 : 0.2;
+    state.quarterback.isMoving = false;
+    state.quarterback.velocityX = 0;
+    state.quarterback.velocityY = 0;
+    state.quarterback.phase = 'throwing';
+    state.quarterback.throwProgress = 0;
+
+    state.throwWindup = {
+      receiverNum,
+      delay,
+      elapsed: 0
+    };
+  }
+
+  function executePassRelease(receiverNum) {
+    const targetReceiver = passTarget(receiverNum);
+    if (!targetReceiver) {
+      state.quarterback.phase = 'passing';
+      return;
+    }
 
     const fromX = state.quarterback.x;
     const fromY = state.quarterback.y;
-    const targetX = targetReceiver.x + 1.2;
-    const targetY = targetReceiver.y;
-    const dist = Math.hypot(targetX - fromX, (targetY - fromY) * 35);
-    const duration = Math.max(0.3, Math.min(1.2, dist / 22));
+    const receiverVelocityX = Number(targetReceiver.velocityX) || 0;
+    const receiverVelocityY = Number(targetReceiver.velocityY) || 0;
+    let duration = 0.3;
+    let targetX = targetReceiver.x;
+    let targetY = targetReceiver.y;
+    let distance = 0;
+    // Predict a constant-velocity lead. Repeating converges the travel time and lead point.
+    for (let step = 0; step < 3; step++) {
+      targetX = targetReceiver.x + receiverVelocityX * duration;
+      targetY = targetReceiver.y + receiverVelocityY * duration;
+      distance = Math.hypot(targetX - fromX, (targetY - fromY) * lateralYards);
+      const arcLength = throwArcLength(distance);
+      duration = Math.max(0.4, Math.min(2.5, arcLength / passSpeedYardsPerSecond));
+    }
 
     state.pass = {
       fromX,
@@ -391,6 +507,9 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       targetY,
       duration,
       progress: 0,
+      distanceYards: distance,
+      heightFeet: releaseHeightFeet,
+      heightfeet: releaseHeightFeet,
       targetReceiverNumber: targetReceiver.receiverNumber
     };
     state.quarterback.phase = 'thrown';
@@ -404,9 +523,10 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     state.quarter = 1;
     state.scrimmagePosition = state.fieldPosition;
     state.phase = 'preplay';
+    state.playType = String(selectedPlays.offense?.playType || selectedPlays.offense?.playtype || selectedPlays.offense?.type || 'pass').toLowerCase();
     state.dropbackRemaining = 0;
-    state.runAfterDropback = false;
     delete state.pass;
+    delete state.throwWindup;
     state.quarterback = createQuarterback();
     state.defenders = createDefenders();
     state.receivers = createReceivers();
@@ -432,29 +552,29 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
 
     const horizontalScale = width / 300;
     const verticalScale = height / field.height;
-    const { pixel, lineOffset, playerX } = camera(width, height);
+    const { pixel } = camera(width, height);
     const passProgress = (state.phase === 'thrown' || state.phase === 'complete') && state.pass ? state.pass.progress : null;
     const cameraYard = passProgress === null
-      ? state.fieldPosition
+      ? ballCarrier().x
       : state.pass.fromX + (state.pass.targetX - state.pass.fromX) * passProgress;
-    const cameraOriginYard = cameraYard - lineOffset / (field.pixelsPerYard * horizontalScale);
-    const playerPosition = field.goalLine + cameraYard * field.pixelsPerYard;
+    const cameraOriginYard = cameraYard - cameraTrailingYards;
+    const fieldOrigin = field.goalLine + cameraOriginYard * field.pixelsPerYard;
     if (fieldImage.complete && fieldImage.naturalWidth) {
       ctx.save();
-      ctx.setTransform(horizontalScale, 0, 0, verticalScale, playerX + lineOffset - playerPosition * horizontalScale, 0);
+      ctx.setTransform(horizontalScale, 0, 0, verticalScale, -fieldOrigin * horizontalScale, 0);
       ctx.drawImage(fieldImage, field.x, field.y, field.width, field.height, 0, 0, field.width, field.height);
       ctx.restore();
     }
 
     const offense = uniformForTeam(team1);
     const defense = uniformForTeam(team2);
-    const lineX = playerX + (state.scrimmagePosition - cameraOriginYard) * field.pixelsPerYard * horizontalScale;
+    const lineX = (state.scrimmagePosition - cameraOriginYard) * field.pixelsPerYard * horizontalScale;
     const top = field.topSideline * verticalScale;
     const bottom = field.bottomSideline * verticalScale;
     ctx.fillStyle = 'rgba(92, 174, 255, .65)';
     ctx.fillRect(lineX, top, Math.max(1, pixel), bottom - top);
     const screenCoordinates = actor => ({
-      screenX: playerX + (actor.x - cameraOriginYard) * field.pixelsPerYard * horizontalScale,
+      screenX: (actor.x - cameraOriginYard) * field.pixelsPerYard * horizontalScale,
       screenY: top + actor.y * (bottom - top)
     });
     if (state.phase === 'preplay') {
@@ -483,11 +603,100 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     for (const defender of state.defenders) defender.draw(ctx, screenCoordinates(defender), pixel, defense);
     state.quarterback.draw(ctx, screenCoordinates(state.quarterback), pixel, offense);
     if (passProgress !== null && RetroSprites.footballImage.complete && RetroSprites.footballImage.naturalWidth) {
-      const ballX = playerX + (cameraYard - cameraOriginYard) * field.pixelsPerYard * horizontalScale;
-      const ballY = top + (state.pass.fromY + (state.pass.targetY - state.pass.fromY) * passProgress) * (bottom - top);
-      ctx.drawImage(RetroSprites.footballImage, ballX - 10 * pixel, ballY - 5 * pixel, 20 * pixel, 10 * pixel);
+      const targetX = (state.pass.targetX - cameraOriginYard) * field.pixelsPerYard * horizontalScale;
+      const targetY = top + state.pass.targetY * (bottom - top);
+      const xSize = Math.max(3, 3 * pixel);
+      ctx.save();
+      ctx.strokeStyle = '#e53935';
+      ctx.lineWidth = Math.max(1, pixel);
+      ctx.beginPath();
+      ctx.moveTo(targetX - xSize, targetY - xSize);
+      ctx.lineTo(targetX + xSize, targetY + xSize);
+      ctx.moveTo(targetX + xSize, targetY - xSize);
+      ctx.lineTo(targetX - xSize, targetY + xSize);
+      ctx.stroke();
+      ctx.restore();
+
+      // Stored field coordinates remain in a straight line from thrower to target:
+      const ballWorldX = state.pass.fromX + (state.pass.targetX - state.pass.fromX) * passProgress;
+      const ballWorldY = state.pass.fromY + (state.pass.targetY - state.pass.fromY) * passProgress;
+      const ballX = (ballWorldX - cameraOriginYard) * field.pixelsPerYard * horizontalScale;
+      const groundY = top + ballWorldY * (bottom - top);
+
+      // Height in feet along the 3D parabolic arc
+      const heightFeet = typeof state.pass.heightFeet === 'number'
+        ? state.pass.heightFeet
+        : throwHeightAt(passProgress, state.pass.distanceYards || 0);
+
+      // In 2D retro view, height projects upward on screen (decreasing screen Y)
+      // 1 foot ≈ (16 / 6) * pixel based on player sprite proportions
+      const pixelsPerFoot = (16 * pixel) / 6;
+      const heightOffset = heightFeet * pixelsPerFoot;
+      const ballY = groundY - heightOffset;
+
+      // Draw shadow at straight 2D ground track
+      ctx.save();
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+      ctx.beginPath();
+      ctx.ellipse(ballX, groundY, 4 * pixel, 2 * pixel, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      ctx.drawImage(RetroSprites.footballImage, ballX - 5 * pixel, ballY - 2.5 * pixel, 10 * pixel, 5 * pixel);
     }
   }
 
-  return { team1, team2, state, update, pressSpace, throwPass, draw, reset, uniformForTeam };
+  function setOffensivePlay(play) {
+    if (state.phase !== 'preplay' || !play) return;
+    selectedPlays.offense = play;
+    state.playType = String(play.playtype || play.playType || play.type || 'pass').toLowerCase();
+    const qbCfg = play.formation?.quarterback || { position: 'QB', across: 0, offset: -3, dropback: false };
+    const rbCfg = play.formation?.runningBack || { position: 'RB', across: 0.13, offset: -4.5 };
+    const recCfgs = play.formation?.receivers || [];
+
+    // Reconfigure Quarterback
+    state.quarterback.offset = qbCfg.offset ?? -3;
+    state.quarterback.across = qbCfg.across ?? 0;
+    state.quarterback.x = state.scrimmagePosition + state.quarterback.offset;
+    state.quarterback.y = 0.5 + state.quarterback.across;
+    state.quarterback.phase = 'preplay';
+    state.quarterback.hasBall = true;
+    state.quarterback.animDistance = 0;
+    state.quarterback.isMoving = false;
+
+    // Reconfigure Running Back
+    state.runningBack.offset = rbCfg.offset ?? -4.5;
+    state.runningBack.across = rbCfg.across ?? 0.13;
+    state.runningBack.startX = state.scrimmagePosition + state.runningBack.offset;
+    state.runningBack.startY = 0.5 + state.runningBack.across;
+    state.runningBack.x = state.runningBack.startX;
+    state.runningBack.y = state.runningBack.startY;
+    state.runningBack.phase = 'preplay';
+    state.runningBack.hasBall = false;
+    state.runningBack.receiverNumber = rbCfg.receiverNumber;
+    state.runningBack.assignRoute(rbCfg.route || []);
+
+    // Reconfigure Receivers
+    state.receivers = recCfgs.map((config, index) => {
+      const ReceiverClass = config?.position === 'TE' ? TightEnd : WideReceiver;
+      const rec = new ReceiverClass({
+        id: `rec-${config.receiverNumber ?? index + 1}`,
+        name: `Receiver ${config.receiverNumber ?? index + 1}`,
+        position: config.position || 'WR',
+        rating: 5,
+        x: state.scrimmagePosition + (config.offset ?? -0.5),
+        y: 0.5 + (config.across ?? 0),
+        receiverNumber: config.receiverNumber,
+        route: config.route || []
+      });
+      rec.offset = config.offset ?? -0.5;
+      rec.across = config.across ?? 0;
+      return rec;
+    });
+
+    state.fieldPosition = state.quarterback.x;
+    state.playerY = state.quarterback.y;
+  }
+
+  return { team1, team2, state, update, pressSpace, throwPass, draw, reset, uniformForTeam, setOffensivePlay };
 };

@@ -457,7 +457,7 @@
         "isDiving": false,
         "diveProgress": 0,
         "isTackled": false,
-        "receiverNumber": 3,
+        "receiverNumber": 4,
         "route": [
           {
             "dx": 4,
@@ -490,7 +490,7 @@
         "isDiving": false,
         "diveProgress": 0,
         "isTackled": false,
-        "receiverNumber": 4,
+        "receiverNumber": 5,
         "route": [
           {
             "dx": 35,
@@ -854,7 +854,7 @@
       "isDiving": false,
       "diveProgress": 0,
       "isTackled": false,
-      "receiverNumber": null,
+      "receiverNumber": 3,
       "route": [],
       "routeIndex": 0,
       "offset": -4.5,

@@ -28,3 +28,12 @@
 
 - The defense will randomly select a defensive play from `data/dplays.json`.
 - The offense will let the player select from multiple offensive plays in `data/oplays.json` before the snap.
+
+## Future jukes and acceleration
+
+- Track each ball carrier's current movement direction and acceleration state.
+- A 90-degree cardinal turn (for example D to W or D to S) is a juke: decelerate to 50%, turn, then accelerate to full speed.
+- An exact 180-degree reversal (for example D to A or W to S) decelerates to 0%, reverses, then accelerates to full speed.
+- Diagonal-to-cardinal changes (for example W+D to D) do not trigger a juke or reversal penalty.
+- Direction changes during recovery retain the current acceleration progress.
+- Add dedicated juke and reversal sprites when the artwork exists.

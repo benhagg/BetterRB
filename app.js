@@ -11,6 +11,9 @@ let gameFrame = null;
 let gameFullscreen = false;
 let saveQueue = Promise.resolve();
 const movementKeys = new Set();
+let selectedOffensivePlayIndex = 0;
+let currentPlayOptions = [];
+let activePlay = null;
 let playbooks = { offense: null, defense: null };
 
 async function initialize() {
@@ -219,7 +222,151 @@ function gamePanel() {
   bindText(component, 'away-score', playerIsHome ? state.score2 : state.score1);
   bindText(component, 'quarter', `Qt${state.quarter}`);
   component.querySelector('#game-clock').textContent = formatClock(state.clockSeconds);
+  renderPlayCards(component);
   return component;
+}
+
+function pickRandomPlays(allPlays, count = 3) {
+  if (!Array.isArray(allPlays) || allPlays.length === 0) return [];
+  const shuffled = [...allPlays].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, Math.min(count, allPlays.length));
+}
+
+function setupPreSnapPlays() {
+  const allPlays = playbooks.offense?.plays || [];
+  currentPlayOptions = pickRandomPlays(allPlays, 3);
+  activePlay = currentPlayOptions[0] || allPlays[0] || null;
+}
+
+function renderPlayDiagramSVG(play) {
+  const width = 200, height = 100;
+  const losX = 55;
+  const centerY = 50;
+  const toSvgX = (startX, dx) => Math.min(195, Math.max(5, startX + dx * 4.2));
+  const toSvgY = (startY, dy) => Math.min(95, Math.max(5, startY + dy * 85));
+
+  let svg = `<svg viewBox="0 0 ${width} ${height}" width="100%" height="100%" class="play-diagram-svg">`;
+  svg += `<rect width="${width}" height="${height}" fill="#162c20" rx="3"/>`;
+  svg += `<line x1="${losX}" y1="4" x2="${losX}" y2="96" stroke="#5caeff" stroke-width="2" stroke-dasharray="3,3"/>`;
+  svg += `<line x1="110" y1="4" x2="110" y2="96" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>`;
+  svg += `<line x1="165" y1="4" x2="165" y2="96" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>`;
+
+  const isRun = String(play.playtype || play.playType || '').toLowerCase() === 'run';
+
+  // OL dots & blocking scheme
+  const ol = play.formation?.offensiveLine || [];
+  ol.forEach(lineman => {
+    const lx = losX + (lineman.offset ?? -0.5) * 6;
+    const ly = centerY + (lineman.across ?? 0) * 85;
+    svg += `<circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="2.5" fill="#90caf9"/>`;
+    if (isRun) {
+      const bx = lx + 12;
+      svg += `<line x1="${lx.toFixed(1)}" y1="${ly.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${ly.toFixed(1)}" stroke="#ff7043" stroke-width="1.5"/>`;
+      svg += `<polygon points="${bx.toFixed(1)},${(ly - 2).toFixed(1)} ${(bx + 3).toFixed(1)},${ly.toFixed(1)} ${bx.toFixed(1)},${(ly + 2).toFixed(1)}" fill="#ff7043"/>`;
+    }
+  });
+
+  // QB dot
+  const qb = play.formation?.quarterback || { across: 0, offset: -3 };
+  const qbx = losX + (qb.offset ?? -3) * 6;
+  const qby = centerY + (qb.across ?? 0) * 85;
+  svg += `<circle cx="${qbx.toFixed(1)}" cy="${qby.toFixed(1)}" r="3" fill="#ffe18a"/>`;
+
+  // Receivers & routes
+  const receivers = play.formation?.receivers || [];
+  receivers.forEach(r => {
+    const rx = losX + (r.offset ?? -0.5) * 6;
+    const ry = centerY + (r.across ?? 0) * 85;
+    svg += `<circle cx="${rx.toFixed(1)}" cy="${ry.toFixed(1)}" r="2.5" fill="#ffffff"/>`;
+    if (r.receiverNumber) {
+      svg += `<text x="${(rx - 7).toFixed(1)}" y="${(ry + 2.5).toFixed(1)}" fill="#ffe18a" font-size="7" font-weight="bold" text-anchor="middle" font-family="monospace">${r.receiverNumber}</text>`;
+    }
+    if (r.route && r.route.length) {
+      let curX = rx, curY = ry;
+      let pathD = `M ${rx.toFixed(1)} ${ry.toFixed(1)}`;
+      r.route.forEach(wp => {
+        const nx = toSvgX(rx, wp.dx);
+        const ny = toSvgY(ry, wp.dy);
+        pathD += ` L ${nx.toFixed(1)} ${ny.toFixed(1)}`;
+        curX = nx;
+        curY = ny;
+      });
+      svg += `<path d="${pathD}" fill="none" stroke="#ffe35c" stroke-width="1.5" stroke-dasharray="3,2"/>`;
+      svg += `<circle cx="${curX.toFixed(1)}" cy="${curY.toFixed(1)}" r="2" fill="#ffe35c"/>`;
+    }
+  });
+
+  // Running Back & path
+  const rb = play.formation?.runningBack;
+  if (rb) {
+    const rbx = losX + (rb.offset ?? -4) * 6;
+    const rby = centerY + (rb.across ?? 0) * 85;
+    svg += `<circle cx="${rbx.toFixed(1)}" cy="${rby.toFixed(1)}" r="3" fill="${isRun ? '#00e676' : '#80d8ff'}"/>`;
+    if (rb.receiverNumber) {
+      svg += `<text x="${(rbx - 8).toFixed(1)}" y="${(rby + 2.5).toFixed(1)}" fill="${isRun ? '#00e676' : '#80d8ff'}" font-size="7" font-weight="bold" text-anchor="middle" font-family="monospace">${rb.receiverNumber}</text>`;
+    }
+    if (rb.route && rb.route.length) {
+      let curX = rbx, curY = rby;
+      let pathD = `M ${rbx.toFixed(1)} ${rby.toFixed(1)}`;
+      rb.route.forEach(wp => {
+        const nx = toSvgX(rbx, wp.dx);
+        const ny = toSvgY(rby, wp.dy);
+        pathD += ` L ${nx.toFixed(1)} ${ny.toFixed(1)}`;
+        curX = nx;
+        curY = ny;
+      });
+      const strokeColor = isRun ? '#00e676' : '#80d8ff';
+      svg += `<path d="${pathD}" fill="none" stroke="${strokeColor}" stroke-width="${isRun ? '2.5' : '1.5'}"/>`;
+      svg += `<polygon points="${curX.toFixed(1)},${(curY - 3).toFixed(1)} ${(curX + 5).toFixed(1)},${curY.toFixed(1)} ${curX.toFixed(1)},${(curY + 3).toFixed(1)}" fill="${strokeColor}"/>`;
+    }
+  }
+
+  svg += `</svg>`;
+  return svg;
+}
+
+function renderPlayCards(root = app) {
+  const overlay = root.querySelector('#play-select-overlay');
+  const cardsRow = root.querySelector('#play-cards-row');
+  if (!overlay || !cardsRow) return;
+
+  if (!gameSession || gameSession.state.phase !== 'preplay') {
+    overlay.classList.add('hidden');
+    return;
+  }
+
+  overlay.classList.remove('hidden');
+  cardsRow.innerHTML = '';
+  if (!currentPlayOptions.length) {
+    setupPreSnapPlays();
+  }
+  currentPlayOptions.forEach(play => {
+    const isRun = String(play.playtype || play.playType || '').toLowerCase() === 'run';
+    const isSelected = activePlay && activePlay.id === play.id;
+    const card = document.createElement('div');
+    card.className = `play-card ${isSelected ? 'selected' : ''}`;
+    card.setAttribute('data-play-id', play.id);
+    card.innerHTML = `
+      <div class="play-card-header">
+        <span class="play-card-name" title="${play.name}">${play.name}</span>
+        <span class="play-card-type-badge ${isRun ? 'run' : 'pass'}">${isRun ? 'RUN' : 'PASS'}</span>
+      </div>
+      <div class="play-card-diagram">
+        ${renderPlayDiagramSVG(play)}
+      </div>
+      <div class="play-card-footer">
+        ${isSelected ? '&#9654; SELECTED' : 'CLICK TO RUN'}
+      </div>
+    `;
+    card.addEventListener('click', () => {
+      activePlay = play;
+      if (gameSession && typeof gameSession.setOffensivePlay === 'function') {
+        gameSession.setOffensivePlay(play);
+      }
+      renderPlayCards(app);
+    });
+    cardsRow.appendChild(card);
+  });
 }
 
 function formatClock(seconds) {
@@ -249,6 +396,12 @@ function startGameLoop() {
     gameSession.draw(context, canvas.width, canvas.height);
     const clock = app.querySelector('#game-clock');
     if (clock) clock.textContent = formatClock(gameSession.state.clockSeconds);
+    if (gameSession.state.phase !== 'preplay') {
+      const overlay = app.querySelector('#play-select-overlay');
+      if (overlay && !overlay.classList.contains('hidden')) {
+        overlay.classList.add('hidden');
+      }
+    }
     gameFrame = requestAnimationFrame(frame);
   }
   gameFrame = requestAnimationFrame(frame);
@@ -272,8 +425,9 @@ function render() {
 function beginNextGame() {
   activeScheduledGame = nextScheduledGame();
   if (!activeScheduledGame) return;
+  setupPreSnapPlays();
   gameSession = playGame(seasonState.team, activeScheduledGame.opponent, null, {
-    offense: playbooks.offense?.plays?.[0],
+    offense: activePlay || playbooks.offense?.plays?.[0],
     defense: playbooks.defense?.plays?.[0]
   });
   gameSession.state.week = activeScheduledGame.week;
@@ -369,8 +523,33 @@ window.addEventListener('keydown', event => {
   if (screen === 'game' && key === 'r' && !event.repeat) {
     event.preventDefault();
     stopGameLoop();
+    setupPreSnapPlays();
     gameSession.reset();
+    if (activePlay && typeof gameSession.setOffensivePlay === 'function') {
+      gameSession.setOffensivePlay(activePlay);
+    }
     render();
+    return;
+  }
+  if (screen === 'game' && key === 'p' && !event.repeat && gameSession?.state?.phase === 'preplay') {
+    event.preventDefault();
+    const plays = playbooks.offense?.plays || [];
+    if (plays.length > 1) {
+      selectedOffensivePlayIndex = (selectedOffensivePlayIndex + 1) % plays.length;
+      const currentWeek = gameSession.state.week;
+      const currentHome = gameSession.state.isHome;
+      const currentFieldPos = gameSession.state.fieldPosition;
+      gameSession = playGame(seasonState.team, activeScheduledGame.opponent, {
+        fieldPosition: currentFieldPos,
+        scrimmagePosition: currentFieldPos
+      }, {
+        offense: plays[selectedOffensivePlayIndex],
+        defense: playbooks.defense?.plays?.[0]
+      });
+      gameSession.state.week = currentWeek;
+      gameSession.state.isHome = currentHome;
+      render();
+    }
     return;
   }
   if (screen === 'game' && ['w', 's', 'a', 'd'].includes(key)) {

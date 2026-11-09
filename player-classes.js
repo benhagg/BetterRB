@@ -40,6 +40,8 @@
       this.y = Number.isFinite(config.y) ? config.y : 0.5;
       this.startX = Number.isFinite(config.startX) ? config.startX : this.x;
       this.startY = Number.isFinite(config.startY) ? config.startY : this.y;
+      this.velocityX = Number.isFinite(config.velocityX) ? config.velocityX : 0;
+      this.velocityY = Number.isFinite(config.velocityY) ? config.velocityY : 0;
 
       this.animDistance = 0;
       this.facingLeft = Boolean(config.facingLeft);
@@ -52,6 +54,7 @@
       return {
         id: this.id, name: this.name, position: this.position, rating: this.rating,
         kind: this.kind, x: this.x, y: this.y, startX: this.startX, startY: this.startY,
+        velocityX: this.velocityX, velocityY: this.velocityY,
         animDistance: this.animDistance, facingLeft: this.facingLeft, isMoving: this.isMoving,
         phase: this.phase, hasBall: this.hasBall, isDiving: this.isDiving,
         diveProgress: this.diveProgress, diveCooldownTimer: this.diveCooldownTimer,
@@ -91,10 +94,14 @@
 
         this.x += vx * step;
         this.y += (vyYards / LATERAL_YARDS) * step;
+        this.velocityX = vx * this.speed;
+        this.velocityY = (vyYards / LATERAL_YARDS) * this.speed;
         this.animDistance += step;
         this.facingLeft = vx < 0;
         this.isMoving = true;
       } else {
+        this.velocityX = 0;
+        this.velocityY = 0;
         this.isMoving = false;
       }
     }
@@ -107,10 +114,14 @@
         const step = this.speed * delta;
         this.x += dirX * step;
         this.y += (dirY * step) / LATERAL_YARDS;
+        this.velocityX = dirX * this.speed;
+        this.velocityY = (dirY * this.speed) / LATERAL_YARDS;
         this.animDistance += step;
         this.facingLeft = dirX < 0;
         this.isMoving = true;
       } else {
+        this.velocityX = 0;
+        this.velocityY = 0;
         this.isMoving = false;
       }
     }
@@ -146,6 +157,7 @@
       this.isDiving = Boolean(config.isDiving);
       this.diveProgress = Number.isFinite(config.diveProgress) ? config.diveProgress : 0;
       this.isTackled = Boolean(config.isTackled);
+      this.receiverNumber = config.receiverNumber ?? null;
     }
 
     dive() {
@@ -182,12 +194,37 @@
       }
     }
 
+    drawRouteBadge(ctx, coords, pixel) {
+      if (this.hasBall || this.isTackled || !this.receiverNumber) return;
+      ctx.save();
+      const bx = Math.round(coords.screenX);
+      const by = Math.round(coords.screenY - 14 * pixel);
+
+      ctx.fillStyle = '#ffea00';
+      ctx.beginPath();
+      ctx.arc(bx, by, 6 * pixel, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = Math.max(1, pixel);
+      ctx.stroke();
+
+      ctx.fillStyle = '#000000';
+      ctx.font = `bold ${8 * pixel}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(this.receiverNumber), bx, by + pixel);
+      ctx.restore();
+    }
+
     draw(ctx, coords, pixel, uniform) {
       const u = uniform || this.uniform;
       const x = Math.round(coords.screenX - 8 * pixel);
       const y = Math.round(coords.screenY - 8 * pixel);
 
-      if (this.isTackled) {
+      if (this.phase === 'preplay') {
+        RetroSprites.drawPrePlay(ctx, x, y, pixel, u, this.kind, this.facingLeft);
+      } else if (this.isTackled) {
         if (RetroSprites.drawAction) RetroSprites.drawAction(ctx, x, y, pixel, u, 'tackled', 1, this.facingLeft);
         else RetroSprites.drawPrePlay(ctx, x, y, pixel, u, this.kind, this.facingLeft);
       } else if (this.isDiving) {
@@ -199,6 +236,8 @@
       } else {
         super.draw(ctx, coords, pixel, uniform);
       }
+
+      this.drawRouteBadge(ctx, coords, pixel);
     }
   }
 
@@ -333,11 +372,20 @@
       const x = Math.round(coords.screenX - 8 * pixel);
       const y = Math.round(coords.screenY - 8 * pixel);
 
-      if (this.phase === 'dropback' || this.phase === 'passing') {
-        const frame = this.phase === 'passing' ? 0 : Math.floor(this.animDistance * 2) % 2;
-        RetroSprites.drawAction(ctx, x, y, pixel, u, 'dropback', frame);
+      if (this.phase === 'preplay') {
+        RetroSprites.drawPrePlay(ctx, x, y, pixel, u, 'skill', this.facingLeft);
+      } else if (this.phase === 'throwing') {
+        const frame = (this.throwProgress ?? 0) < 0.5 ? 0 : 1;
+        RetroSprites.drawAction(ctx, x, y, pixel, u, 'pass', frame, this.facingLeft);
       } else if (this.phase === 'thrown') {
-        RetroSprites.drawAction(ctx, x, y, pixel, u, 'pass', 1);
+        RetroSprites.drawAction(ctx, x, y, pixel, u, 'pass', 1, this.facingLeft);
+      } else if (this.phase === 'dropback') {
+        const frame = Math.floor(this.animDistance * 2) % 2;
+        RetroSprites.drawAction(ctx, x, y, pixel, u, 'dropback', frame, this.facingLeft);
+      } else if (this.isMoving) {
+        RetroSprites.drawRunner(ctx, x, y, pixel, u, Math.floor(this.animDistance * 1.5), this.facingLeft, true);
+      } else if (this.phase === 'passing') {
+        RetroSprites.drawAction(ctx, x, y, pixel, u, 'dropback', 0, this.facingLeft);
       } else {
         super.draw(ctx, coords, pixel, uniform);
       }
@@ -347,7 +395,7 @@
   class WideReceiver extends OffensivePlayer {
     constructor(config = {}) {
       super({ ...config, position: 'WR', kind: 'skill' });
-      this.receiverNumber = config.receiverNumber ?? 1;
+      this.receiverNumber = config.receiverNumber ?? null;
       this.route = config.route ?? [];
       this.routeIndex = Number.isInteger(config.routeIndex) ? config.routeIndex : 0;
     }
@@ -382,34 +430,6 @@
       this.phase = 'running';
       this.run(delta, targetX, targetY);
     }
-
-    drawRouteBadge(ctx, coords, pixel) {
-      if (this.phase === 'preplay' || this.hasBall || this.isTackled) return;
-      ctx.save();
-      const bx = Math.round(coords.screenX);
-      const by = Math.round(coords.screenY - 14 * pixel);
-
-      ctx.fillStyle = '#ffea00';
-      ctx.beginPath();
-      ctx.arc(bx, by, 6 * pixel, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = Math.max(1, pixel);
-      ctx.stroke();
-
-      ctx.fillStyle = '#000000';
-      ctx.font = `bold ${8 * pixel}px monospace`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(String(this.receiverNumber), bx, by + pixel);
-      ctx.restore();
-    }
-
-    draw(ctx, coords, pixel, uniform) {
-      super.draw(ctx, coords, pixel, uniform);
-      this.drawRouteBadge(ctx, coords, pixel);
-    }
   }
 
   class TightEnd extends OffensivePlayer {
@@ -441,28 +461,6 @@
       }
       this.phase = 'running';
       this.run(delta, targetX, targetY);
-    }
-
-    draw(ctx, coords, pixel, uniform) {
-      super.draw(ctx, coords, pixel, uniform);
-      if (this.receiverNumber && !this.hasBall && this.phase !== 'preplay' && !this.isTackled) {
-        ctx.save();
-        const bx = Math.round(coords.screenX);
-        const by = Math.round(coords.screenY - 14 * pixel);
-        ctx.fillStyle = '#ffea00';
-        ctx.beginPath();
-        ctx.arc(bx, by, 6 * pixel, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = Math.max(1, pixel);
-        ctx.stroke();
-        ctx.fillStyle = '#000';
-        ctx.font = `bold ${8 * pixel}px monospace`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(String(this.receiverNumber), bx, by + pixel);
-        ctx.restore();
-      }
     }
   }
 
@@ -497,8 +495,18 @@
         if (this.routeIndex >= this.route.length) return;
       }
       this.phase = 'running';
-      const speedMultiplier = this.routeElapsed < 1.5 ? 0.25 : 1;
-      this.run(delta * speedMultiplier, targetX, targetY);
+      this.run(delta, targetX, targetY);
+    }
+
+    draw(ctx, coords, pixel, uniform) {
+      if (this.phase === 'preplay') {
+        const x = Math.round(coords.screenX - 8 * pixel);
+        const y = Math.round(coords.screenY - 8 * pixel);
+        RetroSprites.drawPrePlay(ctx, x, y, pixel, uniform || this.uniform, 'waiting', this.facingLeft);
+        this.drawRouteBadge(ctx, coords, pixel);
+        return;
+      }
+      super.draw(ctx, coords, pixel, uniform);
     }
   }
 
@@ -512,8 +520,7 @@
       const u = uniform || this.uniform;
       const x = Math.round(coords.screenX - 8 * pixel);
       const y = Math.round(coords.screenY - 8 * pixel);
-      const pose = this.isCenter && this.phase === 'preplay' ? 'center' : 'lineman';
-      RetroSprites.drawPrePlay(ctx, x, y, pixel, u, pose, false);
+      RetroSprites.drawPrePlay(ctx, x, y, pixel, u, 'lineman', false);
     }
   }
 
@@ -529,6 +536,16 @@
   class Linebacker extends DefensivePlayer {
     constructor(config = {}) {
       super({ ...config, position: config.position || 'LB', kind: 'skill' });
+    }
+
+    draw(ctx, coords, pixel, uniform) {
+      if (this.phase === 'preplay') {
+        const x = Math.round(coords.screenX - 8 * pixel);
+        const y = Math.round(coords.screenY - 8 * pixel);
+        RetroSprites.drawPrePlay(ctx, x, y, pixel, uniform || this.uniform, 'waiting', this.facingLeft);
+        return;
+      }
+      super.draw(ctx, coords, pixel, uniform);
     }
   }
 
