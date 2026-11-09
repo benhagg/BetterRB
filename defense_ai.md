@@ -15,6 +15,7 @@
 * **Man Coverage (`role: "man"`)**:
   * Assigned to a specific offensive target (`WR1`, `WR2`, `WR3`, `TE`, `RB`).
   * Backpedal maintaining $3.0\text{–}5.0\text{ yds}$ cushion.
+  * **Reverse Run Animation**: Backpedal plays the runner animation frames in reverse (`(5 - frameIndex % 6)`) while keeping `facingLeft = true` facing the line of scrimmage.
   * When receiver cuts, defender suffers a **$0.15\text{s} - 0.25\text{s}$ reaction delay** before following the new direction.
 * **Zone Coverage (`role: "zone"`)**:
   * Drop to assigned zone center (Flat, Hook/Curl, Deep Zone).
@@ -33,7 +34,8 @@
 * **Targeted Receiver Delay**:
   * Targeted receiver waits **$0.05\text{s}$** after throw release before breaking off route toward the pass target.
 * **Defender Reaction Delay ($0.0\text{s} - 0.3\text{s}$)**:
-  * Coverage defenders unlock and break on the ball based on their momentum relative to the QB:
+  * **Backpedaling Defender Override**: If a defender is actively in a backpedal stance when the ball is thrown, their hips and vision are already squared to the QB $\implies \text{Delay} = \mathbf{0.00\text{s}}$ (instant downhill break).
+  * Otherwise, coverage defenders unlock and break on the ball based on momentum relative to the QB:
     * $\vec{d}_{\text{toQB}} = \frac{\vec{x}_{\text{QB}} - \vec{x}_{\text{def}}}{\|\vec{x}_{\text{QB}} - \vec{x}_{\text{def}}\|}$ (Unit vector towards QB)
     * $\vec{u}_{\text{def}} = \frac{\vec{v}_{\text{def}}}{\|\vec{v}_{\text{def}}\|}$ (Defender momentum unit vector)
     * $k = \vec{u}_{\text{def}} \cdot \vec{d}_{\text{toQB}} \in [-1.0, 1.0]$
