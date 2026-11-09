@@ -462,7 +462,8 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       z: Number.isFinite(pass.targetHeightFeet) ? pass.targetHeightFeet : 4,
       velocityX: (pass.targetX - pass.fromX) / pass.duration,
       velocityY: (pass.targetY - pass.fromY) / pass.duration,
-      velocityZ: (pass.launchVelocity || 0) - passGravityFeetPerSecondSquared * pass.duration,
+      velocityZ: (pass.launchVelocity || 0)
+        - (pass.profile?.gravity ?? passGravityFeetPerSecondSquared) * pass.duration,
       restitution: 0.45,
       friction: 0.5,
       bounces: 0,

@@ -93,7 +93,8 @@
       return {
         x: pass.fromX + (pass.targetX - pass.fromX) * progress,
         y: pass.fromY + (pass.targetY - pass.fromY) * progress,
-        z: 6 + pass.profile.launchVelocity * time - 0.5 * GRAVITY * time * time
+        z: 6 + pass.profile.launchVelocity * time
+          - 0.5 * (pass.profile.gravity ?? GRAVITY) * time * time
       };
     }
 

@@ -5,6 +5,12 @@
   const gravityFeetPerSecondSquared = 32.174;
   const feetPerYard = 3.0;
 
+  // Vertical clearance is intentionally independent from horizontal travel time.
+  // A pass needs to clear defenders without becoming slower downfield.
+  const ARC_BASE_FEET = 5.0;
+  const ARC_FEET_PER_YARD = 0.20;
+  const ARC_STRENGTH_REDUCTION = 0.015;
+
   // Inaccuracy base & distance coefficients (less is more accurate)
   const C_BASE = 0.15;
   const ALPHA = 0.00317;
@@ -14,19 +20,18 @@
   const RUNNING_THROW_INACCURACY_MULTIPLIER = 1.25;
 
   function calculateThrowArc(distanceYards, strength = 5) {
-    // Tunable throw arc coefficients
-    const ARC_BASE = 0;
-    const ARC_DIST_COEFF = 0.01;
-    const ARC_STRENGTH_COEFF = 0.02;
-
     const d = Math.max(0, Number(distanceYards) || 0);
     const numStrength = Number(strength);
     const s = Math.max(0, Math.min(10, Number.isFinite(numStrength) ? numStrength : 5));
-    let arc = (ARC_BASE + ARC_DIST_COEFF * d) * (1 - ARC_STRENGTH_COEFF * s);
-    if (arc < 0) {
-      arc = 0;
-    }
-    return arc;
+    return Math.max(0, (ARC_BASE_FEET + ARC_FEET_PER_YARD * d) * (1 - ARC_STRENGTH_REDUCTION * s));
+  }
+
+  // Retains the legacy flight-time relationship so changing the visual arc
+  // does not change how quickly the ball covers ground.
+  function calculateTimingArc(distanceYards, strength = 5) {
+    const d = Math.max(0, Number(distanceYards) || 0);
+    const s = Math.max(0, Math.min(10, Number(strength) || 5));
+    return Math.max(0, 0.01 * d * (1 - 0.02 * s));
   }
 
   function calculateSigma(distanceYards) {
@@ -58,11 +63,19 @@
   function throwProfile(distanceYards, targetHeight = targetHeightFeet, strength = 5) {
     const resolvedTargetHeight = Number.isFinite(targetHeight) ? targetHeight : targetHeightFeet;
     const arc = calculateThrowArc(distanceYards, strength);
-    const apexHeight = Math.max(releaseHeightFeet, resolvedTargetHeight) + arc * distanceYards;
-    const launchVelocity = Math.sqrt(2 * gravityFeetPerSecondSquared * (apexHeight - releaseHeightFeet));
-    const riseTime = launchVelocity / gravityFeetPerSecondSquared;
-    const fallTime = Math.sqrt(2 * (apexHeight - resolvedTargetHeight) / gravityFeetPerSecondSquared);
-    return { launchVelocity, duration: riseTime + fallTime, apexHeight, arc };
+    const timingArc = calculateTimingArc(distanceYards, strength);
+    const timingApex = Math.max(releaseHeightFeet, resolvedTargetHeight) + timingArc * distanceYards;
+    const timingLaunchVelocity = Math.sqrt(2 * gravityFeetPerSecondSquared * (timingApex - releaseHeightFeet));
+    const timingDuration = timingLaunchVelocity / gravityFeetPerSecondSquared
+      + Math.sqrt(2 * (timingApex - resolvedTargetHeight) / gravityFeetPerSecondSquared);
+    const duration = Math.max(0.001, timingDuration);
+
+    // h(p) = linear height + arc * 4p(1-p). This reaches the new high
+    // clearance arc while arriving at the same time as the legacy throw.
+    const gravity = (8 * arc) / (duration * duration);
+    const launchVelocity = (resolvedTargetHeight - releaseHeightFeet + 4 * arc) / duration;
+    const apexHeight = (releaseHeightFeet + resolvedTargetHeight) / 2 + arc;
+    return { launchVelocity, duration, apexHeight, arc, gravity };
   }
 
   function throwHeightAt(progress, distanceYards, targetHeight = targetHeightFeet, strength = 5) {
@@ -71,14 +84,14 @@
       if (Number.isFinite(p.launchVelocity) && Number.isFinite(p.duration)) {
         const elapsed = Math.max(0, Math.min(1, progress)) * p.duration;
         return releaseHeightFeet + p.launchVelocity * elapsed
-          - 0.5 * gravityFeetPerSecondSquared * elapsed * elapsed;
+          - 0.5 * (p.gravity ?? gravityFeetPerSecondSquared) * elapsed * elapsed;
       }
     }
     const resolvedTargetHeight = Number.isFinite(targetHeight) ? targetHeight : targetHeightFeet;
     const profile = throwProfile(distanceYards, resolvedTargetHeight, strength);
     const elapsed = Math.max(0, Math.min(1, progress)) * profile.duration;
     return releaseHeightFeet + profile.launchVelocity * elapsed
-      - 0.5 * gravityFeetPerSecondSquared * elapsed * elapsed;
+      - 0.5 * profile.gravity * elapsed * elapsed;
   }
 
   function create({ state, lateralYards, fieldBounds, passTarget, quarterbackIsBehindLineOfScrimmage, onPassReleased }) {
@@ -299,7 +312,7 @@
         if (state.pass?.profile) {
           const p = state.pass.profile;
           const elapsed = Math.max(0, Math.min(1, progress)) * p.duration;
-          return releaseHeightFeet + p.launchVelocity * elapsed - 0.5 * gravityFeetPerSecondSquared * elapsed * elapsed;
+          return releaseHeightFeet + p.launchVelocity * elapsed - 0.5 * (p.gravity ?? gravityFeetPerSecondSquared) * elapsed * elapsed;
         }
         return throwHeightAt(progress, distanceYards, targetHeight, getQbStrength());
       },

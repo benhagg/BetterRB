@@ -70,11 +70,11 @@
   },
   "offensiveLines": {
     "standard": [
-      { "position": "OL", "across": -0.08, "offset": -0.2 },
-      { "position": "OL", "across": -0.04, "offset": -0.2 },
-      { "position": "OL", "across": 0, "offset": -0.2, "isCenter": true },
-      { "position": "OL", "across": 0.04, "offset": -0.2 },
-      { "position": "OL", "across": 0.08, "offset": -0.2 }
+      { "position": "OL", "across": -0.08, "offset": -1 },
+      { "position": "OL", "across": -0.04, "offset": -0.7 },
+      { "position": "OL", "across": 0, "offset": -0.5, "isCenter": true },
+      { "position": "OL", "across": 0.04, "offset": -0.7 },
+      { "position": "OL", "across": 0.08, "offset": -1 }
     ]
   },
   "plays": [

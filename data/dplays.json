@@ -1,10 +1,10 @@
 {
   "defensiveLines": {
     "standard": [
-      { "position": "DL", "role": "rush", "across": -0.09, "offset": 0.1 },
-      { "position": "DL", "role": "rush", "across": -0.03, "offset": 0.1 },
-      { "position": "DL", "role": "rush", "across": 0.03, "offset": 0.1 },
-      { "position": "DL", "role": "rush", "across": 0.09, "offset": 0.1 }
+      { "position": "DL", "role": "rush", "across": -0.09, "offset": 0.8},
+      { "position": "DL", "role": "rush", "across": -0.03, "offset": 0.8 },
+      { "position": "DL", "role": "rush", "across": 0.03, "offset": 0.8 },
+      { "position": "DL", "role": "rush", "across": 0.09, "offset": 0.8 }
     ]
   },
   "plays": [
