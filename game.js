@@ -432,29 +432,48 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     }
   }
 
-  function movePlayer(delta, input) {
-    const hasInput = Boolean(input.right || input.left || input.down || input.up);
-    let dx = Number(Boolean(input.right)) - Number(Boolean(input.left));
-    let dy = Number(Boolean(input.down)) - Number(Boolean(input.up));
+  function movePlayer(delta, input = {}) {
     const carrier = ballCarrier();
-    if (carrier) {
-      if (hasInput) {
-        carrier.autoRun = null;
-        if (dx !== 0 || dy !== 0) {
-          carrier.move(delta, dx, dy);
-        } else {
-          carrier.coastToStop(delta);
+    if (!carrier || carrier.isTackled) return;
+
+    const isPocketQb = (carrier === state.quarterback && state.phase === 'passing');
+
+    if (isPocketQb) {
+      // QB in the pocket: requires holding keys to move; stays stationary when released
+      const hasInput = Boolean(input.right || input.left || input.down || input.up);
+      let dx = Number(Boolean(input.right)) - Number(Boolean(input.left));
+      let dy = Number(Boolean(input.down)) - Number(Boolean(input.up));
+      if (hasInput && (dx !== 0 || dy !== 0)) {
+        carrier.move(delta, dx, dy);
+      } else {
+        carrier.coastToStop(delta);
+      }
+    } else {
+      // Ball carrier downfield: single-click steering runs indefinitely until next click
+      if (input.carrierDir && (input.carrierDir.dx !== 0 || input.carrierDir.dy !== 0)) {
+        carrier.autoRun = { vx: input.carrierDir.dx, vy: input.carrierDir.dy };
+      } else if (!carrier.autoRun) {
+        const hasInput = Boolean(input.right || input.left || input.down || input.up);
+        if (hasInput) {
+          let dx = Number(Boolean(input.right)) - Number(Boolean(input.left));
+          let dy = Number(Boolean(input.down)) - Number(Boolean(input.up));
+          if (dx !== 0 || dy !== 0) {
+            carrier.autoRun = { vx: dx, vy: dy };
+          }
         }
-      } else if (carrier.autoRun) {
+      }
+
+      if (carrier.autoRun) {
         carrier.move(delta, carrier.autoRun.vx, carrier.autoRun.vy);
       } else {
         carrier.coastToStop(delta);
       }
-      carrier.x = Math.max(fieldBounds.endZoneL, Math.min(fieldBounds.endZoneR, carrier.x));
-      carrier.y = Math.max(fieldBounds.top, Math.min(fieldBounds.bottom, carrier.y));
-      state.fieldPosition = carrier.x;
-      state.playerY = carrier.y;
     }
+
+    carrier.x = Math.max(fieldBounds.endZoneL, Math.min(fieldBounds.endZoneR, carrier.x));
+    carrier.y = Math.max(fieldBounds.top, Math.min(fieldBounds.bottom, carrier.y));
+    state.fieldPosition = carrier.x;
+    state.playerY = carrier.y;
   }
 
   function startIncompleteBounce() {
@@ -523,6 +542,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       const currentHeight = passing.throwHeightAt(state.pass.progress, state.pass);
       state.pass.heightFeet = currentHeight;
       state.pass.heightfeet = currentHeight;
+      console.log(`[Ball] height: ${currentHeight.toFixed(2)} ft`);
       for (const player of [...state.receivers, state.runningBack]) {
         if (!player.hasBall) {
           const distToTarget = Math.hypot(state.pass.targetX - player.x, (state.pass.targetY - player.y) * lateralYards);
