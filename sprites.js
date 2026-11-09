@@ -26,8 +26,11 @@ window.RetroSprites = (() => {
   }
 
   const fieldImage = loadImage('/images/field.png').image;
+  const footballImage = loadImage('/images/ball.png').image;
   const prePlayFrames = { lineman: '/images/pre_play/lineman.png', center: '/images/pre_play/center.png', skill: '/images/pre_play/skill.png' };
+  const actionFrames = { dropback: ['/images/actions/dropback.png', '/images/actions/dropback1.png'], pass: ['/images/actions/pass.png', '/images/actions/pass1.png'] };
   Object.values(prePlayFrames).forEach(loadImage);
+  Object.values(actionFrames).flat().forEach(loadImage);
   runnerFrames.forEach(loadImage);
 
   function rgb(value, part) {
@@ -78,19 +81,20 @@ window.RetroSprites = (() => {
   function sprite(kind, index, uniform) {
     const source = kind === 'portrait'
       ? `/images/portraits/portrait_${String(index).padStart(2, '0')}.png`
-      : kind === 'runner' ? runnerFrames[index] : prePlayFrames[kind];
+      : kind === 'runner' ? runnerFrames[index] : actionFrames[kind] ? actionFrames[kind][index] : prePlayFrames[kind];
     const sourceImage = loadImage(source);
     const colors = colorsFor(uniform);
     const key = `${kind}:${index}:${JSON.stringify(colors)}`;
     if (cache.has(key)) return cache.get(key);
     const canvas = document.createElement('canvas');
     canvas.width = kind === 'portrait' ? 29 : 16;
-    canvas.height = kind === 'portrait' ? 37 : kind === 'runner' ? 17 : 16;
+    canvas.height = kind === 'portrait' ? 37 : kind === 'runner' || actionFrames[kind] ? 17 : 16;
     const entry = { canvas, ready: false };
     entry.promise = sourceImage.ready.then(() => {
       const context = canvas.getContext('2d', { willReadFrequently: true });
       context.imageSmoothingEnabled = false;
-      context.drawImage(sourceImage.image, 0, 0, canvas.width, canvas.height);
+      if (actionFrames[kind]) context.drawImage(sourceImage.image, 0, 0);
+      else context.drawImage(sourceImage.image, 0, 0, canvas.width, canvas.height);
       const image = context.getImageData(0, 0, canvas.width, canvas.height);
       recolor(image.data, canvas.width, kind, colors);
       context.putImageData(image, 0, 0);
@@ -140,5 +144,10 @@ window.RetroSprites = (() => {
     } else context.drawImage(entry.canvas, x, y, width, height);
   }
 
-  return { fieldImage, paintPortrait, drawRunner, drawPrePlay };
+  function drawAction(context, x, y, pixelSize, uniform, kind, frameIndex) {
+    const entry = sprite(kind, frameIndex % actionFrames[kind].length, uniform);
+    if (entry.ready) context.drawImage(entry.canvas, x, y, entry.canvas.width * pixelSize, entry.canvas.height * pixelSize);
+  }
+
+  return { fieldImage, footballImage, paintPortrait, drawRunner, drawPrePlay, drawAction };
 })();

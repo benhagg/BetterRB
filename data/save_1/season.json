@@ -1619,12 +1619,12 @@
   "currentGame": {
     "score1": 0,
     "score2": 0,
-    "fieldPosition": 22,
+    "fieldPosition": 18.999999999999993,
     "playerY": 0.5,
-    "clockSeconds": 900,
+    "clockSeconds": 827.456699999961,
     "quarter": 1,
     "isHome": false,
-    "phase": "preplay",
+    "phase": "passing",
     "team1": {
       "id": 20,
       "city": "Arizona",
@@ -1722,7 +1722,9 @@
       "ratingsScale": 10
     },
     "week": 1,
-    "scrimmagePosition": 22
+    "scrimmagePosition": 22,
+    "dropbackRemaining": 0,
+    "runAfterDropback": false
   },
   "ratingsScale": 10
 }

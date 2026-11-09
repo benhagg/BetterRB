@@ -318,4 +318,4 @@ http.createServer((request, response) => {
     response.writeHead(200, { 'Content-Type': types[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
     response.end(data);
   });
-}).listen(3000, () => console.log('Sunday Stars is running at http://localhost:3000'));
+}).listen(3000, () => console.log('Better RB is running at http://localhost:3000'));

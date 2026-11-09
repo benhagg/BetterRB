@@ -177,7 +177,7 @@ function gamePanel() {
   bindText(component, 'home-score', playerIsHome ? state.score1 : state.score2);
   bindText(component, 'away-team', awayTeam.abbreviation);
   bindText(component, 'away-score', playerIsHome ? state.score2 : state.score1);
-  bindText(component, 'quarter', `Q${state.quarter}`);
+  bindText(component, 'quarter', `Qt${state.quarter}`);
   component.querySelector('#game-clock').textContent = formatClock(state.clockSeconds);
   return component;
 }
@@ -310,6 +310,11 @@ app.addEventListener('click', async event => {
 
 window.addEventListener('keydown', event => {
   const key = event.key.toLowerCase();
+  if (screen === 'game' && (event.code === 'Space' || key === ' ')) {
+    event.preventDefault();
+    if (!event.repeat && gameSession) gameSession.pressSpace();
+    return;
+  }
   if (screen === 'game' && key === 'escape') {
     event.preventDefault();
     leaveGame();
