@@ -3,33 +3,6 @@
 const fieldBounds = {top: -.02, bottom: 0.95, endZoneL: 2.217644291800185, endZoneR: 101.66747130270615};
 const cameraTrailingYards = 8;
 const lateralYards = 17;
-const passSpeedYardsPerSecond = 12;
-const throw_arc = 0.7;
-const throwArc = throw_arc;
-const releaseHeightFeet = 6;
-const targetHeightFeet = 4;
-
-function throwHeightAt(progress, distanceYards) {
-  const t = Math.max(0, Math.min(1, progress));
-  const straightHeight = releaseHeightFeet + (targetHeightFeet - releaseHeightFeet) * t;
-  return straightHeight + throw_arc * distanceYards * 4 * t * (1 - t);
-}
-
-function throwArcLength(distanceYards) {
-  const samples = 16;
-  let length = 0;
-  let previousDistance = 0;
-  let previousHeight = throwHeightAt(0, distanceYards) / 3;
-  for (let index = 1; index <= samples; index++) {
-    const progress = index / samples;
-    const distance = distanceYards * progress;
-    const height = throwHeightAt(progress, distanceYards) / 3;
-    length += Math.hypot(distance - previousDistance, height - previousHeight);
-    previousDistance = distance;
-    previousHeight = height;
-  }
-  return length;
-}
 
 window.playGame = function playGame(team1, team2, savedState = null, selectedPlays = {}) {
   const dropbackYards = 3;
@@ -315,13 +288,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
   }
 
   // The original field image runs horizontally, with the sidelines at the top and bottom.
-  const fieldImage = RetroSprites.fieldImage;
   const field = { x: 0, y: 0, width: 1305, height: 240, goalLine: 152, pixelsPerYard: 10, topSideline: 32, bottomSideline: 206 };
-
-  function camera(width, height) {
-    const pixel = Math.max(1, Math.min(Math.round(height / 180), Math.floor(width / 360)));
-    return { pixel };
-  }
 
   function syncQuarterbackState() {
     state.fieldPosition = state.quarterback.x;
@@ -333,45 +300,16 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       || (state.runningBack.hasBall ? state.runningBack : state.quarterback);
   }
 
-  function getCameraOriginYard() {
-    const passProgress = (state.phase === 'thrown' || state.phase === 'complete') && state.pass ? state.pass.progress : null;
-    const trackingYard = passProgress === null
-      ? (ballCarrier()?.x ?? state.fieldPosition)
-      : state.pass.fromX + (state.pass.targetX - state.pass.fromX) * passProgress;
-    const cameraYard = Math.max(state.scrimmagePosition, trackingYard);
-    return cameraYard - cameraTrailingYards;
-  }
-
   function passTarget(receiverNumber) {
     return [...state.receivers, state.runningBack].find(player => player.receiverNumber === receiverNumber);
-  }
-
-  function predictReceiverPosition(player, seconds) {
-    const velocityX = Number(player.velocityX) || 0;
-    const velocityYards = (Number(player.velocityY) || 0) * lateralYards;
-    const currentSpeed = Math.hypot(velocityX, velocityYards);
-    if (!player.isMoving || currentSpeed < 0.05 || !Number.isFinite(player.speed) || player.speed <= 0) {
-      return { x: player.x, y: player.y };
-    }
-
-    const directionX = velocityX / currentSpeed;
-    const directionY = velocityYards / currentSpeed;
-    const startFactor = Math.max(0, Math.min(1, currentSpeed / player.speed));
-    const agility = Math.max(0, Math.min(10, Number(player.agility ?? player.acceleration ?? player.rating) || 0));
-    const accelerationRate = 1.3 / Math.max(0.5, 1 - agility * 0.05);
-    // Integral of the same exponential acceleration curve used by Player.movementStep().
-    const travelYards = player.speed * (seconds
-      - ((1 - startFactor) * (1 - Math.exp(-accelerationRate * seconds))) / accelerationRate);
-
-    return {
-      x: player.x + directionX * travelYards,
-      y: player.y + (directionY * travelYards) / lateralYards
-    };
   }
 
   function quarterbackIsBehindLineOfScrimmage() {
     return state.quarterback.x < state.scrimmagePosition;
   }
+
+  const camera = GameCamera.create({ state, field, fieldBounds, cameraTrailingYards, ballCarrier });
+  const passing = GamePassing.create({ state, lateralYards, fieldBounds, passTarget, quarterbackIsBehindLineOfScrimmage });
 
   function isTargetInFrontCone(player, targetX, targetY, maxDist = 5, coneAngleDeg = 60) {
     const dx = targetX - player.x;
@@ -496,7 +434,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       }
     } else if (state.phase === 'thrown') {
       state.pass.progress = Math.min(1, state.pass.progress + delta / state.pass.duration);
-      const currentHeight = throwHeightAt(state.pass.progress, state.pass.distanceYards);
+      const currentHeight = passing.throwHeightAt(state.pass.progress, state.pass.distanceYards);
       state.pass.heightFeet = currentHeight;
       state.pass.heightfeet = currentHeight;
       for (const player of [...state.receivers, state.runningBack]) {
@@ -588,49 +526,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
         state.runningBack.runRoute(delta);
       }
     }
-    if (state.throwWindup) {
-      state.throwWindup.elapsed += delta;
-      const windup = state.throwWindup;
-      const animStart = Math.max(0, windup.delay - (windup.animDuration || 0.2));
-
-      if (windup.wasMoving) {
-        if (windup.elapsed >= animStart) {
-          // Show throwing sprite animation right before we throw
-          state.quarterback.phase = 'throwing';
-          const throwAnimElapsed = windup.elapsed - animStart;
-          const throwAnimTotal = windup.delay - animStart;
-          state.quarterback.throwProgress = Math.min(1, throwAnimElapsed / throwAnimTotal);
-
-          let targetX = windup.targetX;
-          if (!Number.isFinite(targetX) && windup.receiverNum) {
-            const targetRec = passTarget(windup.receiverNum);
-            if (targetRec) targetX = targetRec.x;
-          }
-          if (Number.isFinite(targetX)) {
-            state.quarterback.facingLeft = targetX < state.quarterback.x;
-          }
-        } else {
-          // Still running before throwing motion starts
-          state.quarterback.phase = 'running';
-          state.quarterback.isMoving = true;
-        }
-      } else {
-        state.quarterback.phase = 'throwing';
-        state.quarterback.throwProgress = Math.min(1, windup.elapsed / windup.delay);
-      }
-
-      if (windup.elapsed >= windup.delay) {
-        delete state.throwWindup;
-        if (!quarterbackIsBehindLineOfScrimmage()) {
-          state.quarterback.phase = 'running';
-          state.quarterback.isMoving = true;
-        } else if (Number.isFinite(windup.targetX) && Number.isFinite(windup.targetY)) {
-          executePassReleaseToLocation(windup.targetX, windup.targetY);
-        } else if (windup.receiverNum) {
-          executePassRelease(windup.receiverNum);
-        }
-      }
-    }
+    passing.updateWindup(delta);
     if (state.phase !== 'complete') {
       state.clockSeconds = Math.max(0, state.clockSeconds - delta);
     }
@@ -662,59 +558,11 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
   }
 
   function canvasCoordsToField(canvasX, canvasY, width = 960, height = 540) {
-    const horizontalScale = width / 300;
-    const verticalScale = height / field.height;
-    const cameraOriginYard = getCameraOriginYard();
-    const top = field.topSideline * verticalScale;
-    const bottom = field.bottomSideline * verticalScale;
-
-    const fieldX = cameraOriginYard + canvasX / (field.pixelsPerYard * horizontalScale);
-    const fieldY = (canvasY - top) / (bottom - top);
-    return {
-      x: Math.max(fieldBounds.endZoneL, Math.min(fieldBounds.endZoneR, fieldX)),
-      y: Math.max(fieldBounds.top, Math.min(fieldBounds.bottom, fieldY))
-    };
+    return camera.canvasCoordsToField(canvasX, canvasY, width, height);
   }
 
   function throwPassToLocation(targetX, targetY) {
-    if (state.playType === 'run') return;
-    if (state.phase !== 'passing' && state.phase !== 'dropback') return;
-    if (state.throwWindup) return;
-    if (!quarterbackIsBehindLineOfScrimmage()) return;
-    if (!Number.isFinite(targetX) || !Number.isFinite(targetY)) return;
-
-    if (state.phase === 'dropback') {
-      state.phase = 'passing';
-      state.dropbackRemaining = 0;
-      state.quarterback.dropbackRemaining = 0;
-    }
-
-    const clampedX = Math.max(fieldBounds.endZoneL, Math.min(fieldBounds.endZoneR, targetX));
-    const clampedY = Math.max(fieldBounds.top, Math.min(fieldBounds.bottom, targetY));
-
-    const isMoving = Boolean(state.quarterback.isMoving) && (Math.hypot(state.quarterback.velocityX || 0, (state.quarterback.velocityY || 0) * lateralYards) > 0.05);
-    const delay = isMoving ? 0.4 : 0.2;
-    const animDuration = 0.2;
-
-    if (!isMoving) {
-      state.quarterback.isMoving = false;
-      state.quarterback.velocityX = 0;
-      state.quarterback.velocityY = 0;
-      state.quarterback.phase = 'throwing';
-      state.quarterback.throwProgress = 0;
-      state.quarterback.facingLeft = clampedX < state.quarterback.x;
-    }
-
-    state.throwWindup = {
-      targetX: clampedX,
-      targetY: clampedY,
-      delay,
-      elapsed: 0,
-      wasMoving: isMoving,
-      animDuration,
-      runDirX: Number.isFinite(state.quarterback.lastDirX) ? state.quarterback.lastDirX : 1,
-      runDirY: Number.isFinite(state.quarterback.lastDirY) ? state.quarterback.lastDirY : 0
-    };
+    return passing.throwPassToLocation(targetX, targetY);
   }
 
   function throwPassToCanvasCoords(canvasX, canvasY, width = 960, height = 540) {
@@ -722,134 +570,8 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     throwPassToLocation(coords.x, coords.y);
   }
 
-  function executePassReleaseToLocation(targetX, targetY) {
-    const fromX = state.quarterback.x;
-    const fromY = state.quarterback.y;
-    state.quarterback.facingLeft = targetX < fromX;
-    state.quarterback.isMoving = false;
-    state.quarterback.velocityX = 0;
-    state.quarterback.velocityY = 0;
-    const distance = Math.hypot(targetX - fromX, (targetY - fromY) * lateralYards);
-    const arcLength = throwArcLength(distance);
-    const duration = Math.max(0.4, Math.min(2.5, arcLength / passSpeedYardsPerSecond));
-
-    state.pass = {
-      fromX,
-      fromY,
-      targetX,
-      targetY,
-      duration,
-      progress: 0,
-      distanceYards: distance,
-      heightFeet: releaseHeightFeet,
-      heightfeet: releaseHeightFeet,
-      targetReceiverNumber: null,
-      wasTargetMoving: false
-    };
-    state.quarterback.phase = 'thrown';
-    state.phase = 'thrown';
-  }
-
   function throwPass(target, maybeY) {
-    if (typeof target === 'number' && typeof maybeY === 'number') {
-      return throwPassToLocation(target, maybeY);
-    }
-    if (typeof target === 'object' && target !== null && Number.isFinite(target.x) && Number.isFinite(target.y)) {
-      return throwPassToLocation(target.x, target.y);
-    }
-    const receiverNum = target;
-    if (state.playType === 'run') return;
-    if (state.phase !== 'passing' && state.phase !== 'dropback') return;
-    if (state.throwWindup) return;
-    if (!quarterbackIsBehindLineOfScrimmage()) return;
-    const targetReceiver = passTarget(receiverNum);
-    if (!targetReceiver || !targetReceiver.receiverNumber) return;
-
-    if (state.phase === 'dropback') {
-      state.phase = 'passing';
-      state.dropbackRemaining = 0;
-      state.quarterback.dropbackRemaining = 0;
-    }
-
-    const isMoving = Boolean(state.quarterback.isMoving) && (Math.hypot(state.quarterback.velocityX || 0, (state.quarterback.velocityY || 0) * lateralYards) > 0.05);
-    const delay = isMoving ? 0.4 : 0.2;
-    const animDuration = 0.2;
-
-    if (!isMoving) {
-      state.quarterback.isMoving = false;
-      state.quarterback.velocityX = 0;
-      state.quarterback.velocityY = 0;
-      state.quarterback.phase = 'throwing';
-      state.quarterback.throwProgress = 0;
-      state.quarterback.facingLeft = targetReceiver.x < state.quarterback.x;
-    }
-
-    state.throwWindup = {
-      receiverNum,
-      delay,
-      elapsed: 0,
-      wasMoving: isMoving,
-      animDuration,
-      runDirX: Number.isFinite(state.quarterback.lastDirX) ? state.quarterback.lastDirX : 1,
-      runDirY: Number.isFinite(state.quarterback.lastDirY) ? state.quarterback.lastDirY : 0
-    };
-  }
-
-  function executePassRelease(receiverNum) {
-    const targetReceiver = passTarget(receiverNum);
-    if (!targetReceiver) {
-      state.quarterback.phase = 'passing';
-      return;
-    }
-
-    const fromX = state.quarterback.x;
-    const fromY = state.quarterback.y;
-    state.quarterback.facingLeft = targetReceiver.x < fromX;
-    state.quarterback.isMoving = false;
-    state.quarterback.velocityX = 0;
-    state.quarterback.velocityY = 0;
-    const receiverVelocityX = Number(targetReceiver.velocityX) || 0;
-    const receiverVelocityY = Number(targetReceiver.velocityY) || 0;
-    const isMoving = Boolean(targetReceiver.isMoving) && (Math.hypot(receiverVelocityX, receiverVelocityY * lateralYards) > 0.05);
-
-    let duration = 0.3;
-    let targetX = targetReceiver.x;
-    let targetY = targetReceiver.y;
-    let distance = 0;
-
-    if (isMoving) {
-      // Repeating converges the ball's arc time with the receiver's accelerating movement.
-      for (let step = 0; step < 4; step++) {
-        const predicted = predictReceiverPosition(targetReceiver, duration);
-        targetX = predicted.x;
-        targetY = predicted.y;
-        distance = Math.hypot(targetX - fromX, (targetY - fromY) * lateralYards);
-        const arcLength = throwArcLength(distance);
-        duration = Math.max(0.4, Math.min(2.5, arcLength / passSpeedYardsPerSecond));
-      }
-    } else {
-      targetX = targetReceiver.x;
-      targetY = targetReceiver.y;
-      distance = Math.hypot(targetX - fromX, (targetY - fromY) * lateralYards);
-      const arcLength = throwArcLength(distance);
-      duration = Math.max(0.4, Math.min(2.5, arcLength / passSpeedYardsPerSecond));
-    }
-
-    state.pass = {
-      fromX,
-      fromY,
-      targetX,
-      targetY,
-      duration,
-      progress: 0,
-      distanceYards: distance,
-      heightFeet: releaseHeightFeet,
-      heightfeet: releaseHeightFeet,
-      targetReceiverNumber: targetReceiver.receiverNumber,
-      wasTargetMoving: isMoving
-    };
-    state.quarterback.phase = 'thrown';
-    state.phase = 'thrown';
+    return passing.throwPass(target, maybeY);
   }
 
   function reset() {
@@ -880,7 +602,10 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     return uniform;
   }
 
+  const renderer = GameRenderer.create({ state, field, camera, team1, team2, uniformForTeam, throwHeightAt: passing.throwHeightAt });
+
   function draw(ctx, width, height) {
+    return renderer.draw(ctx, width, height);
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, width, height);
     ctx.fillStyle = '#377c08';
