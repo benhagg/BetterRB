@@ -42,6 +42,8 @@
       this.startY = Number.isFinite(config.startY) ? config.startY : this.y;
       this.velocityX = Number.isFinite(config.velocityX) ? config.velocityX : 0;
       this.velocityY = Number.isFinite(config.velocityY) ? config.velocityY : 0;
+      this.lastDirX = Number.isFinite(config.lastDirX) ? config.lastDirX : 1;
+      this.lastDirY = Number.isFinite(config.lastDirY) ? config.lastDirY : 0;
 
       this.animDistance = 0;
       this.facingLeft = Boolean(config.facingLeft);
@@ -55,6 +57,7 @@
         id: this.id, name: this.name, position: this.position, rating: this.rating,
         kind: this.kind, x: this.x, y: this.y, startX: this.startX, startY: this.startY,
         velocityX: this.velocityX, velocityY: this.velocityY,
+        lastDirX: this.lastDirX, lastDirY: this.lastDirY, autoRun: this.autoRun,
         animDistance: this.animDistance, facingLeft: this.facingLeft, isMoving: this.isMoving,
         phase: this.phase, hasBall: this.hasBall, isDiving: this.isDiving,
         diveProgress: this.diveProgress, diveCooldownTimer: this.diveCooldownTimer,
@@ -80,6 +83,9 @@
       this.animDistance = 0;
       this.isMoving = false;
       this.phase = 'preplay';
+      this.lastDirX = 1;
+      this.lastDirY = 0;
+      this.autoRun = null;
     }
 
     run(delta, targetX, targetY) {
@@ -96,6 +102,8 @@
         this.y += (vyYards / LATERAL_YARDS) * step;
         this.velocityX = vx * this.speed;
         this.velocityY = (vyYards / LATERAL_YARDS) * this.speed;
+        this.lastDirX = vx;
+        this.lastDirY = vyYards;
         this.animDistance += step;
         this.facingLeft = vx < 0;
         this.isMoving = true;
@@ -116,6 +124,8 @@
         this.y += (dirY * step) / LATERAL_YARDS;
         this.velocityX = dirX * this.speed;
         this.velocityY = (dirY * this.speed) / LATERAL_YARDS;
+        this.lastDirX = dirX;
+        this.lastDirY = dirY;
         this.animDistance += step;
         this.facingLeft = dirX < 0;
         this.isMoving = true;
@@ -158,27 +168,53 @@
       this.diveProgress = Number.isFinite(config.diveProgress) ? config.diveProgress : 0;
       this.isTackled = Boolean(config.isTackled);
       this.receiverNumber = config.receiverNumber ?? null;
+      this.autoRun = config.autoRun ?? null;
     }
 
     dive() {
       if (this.isDiving || this.isTackled) return;
       this.isDiving = true;
       this.diveProgress = 0;
+      this.autoRun = null;
     }
 
-    catchBall() {
+    catchBall(dir = null) {
       this.hasBall = true;
       this.phase = 'running';
+      if (dir && dir.vx === 0 && dir.vy === 0) {
+        this.autoRun = null;
+        this.velocityX = 0;
+        this.velocityY = 0;
+        this.isMoving = false;
+        return;
+      }
+      let vx = dir?.vx;
+      let vy = dir?.vy;
+      if (!Number.isFinite(vx) || !Number.isFinite(vy)) {
+        vx = Number.isFinite(this.lastDirX) ? this.lastDirX : 1;
+        vy = Number.isFinite(this.lastDirY) ? this.lastDirY : 0;
+      }
+      const len = Math.hypot(vx, vy);
+      if (len > 0.001) {
+        this.autoRun = { vx: vx / len, vy: vy / len };
+      } else {
+        this.autoRun = null;
+        this.velocityX = 0;
+        this.velocityY = 0;
+        this.isMoving = false;
+      }
     }
 
     fumble() {
       this.hasBall = false;
+      this.autoRun = null;
     }
 
     tackled() {
       this.isTackled = true;
       this.isMoving = false;
       this.phase = 'tackled';
+      this.autoRun = null;
     }
 
     update(delta) {
@@ -402,13 +438,15 @@
 
     assignRoute(waypoints) {
       this.route = Array.isArray(waypoints) ? waypoints : [];
-      this.routeIndex = Number.isInteger(config.routeIndex) ? config.routeIndex : 0;
+      this.routeIndex = 0;
     }
 
     runRoute(delta) {
       if (this.hasBall || this.isTackled) return;
       if (!this.route || this.routeIndex >= this.route.length) {
         this.isMoving = false;
+        this.velocityX = 0;
+        this.velocityY = 0;
         return;
       }
 
@@ -424,6 +462,8 @@
         this.routeIndex++;
         if (this.routeIndex >= this.route.length) {
           this.isMoving = false;
+          this.velocityX = 0;
+          this.velocityY = 0;
           return;
         }
       }
@@ -449,6 +489,8 @@
       if (this.hasBall || this.isTackled) return;
       if (!this.route || this.routeIndex >= this.route.length) {
         this.isMoving = false;
+        this.velocityX = 0;
+        this.velocityY = 0;
         return;
       }
       const target = this.route[this.routeIndex];
@@ -457,7 +499,12 @@
       const dist = Math.hypot(targetX - this.x, (targetY - this.y) * LATERAL_YARDS);
       if (dist < 0.4) {
         this.routeIndex++;
-        if (this.routeIndex >= this.route.length) return;
+        if (this.routeIndex >= this.route.length) {
+          this.isMoving = false;
+          this.velocityX = 0;
+          this.velocityY = 0;
+          return;
+        }
       }
       this.phase = 'running';
       this.run(delta, targetX, targetY);
@@ -484,6 +531,8 @@
       this.routeElapsed += delta;
       if (!this.route || this.routeIndex >= this.route.length) {
         this.isMoving = false;
+        this.velocityX = 0;
+        this.velocityY = 0;
         return;
       }
       const target = this.route[this.routeIndex];
@@ -492,7 +541,12 @@
       const dist = Math.hypot(targetX - this.x, (targetY - this.y) * LATERAL_YARDS);
       if (dist < 0.4) {
         this.routeIndex++;
-        if (this.routeIndex >= this.route.length) return;
+        if (this.routeIndex >= this.route.length) {
+          this.isMoving = false;
+          this.velocityX = 0;
+          this.velocityY = 0;
+          return;
+        }
       }
       this.phase = 'running';
       this.run(delta, targetX, targetY);

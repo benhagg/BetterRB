@@ -104,28 +104,24 @@
         ],
         "receivers": [
           {
-            "receiverNumber": 1,
             "position": "WR",
             "across": -0.38,
             "offset": -0.5,
             "route": [{ "dx": 10, "dy": 0 }]
           },
           {
-            "receiverNumber": 2,
             "position": "WR",
             "across": -0.22,
             "offset": -0.5,
             "route": [{ "dx": 8, "dy": 0 }]
           },
           {
-            "receiverNumber": 4,
             "position": "TE",
             "across": 0.12,
             "offset": -0.5,
             "route": [{ "dx": 6, "dy": 0 }]
           },
           {
-            "receiverNumber": 5,
             "position": "WR",
             "across": 0.38,
             "offset": -0.5,
@@ -133,7 +129,6 @@
           }
         ],
         "runningBack": {
-          "receiverNumber": 3,
           "position": "RB",
           "across": 0,
           "offset": -3.8,
@@ -159,28 +154,24 @@
         ],
         "receivers": [
           {
-            "receiverNumber": 1,
             "position": "WR",
             "across": -0.38,
             "offset": -0.5,
             "route": [{ "dx": 10, "dy": 0 }]
           },
           {
-            "receiverNumber": 2,
             "position": "WR",
             "across": -0.22,
             "offset": -0.5,
             "route": [{ "dx": 8, "dy": 0 }]
           },
           {
-            "receiverNumber": 4,
             "position": "TE",
             "across": 0.12,
             "offset": -0.5,
             "route": [{ "dx": 6, "dy": 0.08 }]
           },
           {
-            "receiverNumber": 5,
             "position": "WR",
             "across": 0.38,
             "offset": -0.5,
@@ -188,7 +179,6 @@
           }
         ],
         "runningBack": {
-          "receiverNumber": 3,
           "position": "RB",
           "across": -0.05,
           "offset": -3.8,

@@ -174,6 +174,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
   ];
 
   function createReceivers() {
+    const isRunPlay = playType === 'run';
     const used = new Set();
     return receiverConfigs.map((cfg, index) => {
       let rosterPlayer = team1.players?.find(p => !used.has(p) && p.position === cfg.position);
@@ -188,11 +189,11 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
 
       {
         const receiver = new ReceiverClass({
-          id: rosterPlayer?.id ?? `wr-${cfg.receiverNumber}`,
+          id: rosterPlayer?.id ?? `wr-${cfg.receiverNumber ?? index + 1}`,
           name: rosterPlayer?.name ?? cfg.name,
           position: cfg.position,
           rating,
-          receiverNumber: cfg.receiverNumber,
+          receiverNumber: isRunPlay ? null : (cfg.receiverNumber ?? null),
           x: startX,
           y: startY,
           route: cfg.route
@@ -232,12 +233,13 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
   }
 
   function createRunningBack() {
+    const isRunPlay = playType === 'run';
     const player = team1.players?.find(item => String(item.position).trim().toUpperCase() === 'RB');
     const back = new RunningBack({
       id: player?.id ?? 'rb', name: player?.name ?? 'RB', position: 'RB',
       rating: Number.isFinite(player?.ratings?.speed) ? player.ratings.speed : 5,
       x: state.scrimmagePosition + runningBackConfig.offset, y: 0.5 + runningBackConfig.across,
-      receiverNumber: runningBackConfig.receiverNumber ?? 3,
+      receiverNumber: isRunPlay ? null : (runningBackConfig.receiverNumber ?? 3),
       route: runningBackRoute
     });
     back.offset = runningBackConfig.offset;
@@ -335,13 +337,50 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     return [...state.receivers, state.runningBack].find(player => player.receiverNumber === receiverNumber);
   }
 
+  function isTargetInFrontCone(player, targetX, targetY, maxDist = 5, coneAngleDeg = 60) {
+    const dx = targetX - player.x;
+    const dy = (targetY - player.y) * lateralYards;
+    const dist = Math.hypot(dx, dy);
+    if (dist > maxDist) return false;
+    if (dist < 0.05) return true;
+
+    let forwardX = Number(player.lastDirX);
+    let forwardY = Number(player.lastDirY);
+    if (!Number.isFinite(forwardX) || !Number.isFinite(forwardY) || Math.hypot(forwardX, forwardY) < 0.001) {
+      forwardX = player.facingLeft ? -1 : 1;
+      forwardY = 0;
+    } else {
+      const len = Math.hypot(forwardX, forwardY);
+      forwardX /= len;
+      forwardY /= len;
+    }
+
+    const toTargetX = dx / dist;
+    const toTargetY = dy / dist;
+    const dot = forwardX * toTargetX + forwardY * toTargetY;
+    const halfAngleRad = (coneAngleDeg / 2) * (Math.PI / 180);
+    const minCos = Math.cos(halfAngleRad);
+
+    return dot >= minCos;
+  }
+
   function movePlayer(delta, input) {
+    const hasInput = Boolean(input.right || input.left || input.down || input.up);
     let dx = Number(Boolean(input.right)) - Number(Boolean(input.left));
     let dy = Number(Boolean(input.down)) - Number(Boolean(input.up));
     const carrier = ballCarrier();
     if (carrier) {
-      if (dx !== 0 || dy !== 0) {
-        carrier.move(delta, dx, dy);
+      if (hasInput) {
+        carrier.autoRun = null;
+        if (dx !== 0 || dy !== 0) {
+          carrier.move(delta, dx, dy);
+        } else {
+          carrier.velocityX = 0;
+          carrier.velocityY = 0;
+          carrier.isMoving = false;
+        }
+      } else if (carrier.autoRun) {
+        carrier.move(delta, carrier.autoRun.vx, carrier.autoRun.vy);
       } else if (state.playType === 'run' && carrier === state.runningBack) {
         carrier.move(delta, 1, 0);
       } else {
@@ -367,15 +406,36 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       state.dropbackRemaining = state.quarterback.dropbackRemaining;
       syncQuarterbackState();
     } else if (state.phase === 'passing' || state.phase === 'running') {
-      if (state.throwWindup) {
-        // QB is winding up to throw; keep position stable
-      } else if (state.playType === 'run' && !state.runningBack.hasBall) {
+      if (state.playType === 'run' && !state.runningBack.hasBall) {
         state.runningBack.runRoute(delta);
         if (state.runningBack.x >= state.quarterback.x - 0.1) {
           state.quarterback.hasBall = false;
-          state.runningBack.hasBall = true;
+          let catchDirX = state.runningBack.velocityX;
+          let catchDirY = state.runningBack.velocityY * lateralYards;
+          if (Math.hypot(catchDirX, catchDirY) < 0.1) {
+            catchDirX = state.runningBack.lastDirX;
+            catchDirY = state.runningBack.lastDirY;
+          }
+          state.runningBack.catchBall(
+            Number.isFinite(catchDirX) && Number.isFinite(catchDirY)
+              ? { vx: catchDirX, vy: catchDirY }
+              : null
+          );
           state.fieldPosition = state.runningBack.x;
           state.playerY = state.runningBack.y;
+        }
+      } else if (state.throwWindup) {
+        if (state.throwWindup.wasMoving) {
+          const hasInput = Boolean(input.right || input.left || input.down || input.up);
+          if (hasInput) {
+            movePlayer(delta, input);
+          } else {
+            state.quarterback.move(delta, state.throwWindup.runDirX, state.throwWindup.runDirY);
+            state.quarterback.x = Math.max(fieldBounds.endZoneL, Math.min(fieldBounds.endZoneR, state.quarterback.x));
+            state.quarterback.y = Math.max(fieldBounds.top, Math.min(fieldBounds.bottom, state.quarterback.y));
+            state.fieldPosition = state.quarterback.x;
+            state.playerY = state.quarterback.y;
+          }
         }
       } else {
         movePlayer(delta, input);
@@ -388,7 +448,15 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       for (const player of [...state.receivers, state.runningBack]) {
         if (!player.hasBall) {
           const distToTarget = Math.hypot(state.pass.targetX - player.x, (state.pass.targetY - player.y) * lateralYards);
-          if (player.receiverNumber === state.pass.targetReceiverNumber || distToTarget <= 5) {
+          if (state.pass.targetReceiverNumber && player.receiverNumber === state.pass.targetReceiverNumber) {
+            if (state.pass.wasTargetMoving) {
+              player.run(delta, state.pass.targetX, state.pass.targetY);
+            } else {
+              player.velocityX = 0;
+              player.velocityY = 0;
+              player.isMoving = false;
+            }
+          } else if (isTargetInFrontCone(player, state.pass.targetX, state.pass.targetY, 5, 60)) {
             player.run(delta, state.pass.targetX, state.pass.targetY);
           } else {
             player.runRoute(delta);
@@ -396,13 +464,51 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
         }
       }
       if (state.pass.progress >= 1) {
-        state.phase = 'running';
-        const target = passTarget(state.pass.targetReceiverNumber);
+        let target = null;
+        if (state.pass.targetReceiverNumber) {
+          target = passTarget(state.pass.targetReceiverNumber);
+        } else {
+          const eligible = [...state.receivers, state.runningBack];
+          let bestDist = Infinity;
+          let bestCandidate = null;
+          for (const player of eligible) {
+            const dist = Math.hypot(state.pass.targetX - player.x, (state.pass.targetY - player.y) * lateralYards);
+            if (dist < bestDist) {
+              bestDist = dist;
+              bestCandidate = player;
+            }
+          }
+          if (bestCandidate && bestDist <= 2.5) {
+            target = bestCandidate;
+          }
+        }
         if (target) {
+          state.phase = 'running';
           state.quarterback.hasBall = false;
-          target.catchBall();
+          const wasMoving = state.pass.targetReceiverNumber
+            ? state.pass.wasTargetMoving
+            : Boolean(target.isMoving) && (Math.hypot(target.velocityX || 0, (target.velocityY || 0) * lateralYards) > 0.05);
+          if (wasMoving) {
+            let catchDirX = target.velocityX;
+            let catchDirY = target.velocityY * lateralYards;
+            if (Math.hypot(catchDirX, catchDirY) < 0.1) {
+              catchDirX = target.lastDirX;
+              catchDirY = target.lastDirY;
+            }
+            target.catchBall(
+              Number.isFinite(catchDirX) && Number.isFinite(catchDirY)
+                ? { vx: catchDirX, vy: catchDirY }
+                : null
+            );
+          } else {
+            target.catchBall({ vx: 0, vy: 0 });
+          }
           state.fieldPosition = target.x;
           state.playerY = target.y;
+          movePlayer(0, input);
+        } else {
+          state.phase = 'complete';
+          state.quarterback.hasBall = false;
         }
       }
     }
@@ -418,11 +524,42 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     }
     if (state.throwWindup) {
       state.throwWindup.elapsed += delta;
-      state.quarterback.throwProgress = Math.min(1, state.throwWindup.elapsed / state.throwWindup.delay);
-      if (state.throwWindup.elapsed >= state.throwWindup.delay) {
-        const num = state.throwWindup.receiverNum;
+      const windup = state.throwWindup;
+      const animStart = Math.max(0, windup.delay - (windup.animDuration || 0.2));
+
+      if (windup.wasMoving) {
+        if (windup.elapsed >= animStart) {
+          // Show throwing sprite animation right before we throw
+          state.quarterback.phase = 'throwing';
+          const throwAnimElapsed = windup.elapsed - animStart;
+          const throwAnimTotal = windup.delay - animStart;
+          state.quarterback.throwProgress = Math.min(1, throwAnimElapsed / throwAnimTotal);
+
+          let targetX = windup.targetX;
+          if (!Number.isFinite(targetX) && windup.receiverNum) {
+            const targetRec = passTarget(windup.receiverNum);
+            if (targetRec) targetX = targetRec.x;
+          }
+          if (Number.isFinite(targetX)) {
+            state.quarterback.facingLeft = targetX < state.quarterback.x;
+          }
+        } else {
+          // Still running before throwing motion starts
+          state.quarterback.phase = 'running';
+          state.quarterback.isMoving = true;
+        }
+      } else {
+        state.quarterback.phase = 'throwing';
+        state.quarterback.throwProgress = Math.min(1, windup.elapsed / windup.delay);
+      }
+
+      if (windup.elapsed >= windup.delay) {
         delete state.throwWindup;
-        executePassRelease(num);
+        if (Number.isFinite(windup.targetX) && Number.isFinite(windup.targetY)) {
+          executePassReleaseToLocation(windup.targetX, windup.targetY);
+        } else if (windup.receiverNum) {
+          executePassRelease(windup.receiverNum);
+        }
       }
     }
     if (state.phase !== 'complete') {
@@ -455,24 +592,139 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     }
   }
 
-  function throwPass(receiverNum) {
+  function canvasCoordsToField(canvasX, canvasY, width = 960, height = 540) {
+    const horizontalScale = width / 300;
+    const verticalScale = height / field.height;
+    const passProgress = (state.phase === 'thrown' || state.phase === 'complete') && state.pass ? state.pass.progress : null;
+    const cameraYard = passProgress === null
+      ? (ballCarrier()?.x ?? state.fieldPosition)
+      : state.pass.fromX + (state.pass.targetX - state.pass.fromX) * passProgress;
+    const cameraOriginYard = cameraYard - cameraTrailingYards;
+    const top = field.topSideline * verticalScale;
+    const bottom = field.bottomSideline * verticalScale;
+
+    const fieldX = cameraOriginYard + canvasX / (field.pixelsPerYard * horizontalScale);
+    const fieldY = (canvasY - top) / (bottom - top);
+    return {
+      x: Math.max(fieldBounds.endZoneL, Math.min(fieldBounds.endZoneR, fieldX)),
+      y: Math.max(fieldBounds.top, Math.min(fieldBounds.bottom, fieldY))
+    };
+  }
+
+  function throwPassToLocation(targetX, targetY) {
+    if (state.playType === 'run') return;
+    if (state.phase !== 'passing' && state.phase !== 'dropback') return;
+    if (state.throwWindup) return;
+    if (!Number.isFinite(targetX) || !Number.isFinite(targetY)) return;
+
+    if (state.phase === 'dropback') {
+      state.phase = 'passing';
+      state.dropbackRemaining = 0;
+      state.quarterback.dropbackRemaining = 0;
+    }
+
+    const clampedX = Math.max(fieldBounds.endZoneL, Math.min(fieldBounds.endZoneR, targetX));
+    const clampedY = Math.max(fieldBounds.top, Math.min(fieldBounds.bottom, targetY));
+
+    const isMoving = Boolean(state.quarterback.isMoving) && (Math.hypot(state.quarterback.velocityX || 0, (state.quarterback.velocityY || 0) * lateralYards) > 0.05);
+    const delay = isMoving ? 0.4 : 0.2;
+    const animDuration = 0.2;
+
+    if (!isMoving) {
+      state.quarterback.isMoving = false;
+      state.quarterback.velocityX = 0;
+      state.quarterback.velocityY = 0;
+      state.quarterback.phase = 'throwing';
+      state.quarterback.throwProgress = 0;
+      state.quarterback.facingLeft = clampedX < state.quarterback.x;
+    }
+
+    state.throwWindup = {
+      targetX: clampedX,
+      targetY: clampedY,
+      delay,
+      elapsed: 0,
+      wasMoving: isMoving,
+      animDuration,
+      runDirX: Number.isFinite(state.quarterback.lastDirX) ? state.quarterback.lastDirX : 1,
+      runDirY: Number.isFinite(state.quarterback.lastDirY) ? state.quarterback.lastDirY : 0
+    };
+  }
+
+  function throwPassToCanvasCoords(canvasX, canvasY, width = 960, height = 540) {
+    const coords = canvasCoordsToField(canvasX, canvasY, width, height);
+    throwPassToLocation(coords.x, coords.y);
+  }
+
+  function executePassReleaseToLocation(targetX, targetY) {
+    const fromX = state.quarterback.x;
+    const fromY = state.quarterback.y;
+    state.quarterback.facingLeft = targetX < fromX;
+    state.quarterback.isMoving = false;
+    state.quarterback.velocityX = 0;
+    state.quarterback.velocityY = 0;
+    const distance = Math.hypot(targetX - fromX, (targetY - fromY) * lateralYards);
+    const arcLength = throwArcLength(distance);
+    const duration = Math.max(0.4, Math.min(2.5, arcLength / passSpeedYardsPerSecond));
+
+    state.pass = {
+      fromX,
+      fromY,
+      targetX,
+      targetY,
+      duration,
+      progress: 0,
+      distanceYards: distance,
+      heightFeet: releaseHeightFeet,
+      heightfeet: releaseHeightFeet,
+      targetReceiverNumber: null,
+      wasTargetMoving: false
+    };
+    state.quarterback.phase = 'thrown';
+    state.phase = 'thrown';
+  }
+
+  function throwPass(target, maybeY) {
+    if (typeof target === 'number' && typeof maybeY === 'number') {
+      return throwPassToLocation(target, maybeY);
+    }
+    if (typeof target === 'object' && target !== null && Number.isFinite(target.x) && Number.isFinite(target.y)) {
+      return throwPassToLocation(target.x, target.y);
+    }
+    const receiverNum = target;
     if (state.playType === 'run') return;
     if (state.phase !== 'passing' && state.phase !== 'dropback') return;
     if (state.throwWindup) return;
     const targetReceiver = passTarget(receiverNum);
-    if (!targetReceiver) return;
+    if (!targetReceiver || !targetReceiver.receiverNumber) return;
 
-    const delay = state.quarterback.isMoving ? 0.4 : 0.2;
-    state.quarterback.isMoving = false;
-    state.quarterback.velocityX = 0;
-    state.quarterback.velocityY = 0;
-    state.quarterback.phase = 'throwing';
-    state.quarterback.throwProgress = 0;
+    if (state.phase === 'dropback') {
+      state.phase = 'passing';
+      state.dropbackRemaining = 0;
+      state.quarterback.dropbackRemaining = 0;
+    }
+
+    const isMoving = Boolean(state.quarterback.isMoving) && (Math.hypot(state.quarterback.velocityX || 0, (state.quarterback.velocityY || 0) * lateralYards) > 0.05);
+    const delay = isMoving ? 0.4 : 0.2;
+    const animDuration = 0.2;
+
+    if (!isMoving) {
+      state.quarterback.isMoving = false;
+      state.quarterback.velocityX = 0;
+      state.quarterback.velocityY = 0;
+      state.quarterback.phase = 'throwing';
+      state.quarterback.throwProgress = 0;
+      state.quarterback.facingLeft = targetReceiver.x < state.quarterback.x;
+    }
 
     state.throwWindup = {
       receiverNum,
       delay,
-      elapsed: 0
+      elapsed: 0,
+      wasMoving: isMoving,
+      animDuration,
+      runDirX: Number.isFinite(state.quarterback.lastDirX) ? state.quarterback.lastDirX : 1,
+      runDirY: Number.isFinite(state.quarterback.lastDirY) ? state.quarterback.lastDirY : 0
     };
   }
 
@@ -485,16 +737,31 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
 
     const fromX = state.quarterback.x;
     const fromY = state.quarterback.y;
+    state.quarterback.facingLeft = targetReceiver.x < fromX;
+    state.quarterback.isMoving = false;
+    state.quarterback.velocityX = 0;
+    state.quarterback.velocityY = 0;
     const receiverVelocityX = Number(targetReceiver.velocityX) || 0;
     const receiverVelocityY = Number(targetReceiver.velocityY) || 0;
+    const isMoving = Boolean(targetReceiver.isMoving) && (Math.hypot(receiverVelocityX, receiverVelocityY * lateralYards) > 0.05);
+
     let duration = 0.3;
     let targetX = targetReceiver.x;
     let targetY = targetReceiver.y;
     let distance = 0;
-    // Predict a constant-velocity lead. Repeating converges the travel time and lead point.
-    for (let step = 0; step < 3; step++) {
-      targetX = targetReceiver.x + receiverVelocityX * duration;
-      targetY = targetReceiver.y + receiverVelocityY * duration;
+
+    if (isMoving) {
+      // Predict a constant-velocity lead. Repeating converges the travel time and lead point.
+      for (let step = 0; step < 3; step++) {
+        targetX = targetReceiver.x + receiverVelocityX * duration;
+        targetY = targetReceiver.y + receiverVelocityY * duration;
+        distance = Math.hypot(targetX - fromX, (targetY - fromY) * lateralYards);
+        const arcLength = throwArcLength(distance);
+        duration = Math.max(0.4, Math.min(2.5, arcLength / passSpeedYardsPerSecond));
+      }
+    } else {
+      targetX = targetReceiver.x;
+      targetY = targetReceiver.y;
       distance = Math.hypot(targetX - fromX, (targetY - fromY) * lateralYards);
       const arcLength = throwArcLength(distance);
       duration = Math.max(0.4, Math.min(2.5, arcLength / passSpeedYardsPerSecond));
@@ -510,7 +777,8 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       distanceYards: distance,
       heightFeet: releaseHeightFeet,
       heightfeet: releaseHeightFeet,
-      targetReceiverNumber: targetReceiver.receiverNumber
+      targetReceiverNumber: targetReceiver.receiverNumber,
+      wasTargetMoving: isMoving
     };
     state.quarterback.phase = 'thrown';
     state.phase = 'thrown';
@@ -650,6 +918,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     if (state.phase !== 'preplay' || !play) return;
     selectedPlays.offense = play;
     state.playType = String(play.playtype || play.playType || play.type || 'pass').toLowerCase();
+    const isRun = state.playType === 'run';
     const qbCfg = play.formation?.quarterback || { position: 'QB', across: 0, offset: -3, dropback: false };
     const rbCfg = play.formation?.runningBack || { position: 'RB', across: 0.13, offset: -4.5 };
     const recCfgs = play.formation?.receivers || [];
@@ -673,7 +942,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     state.runningBack.y = state.runningBack.startY;
     state.runningBack.phase = 'preplay';
     state.runningBack.hasBall = false;
-    state.runningBack.receiverNumber = rbCfg.receiverNumber;
+    state.runningBack.receiverNumber = isRun ? null : (rbCfg.receiverNumber ?? null);
     state.runningBack.assignRoute(rbCfg.route || []);
 
     // Reconfigure Receivers
@@ -686,7 +955,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
         rating: 5,
         x: state.scrimmagePosition + (config.offset ?? -0.5),
         y: 0.5 + (config.across ?? 0),
-        receiverNumber: config.receiverNumber,
+        receiverNumber: isRun ? null : (config.receiverNumber ?? null),
         route: config.route || []
       });
       rec.offset = config.offset ?? -0.5;
@@ -698,5 +967,20 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     state.playerY = state.quarterback.y;
   }
 
-  return { team1, team2, state, update, pressSpace, throwPass, draw, reset, uniformForTeam, setOffensivePlay };
+  return {
+    team1,
+    team2,
+    state,
+    update,
+    pressSpace,
+    throwPass,
+    throwPassToLocation,
+    throwPassToCanvasCoords,
+    canvasCoordsToField,
+    isTargetInFrontCone,
+    draw,
+    reset,
+    uniformForTeam,
+    setOffensivePlay
+  };
 };

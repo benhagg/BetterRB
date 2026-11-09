@@ -278,7 +278,7 @@ function renderPlayDiagramSVG(play) {
     const rx = losX + (r.offset ?? -0.5) * 6;
     const ry = centerY + (r.across ?? 0) * 85;
     svg += `<circle cx="${rx.toFixed(1)}" cy="${ry.toFixed(1)}" r="2.5" fill="#ffffff"/>`;
-    if (r.receiverNumber) {
+    if (r.receiverNumber && !isRun) {
       svg += `<text x="${(rx - 7).toFixed(1)}" y="${(ry + 2.5).toFixed(1)}" fill="#ffe18a" font-size="7" font-weight="bold" text-anchor="middle" font-family="monospace">${r.receiverNumber}</text>`;
     }
     if (r.route && r.route.length) {
@@ -302,7 +302,7 @@ function renderPlayDiagramSVG(play) {
     const rbx = losX + (rb.offset ?? -4) * 6;
     const rby = centerY + (rb.across ?? 0) * 85;
     svg += `<circle cx="${rbx.toFixed(1)}" cy="${rby.toFixed(1)}" r="3" fill="${isRun ? '#00e676' : '#80d8ff'}"/>`;
-    if (rb.receiverNumber) {
+    if (rb.receiverNumber && !isRun) {
       svg += `<text x="${(rbx - 8).toFixed(1)}" y="${(rby + 2.5).toFixed(1)}" fill="${isRun ? '#00e676' : '#80d8ff'}" font-size="7" font-weight="bold" text-anchor="middle" font-family="monospace">${rb.receiverNumber}</text>`;
     }
     if (rb.route && rb.route.length) {
@@ -325,6 +325,20 @@ function renderPlayDiagramSVG(play) {
   return svg;
 }
 
+function selectPreSnapPlay(index) {
+  if (!currentPlayOptions || index < 0 || index >= currentPlayOptions.length) return false;
+  const play = currentPlayOptions[index];
+  activePlay = play;
+  if (gameSession && typeof gameSession.setOffensivePlay === 'function') {
+    gameSession.setOffensivePlay(play);
+  }
+  const overlay = app.querySelector('#play-select-overlay');
+  if (overlay) {
+    overlay.classList.add('hidden');
+  }
+  return true;
+}
+
 function renderPlayCards(root = app) {
   const overlay = root.querySelector('#play-select-overlay');
   const cardsRow = root.querySelector('#play-cards-row');
@@ -340,7 +354,7 @@ function renderPlayCards(root = app) {
   if (!currentPlayOptions.length) {
     setupPreSnapPlays();
   }
-  currentPlayOptions.forEach(play => {
+  currentPlayOptions.forEach((play, index) => {
     const isRun = String(play.playtype || play.playType || '').toLowerCase() === 'run';
     const isSelected = activePlay && activePlay.id === play.id;
     const card = document.createElement('div');
@@ -348,22 +362,19 @@ function renderPlayCards(root = app) {
     card.setAttribute('data-play-id', play.id);
     card.innerHTML = `
       <div class="play-card-header">
-        <span class="play-card-name" title="${play.name}">${play.name}</span>
+        <span class="play-card-name" title="${play.name}"><strong style="color:#ffe18a">[${index + 1}]</strong> ${play.name}</span>
         <span class="play-card-type-badge ${isRun ? 'run' : 'pass'}">${isRun ? 'RUN' : 'PASS'}</span>
       </div>
       <div class="play-card-diagram">
         ${renderPlayDiagramSVG(play)}
       </div>
       <div class="play-card-footer">
-        ${isSelected ? '&#9654; SELECTED' : 'CLICK TO RUN'}
+        ${isSelected ? '&#9654; SELECTED' : `PRESS [${index + 1}] OR CLICK`}
       </div>
     `;
-    card.addEventListener('click', () => {
-      activePlay = play;
-      if (gameSession && typeof gameSession.setOffensivePlay === 'function') {
-        gameSession.setOffensivePlay(play);
-      }
-      renderPlayCards(app);
+    card.addEventListener('click', (event) => {
+      event.stopPropagation();
+      selectPreSnapPlay(index);
     });
     cardsRow.appendChild(card);
   });
@@ -390,8 +401,10 @@ function startGameLoop() {
     const seconds = previousTime === null ? 0 : (now - previousTime) / 1000;
     previousTime = now;
     gameSession.update(seconds, {
-      up: movementKeys.has('w'), down: movementKeys.has('s'),
-      left: movementKeys.has('a'), right: movementKeys.has('d')
+      up: movementKeys.has('w') || movementKeys.has('arrowup'),
+      down: movementKeys.has('s') || movementKeys.has('arrowdown'),
+      left: movementKeys.has('a') || movementKeys.has('arrowleft'),
+      right: movementKeys.has('d') || movementKeys.has('arrowright')
     });
     gameSession.draw(context, canvas.width, canvas.height);
     const clock = app.querySelector('#game-clock');
@@ -463,7 +476,21 @@ function requestGameFullscreen() {
 app.addEventListener('click', async event => {
   const target = event.target.closest('[data-action]');
   const action = target?.dataset.action;
-  if (!action) return;
+  if (!action) {
+    if (screen === 'game' && gameSession && event.target?.id === 'game-canvas') {
+      const canvas = event.target;
+      if (typeof canvas.focus === 'function') canvas.focus();
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const canvasX = (event.clientX - rect.left) * scaleX;
+      const canvasY = (event.clientY - rect.top) * scaleY;
+      if (typeof gameSession.throwPassToCanvasCoords === 'function') {
+        gameSession.throwPassToCanvasCoords(canvasX, canvasY, canvas.width, canvas.height);
+      }
+    }
+    return;
+  }
   if (action === 'home') {
     if (screen === 'game') {
       leaveGame();
@@ -510,8 +537,14 @@ window.addEventListener('keydown', event => {
     if (!event.repeat && gameSession) gameSession.pressSpace();
     return;
   }
+  if (screen === 'game' && ['1', '2', '3'].includes(key) && !event.repeat && gameSession?.state?.phase === 'preplay') {
+    event.preventDefault();
+    selectPreSnapPlay(parseInt(key, 10) - 1);
+    return;
+  }
   if (screen === 'game' && ['1', '2', '3', '4', '5'].includes(key) && !event.repeat && gameSession) {
     event.preventDefault();
+    if (gameSession.state.playType === 'run') return;
     gameSession.throwPass(parseInt(key, 10));
     return;
   }
@@ -552,7 +585,7 @@ window.addEventListener('keydown', event => {
     }
     return;
   }
-  if (screen === 'game' && ['w', 's', 'a', 'd'].includes(key)) {
+  if (screen === 'game' && ['w', 's', 'a', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
     event.preventDefault();
     movementKeys.add(key);
   }
