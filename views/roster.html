@@ -6,9 +6,8 @@
   <div class="player-grid" data-bind="player-grid"><p class="empty" data-bind="empty-roster" hidden>No players on the roster yet.</p></div>
   <template data-template="player-card">
     <button class="player-card" data-action="player">
-      <span class="player-card-top"><span class="position-badge" data-bind="position"></span><span data-bind="portrait"></span></span>
-      <span class="player-card-info"><span class="player-name" data-bind="name"></span></span>
-      <span class="player-card-overall"><strong data-bind="overall"></strong><small>/10</small></span>
+      <span class="player-card-top"><span class="player-card-rating-badge" data-bind="overall"></span><span data-bind="portrait"></span></span>
+      <span class="player-card-info"><span class="player-name" data-bind="name"></span><span class="player-card-position" data-bind="position"></span></span>
     </button>
   </template>
 </section>

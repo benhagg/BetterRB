@@ -161,7 +161,7 @@ function rosterPanel() {
     button.dataset.playerId = player.id;
     button.setAttribute('aria-label', `View ${player.name}, ${player.position}`);
     bindText(card, 'position', player.position);
-    bindText(card, 'name', player.name);
+    bindText(card, 'name', String(player.name || '').trim().split(/\s+/).at(-1));
     bindText(card, 'overall', player.rating ?? 0);
     appendPortrait(card.querySelector('[data-bind="portrait"]'), team, player, team.players.indexOf(player));
     grid.append(card);
@@ -177,6 +177,8 @@ function playerPanel() {
   bindText(component, 'name', player.name.toUpperCase());
   bindText(component, 'position', player.position);
   bindText(component, 'team-title', `${team.city} ${team.name}`);
+  bindText(component, 'rating', player.rating ?? 0);
+  bindText(component, 'potential', player.potential ?? player.rating ?? 0);
   appendPortrait(component.querySelector('[data-bind="portrait"]'), team, player, team.players.indexOf(player));
   const skill = PlayerSkills.forPosition(player.position);
   appendRatings(component.querySelector('[data-bind="ratings"]'), player.ratings, [['strength', 'STRENGTH'], ['speed', 'SPEED'], ['agility', 'AGILITY'], [skill.key, skill.label]], player.potentialRatings);

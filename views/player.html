@@ -1,10 +1,10 @@
 <section class="roster-screen player-profile">
   <header class="roster-header">
-    <div><span class="roster-kicker" data-bind="team-title"></span><h2 data-bind="name"></h2></div>
+    <div><span class="roster-kicker" data-bind="team-title"></span><h2><span data-bind="name"></span> <small class="profile-header-position" data-bind="position"></small></h2></div>
     <button class="roster-back" data-action="roster">← ROSTER</button>
   </header>
   <div class="profile-body">
-    <div class="profile-identity"><span data-bind="portrait"></span><span class="profile-position" data-bind="position"></span></div>
+    <div class="profile-identity"><span data-bind="portrait"></span><span class="profile-overall"><strong data-bind="rating"></strong><small>RATING</small></span><span class="profile-potential"><strong data-bind="potential"></strong><small>POTENTIAL</small></span></div>
     <div class="profile-ratings"><h3>PLAYER RATINGS</h3><div data-bind="ratings"></div></div>
   </div>
 </section>
