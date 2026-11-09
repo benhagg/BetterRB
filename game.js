@@ -32,7 +32,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
   }
 
   const defaultDefensiveFormationSlots = [
-    { position: 'DT', across: -.09, offset: .6 },
+    { position: 'DT', across: -.09, offset: .1 },
     { position: 'DT', across: -.03, offset: .1 },
     { position: 'DT', across:  .03, offset: .1 },
     { position: 'DT', across:  .09, offset: .1 },
@@ -133,11 +133,11 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
   };
   const runningBackRoute = runningBackConfig.route;
   const offensiveLineSlots = selectedPlays.offense?.formation?.offensiveLine || [
-    { position: 'OL', across: -.08, offset: -.1 },
-    { position: 'OL', across: -.04, offset: -.1 },
-    { position: 'OL', across: 0, offset: -.1, isCenter: true },
-    { position: 'OL', across: .04, offset: -.1 },
-    { position: 'OL', across: .08, offset: -.1 }
+    { position: 'OL', across: -.08, offset: -.2 },
+    { position: 'OL', across: -.04, offset: -.2 },
+    { position: 'OL', across: 0, offset: -.2, isCenter: true },
+    { position: 'OL', across: .04, offset: -.2 },
+    { position: 'OL', across: .08, offset: -.2 }
   ];
 
   function createReceivers(configs = (selectedPlays.offense?.formation?.receivers || receiverConfigs)) {
