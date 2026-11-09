@@ -7,7 +7,6 @@ const ScoreHistory = require('./score-history');
 const root = __dirname;
 const sharedDir = path.join(root, 'shared');
 const saveDir = path.join(root, 'data', 'save_1');
-const archiveDir = path.join(saveDir, 'archives');
 const stateFile = path.join(saveDir, 'season.json');
 const rosterFile = path.join(saveDir, 'roster.json');
 const opponentRostersFile = path.join(saveDir, 'opp_rosters.json');
@@ -148,11 +147,6 @@ function loadState() {
   }
   // Preserve the previous franchise before starting Arizona's schedule.
   if (state.team.id === 0 && state.team.name === 'Comets') {
-    if (state.schedule?.some(game => game.played)) {
-      fs.mkdirSync(archiveDir, { recursive: true });
-      const archiveFile = path.join(archiveDir, `season-comets-${Date.now()}.json`);
-      fs.copyFileSync(stateFile, archiveFile, fs.constants.COPYFILE_EXCL);
-    }
     const previous = state.team;
     state.team = { ...makeTeam(20, uniforms, opponentRosters), city: 'Arizona', name: 'Cardinals', fans: previous.fans, cap: previous.cap, players: previous.players };
     state.schedule = scheduleFor(20, uniforms, opponentRosters);
@@ -221,12 +215,7 @@ function ensureOpponentRatings(state) {
 }
 
 function syncSaveHistory(state) {
-  let archives = [];
-  if (!fs.existsSync(historyFile) && fs.existsSync(archiveDir)) {
-    archives = fs.readdirSync(archiveDir).filter(name => name.endsWith('.json')).map(name =>
-      JSON.parse(fs.readFileSync(path.join(archiveDir, name), 'utf8')));
-  }
-  ScoreHistory.syncHistory(historyFile, state, archives);
+  ScoreHistory.syncHistory(historyFile, state);
 }
 
 function saveState(state) {
