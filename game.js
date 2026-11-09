@@ -346,6 +346,33 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     return [...state.receivers, state.runningBack].find(player => player.receiverNumber === receiverNumber);
   }
 
+  function predictReceiverPosition(player, seconds) {
+    const velocityX = Number(player.velocityX) || 0;
+    const velocityYards = (Number(player.velocityY) || 0) * lateralYards;
+    const currentSpeed = Math.hypot(velocityX, velocityYards);
+    if (!player.isMoving || currentSpeed < 0.05 || !Number.isFinite(player.speed) || player.speed <= 0) {
+      return { x: player.x, y: player.y };
+    }
+
+    const directionX = velocityX / currentSpeed;
+    const directionY = velocityYards / currentSpeed;
+    const startFactor = Math.max(0, Math.min(1, currentSpeed / player.speed));
+    const agility = Math.max(0, Math.min(10, Number(player.agility ?? player.acceleration ?? player.rating) || 0));
+    const accelerationRate = 1.3 / Math.max(0.5, 1 - agility * 0.05);
+    // Integral of the same exponential acceleration curve used by Player.movementStep().
+    const travelYards = player.speed * (seconds
+      - ((1 - startFactor) * (1 - Math.exp(-accelerationRate * seconds))) / accelerationRate);
+
+    return {
+      x: player.x + directionX * travelYards,
+      y: player.y + (directionY * travelYards) / lateralYards
+    };
+  }
+
+  function quarterbackIsBehindLineOfScrimmage() {
+    return state.quarterback.x < state.scrimmagePosition;
+  }
+
   function isTargetInFrontCone(player, targetX, targetY, maxDist = 5, coneAngleDeg = 60) {
     const dx = targetX - player.x;
     const dy = (targetY - player.y) * lateralYards;
@@ -594,7 +621,10 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
 
       if (windup.elapsed >= windup.delay) {
         delete state.throwWindup;
-        if (Number.isFinite(windup.targetX) && Number.isFinite(windup.targetY)) {
+        if (!quarterbackIsBehindLineOfScrimmage()) {
+          state.quarterback.phase = 'running';
+          state.quarterback.isMoving = true;
+        } else if (Number.isFinite(windup.targetX) && Number.isFinite(windup.targetY)) {
           executePassReleaseToLocation(windup.targetX, windup.targetY);
         } else if (windup.receiverNum) {
           executePassRelease(windup.receiverNum);
@@ -650,6 +680,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     if (state.playType === 'run') return;
     if (state.phase !== 'passing' && state.phase !== 'dropback') return;
     if (state.throwWindup) return;
+    if (!quarterbackIsBehindLineOfScrimmage()) return;
     if (!Number.isFinite(targetX) || !Number.isFinite(targetY)) return;
 
     if (state.phase === 'dropback') {
@@ -730,6 +761,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     if (state.playType === 'run') return;
     if (state.phase !== 'passing' && state.phase !== 'dropback') return;
     if (state.throwWindup) return;
+    if (!quarterbackIsBehindLineOfScrimmage()) return;
     const targetReceiver = passTarget(receiverNum);
     if (!targetReceiver || !targetReceiver.receiverNumber) return;
 
@@ -786,10 +818,11 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     let distance = 0;
 
     if (isMoving) {
-      // Predict a constant-velocity lead. Repeating converges the travel time and lead point.
-      for (let step = 0; step < 3; step++) {
-        targetX = targetReceiver.x + receiverVelocityX * duration;
-        targetY = targetReceiver.y + receiverVelocityY * duration;
+      // Repeating converges the ball's arc time with the receiver's accelerating movement.
+      for (let step = 0; step < 4; step++) {
+        const predicted = predictReceiverPosition(targetReceiver, duration);
+        targetX = predicted.x;
+        targetY = predicted.y;
         distance = Math.hypot(targetX - fromX, (targetY - fromY) * lateralYards);
         const arcLength = throwArcLength(distance);
         duration = Math.max(0.4, Math.min(2.5, arcLength / passSpeedYardsPerSecond));
