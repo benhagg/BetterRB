@@ -3,14 +3,34 @@
   const releaseHeightFeet = 6;
   const targetHeightFeet = 4;
   const gravityFeetPerSecondSquared = 32.174;
-  const inaccuracyYards = 1.0;
+  const C_BASE = 0.15;
+  const ALPHA = 0.00417;
+  const BETA = 0.00192;
   const feetPerYard = 3.0;
 
-  function calculateInaccuracy(lateralYards) {
-    const inaccuracyX = (Math.random() * 2 - 1) * inaccuracyYards;
-    const inaccuracyY = ((Math.random() * 2 - 1) * inaccuracyYards) / lateralYards;
-    const inaccuracyHeightFeet = (Math.random() * 2 - 1) * (inaccuracyYards * feetPerYard);
-    return { inaccuracyX, inaccuracyY, inaccuracyHeightFeet };
+  function calculateSigma(distanceYards) {
+    const d = Math.max(0, Number(distanceYards) || 0);
+    return C_BASE + (ALPHA * d) + (BETA * d * d);
+  }
+
+  function randomGaussian() {
+    let u = 0, v = 0;
+    while (u === 0) u = Math.random();
+    while (v === 0) v = Math.random();
+    return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+  }
+
+  function clampedGaussian(maxStdDev = 3) {
+    const sample = randomGaussian();
+    return Math.max(-maxStdDev, Math.min(maxStdDev, sample));
+  }
+
+  function calculateInaccuracy(distanceYards, lateralYards) {
+    const sigma = calculateSigma(distanceYards);
+    const inaccuracyX = clampedGaussian() * sigma;
+    const inaccuracyY = (clampedGaussian() * sigma) / lateralYards;
+    const inaccuracyHeightFeet = clampedGaussian() * (sigma * feetPerYard);
+    return { inaccuracyX, inaccuracyY, inaccuracyHeightFeet, sigma };
   }
 
   function throwProfile(distanceYards, targetHeight = targetHeightFeet) {
@@ -65,7 +85,8 @@
       state.quarterback.velocityX = 0;
       state.quarterback.velocityY = 0;
 
-      const { inaccuracyX, inaccuracyY, inaccuracyHeightFeet } = calculateInaccuracy(lateralYards);
+      const intendedDistance = Math.hypot(targetX - fromX, (targetY - fromY) * lateralYards);
+      const { inaccuracyX, inaccuracyY, inaccuracyHeightFeet, sigma } = calculateInaccuracy(intendedDistance, lateralYards);
       const actualTargetX = Math.max(fieldBounds.endZoneL, Math.min(fieldBounds.endZoneR, targetX + inaccuracyX));
       const actualTargetY = Math.max(fieldBounds.top, Math.min(fieldBounds.bottom, targetY + inaccuracyY));
       const actualTargetHeightFeet = Math.max(1, targetHeightFeet + inaccuracyHeightFeet);
@@ -86,7 +107,8 @@
         targetReceiverNumber: null,
         wasTargetMoving: false,
         intendedTargetX: targetX,
-        intendedTargetY: targetY
+        intendedTargetY: targetY,
+        sigma
       };
       state.quarterback.hasBall = false;
       state.quarterback.phase = 'thrown';
@@ -122,7 +144,8 @@
         duration = throwProfile(distance, targetHeightFeet).duration;
       }
 
-      const { inaccuracyX, inaccuracyY, inaccuracyHeightFeet } = calculateInaccuracy(lateralYards);
+      const intendedDistance = distance;
+      const { inaccuracyX, inaccuracyY, inaccuracyHeightFeet, sigma } = calculateInaccuracy(intendedDistance, lateralYards);
       const actualTargetX = Math.max(fieldBounds.endZoneL, Math.min(fieldBounds.endZoneR, targetX + inaccuracyX));
       const actualTargetY = Math.max(fieldBounds.top, Math.min(fieldBounds.bottom, targetY + inaccuracyY));
       const actualTargetHeightFeet = Math.max(1, targetHeightFeet + inaccuracyHeightFeet);
@@ -143,7 +166,8 @@
         targetReceiverNumber: targetReceiver.receiverNumber,
         wasTargetMoving: isMoving,
         intendedTargetX: targetX,
-        intendedTargetY: targetY
+        intendedTargetY: targetY,
+        sigma
       };
       state.quarterback.hasBall = false;
       state.quarterback.phase = 'thrown';
@@ -213,6 +237,7 @@
       throwPass,
       throwPassToLocation,
       updateWindup,
+      calculateSigma,
       calculateInaccuracy
     };
   }
@@ -221,11 +246,14 @@
     create,
     throwProfile,
     throwHeightAt,
+    calculateSigma,
     calculateInaccuracy,
     throwArc,
     releaseHeightFeet,
     targetHeightFeet,
-    inaccuracyYards
+    C_BASE,
+    ALPHA,
+    BETA
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) root.GamePassing = api;

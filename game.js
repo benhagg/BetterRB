@@ -327,6 +327,10 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     if (dist > maxDist) return false;
     if (dist < 0.05) return true;
 
+    // When the player is stopped, they have 360-degree awareness and can catch in all directions
+    const isMoving = Boolean(player.isMoving) && Math.hypot(player.velocityX || 0, (player.velocityY || 0) * lateralYards) > 0.05;
+    if (!isMoving) return true;
+
     let forwardX = Number(player.lastDirX);
     let forwardY = Number(player.lastDirY);
     if (!Number.isFinite(forwardX) || !Number.isFinite(forwardY) || Math.hypot(forwardX, forwardY) < 0.001) {
@@ -450,7 +454,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
         if (!player.hasBall) {
           const distToTarget = Math.hypot(state.pass.targetX - player.x, (state.pass.targetY - player.y) * lateralYards);
           if (state.pass.targetReceiverNumber && player.receiverNumber === state.pass.targetReceiverNumber) {
-            if (state.pass.wasTargetMoving) {
+            if (state.pass.wasTargetMoving || distToTarget <= 5) {
               player.run(delta, state.pass.targetX, state.pass.targetY);
             } else {
               player.velocityX = 0;
