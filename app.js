@@ -325,17 +325,57 @@ function renderPlayDiagramSVG(play) {
   return svg;
 }
 
-function selectPreSnapPlay(index) {
-  if (!currentPlayOptions || index < 0 || index >= currentPlayOptions.length) return false;
-  const play = currentPlayOptions[index];
-  activePlay = play;
-  if (gameSession && typeof gameSession.setOffensivePlay === 'function') {
-    gameSession.setOffensivePlay(play);
-  }
+function isPreSnapCardsVisible() {
+  const overlay = app.querySelector('#play-select-overlay');
+  return Boolean(
+    screen === 'game' &&
+    gameSession?.state?.phase === 'preplay' &&
+    overlay &&
+    !overlay.classList.contains('hidden')
+  );
+}
+
+function finalizePreSnapPlay() {
   const overlay = app.querySelector('#play-select-overlay');
   if (overlay) {
     overlay.classList.add('hidden');
   }
+  if (activePlay && gameSession && typeof gameSession.setOffensivePlay === 'function') {
+    gameSession.setOffensivePlay(activePlay);
+  }
+}
+
+function updatePlayCardsSelection() {
+  const overlay = app.querySelector('#play-select-overlay');
+  if (!overlay) return;
+  const cards = overlay.querySelectorAll('.play-card');
+  cards.forEach((card, idx) => {
+    const play = currentPlayOptions[idx];
+    const isSelected = activePlay && play && activePlay.id === play.id;
+    card.classList.toggle('selected', Boolean(isSelected));
+    const footer = card.querySelector('.play-card-footer');
+    if (footer) {
+      footer.innerHTML = isSelected ? '&#9654; SELECTED' : `PRESS [${idx + 1}] OR CLICK`;
+    }
+  });
+}
+
+function navigatePreSnapPlay(direction) {
+  if (!currentPlayOptions || currentPlayOptions.length === 0) return;
+  let currentIndex = currentPlayOptions.findIndex(p => p.id === activePlay?.id);
+  if (currentIndex === -1) currentIndex = 0;
+  const newIndex = (currentIndex + direction + currentPlayOptions.length) % currentPlayOptions.length;
+  activePlay = currentPlayOptions[newIndex];
+  if (gameSession && typeof gameSession.setOffensivePlay === 'function') {
+    gameSession.setOffensivePlay(activePlay);
+  }
+  updatePlayCardsSelection();
+}
+
+function selectPreSnapPlay(index) {
+  if (!currentPlayOptions || index < 0 || index >= currentPlayOptions.length) return false;
+  activePlay = currentPlayOptions[index];
+  finalizePreSnapPlay();
   return true;
 }
 
@@ -532,6 +572,32 @@ window.addEventListener('popstate', () => {
 
 window.addEventListener('keydown', event => {
   const key = event.key.toLowerCase();
+
+  // If in game and pre-snap play cards are currently visible on field:
+  if (isPreSnapCardsVisible()) {
+    if (key === 'w' || key === 'arrowup') {
+      event.preventDefault();
+      navigatePreSnapPlay(-1);
+      return;
+    }
+    if (key === 's' || key === 'arrowdown') {
+      event.preventDefault();
+      navigatePreSnapPlay(1);
+      return;
+    }
+    if (key === 'enter' || event.code === 'Space' || key === ' ') {
+      event.preventDefault();
+      finalizePreSnapPlay();
+      return;
+    }
+    if (['1', '2', '3'].includes(key) && !event.repeat) {
+      event.preventDefault();
+      selectPreSnapPlay(parseInt(key, 10) - 1);
+      return;
+    }
+  }
+
+  // Snapping the ball only happens when cards are NOT covering the field
   if (screen === 'game' && (event.code === 'Space' || key === ' ')) {
     event.preventDefault();
     if (!event.repeat && gameSession) gameSession.pressSpace();
