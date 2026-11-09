@@ -20,10 +20,10 @@
         "skillCredits": 12,
         "potentialSkillCredits": 21,
         "ratings": {
-          "strength": 2,
+          "strength": 10,
           "speed": 10,
           "agility": 1,
-          "accuracy": 6
+          "accuracy": 0
         },
         "potentialRatings": {
           "strength": 6,
@@ -67,8 +67,8 @@
         "potentialSkillCredits": 27,
         "ratings": {
           "strength": 2,
-          "speed": 2,
-          "agility": 4,
+          "speed": 10,
+          "agility": 10,
           "catching": 1
         },
         "potentialRatings": {
@@ -91,7 +91,7 @@
         "ratings": {
           "strength": 0,
           "speed": 0,
-          "agility": 2,
+          "agility": 10,
           "catching": 4
         },
         "potentialRatings": {
@@ -113,7 +113,7 @@
         "potentialSkillCredits": 18,
         "ratings": {
           "strength": 2,
-          "speed": 4,
+          "speed": 10,
           "agility": 1,
           "catching": 5
         },

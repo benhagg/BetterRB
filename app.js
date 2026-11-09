@@ -18,6 +18,20 @@ let playbooks = { offense: null, defense: null };
 const STORAGE_KEY = 'better_rb_season_state';
 
 async function loadInitialState() {
+  // Prefer active state from backend server (/api/state) if available
+  try {
+    const apiResp = await fetch('/api/state', { cache: 'no-store' });
+    if (apiResp.ok) {
+      const data = await apiResp.json();
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
+      } catch (_) {}
+      return data;
+    }
+  } catch (_) {}
+
   const localSaved = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
   if (localSaved) {
     try {
@@ -37,12 +51,6 @@ async function loadInitialState() {
       } catch (_) {}
       return data;
     }
-  } catch (_) {}
-
-  // Fallback to /api/state if running with backend server
-  try {
-    const apiResp = await fetch('/api/state', { cache: 'no-store' });
-    if (apiResp.ok) return await apiResp.json();
   } catch (_) {}
 
   throw new Error('Could not load season state');
