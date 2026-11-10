@@ -1,0 +1,60 @@
+[
+  {
+    "name": "blocking",
+    "frames": [
+      "blocking.png",
+      "blocking1.png"
+    ]
+  },
+  {
+    "name": "ddive",
+    "frames": [
+      "ddive.png",
+      "ddive1.png",
+      "ddive2.png"
+    ]
+  },
+  {
+    "name": "dive_catch",
+    "frames": [
+      "dive_catch_1.png",
+      "dive_catch_2.png",
+      "dive_catch.png"
+    ]
+  },
+  {
+    "name": "dropback",
+    "frames": [
+      "dropback.png",
+      "dropback1.png"
+    ]
+  },
+  {
+    "name": "jump_catch",
+    "frames": [
+      "jump_catch_1.png",
+      "jump_catch.png"
+    ]
+  },
+  {
+    "name": "pass",
+    "frames": [
+      "pass.png",
+      "pass1.png"
+    ]
+  },
+  {
+    "name": "resting",
+    "frames": [
+      "resting.png"
+    ]
+  },
+  {
+    "name": "tackled",
+    "frames": [
+      "tackled.png",
+      "tackled1.png",
+      "tackled2.png"
+    ]
+  }
+]

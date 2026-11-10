@@ -2,6 +2,27 @@
 
 Specification for core game rules, down and distance tracking, scoring, clock management, and ball placement.
 
+## Implementation Order
+
+### Implement First
+
+- Immediately update down, distance, line of scrimmage, and possession after every play.
+- Track touchdowns, safeties, and scores.
+- After a touchdown, let the player choose a 1-point or 2-point conversion.
+- A 1-point choice awards 1 point automatically until kicking is implemented.
+- A 2-point choice creates an untimed conversion from the 2-yard line.
+- After the conversion, randomly score the opponent 0, 3, 6, 7, or 8 points, each with a 20% chance.
+- Return possession to the player at the 25-yard line.
+- Do not implement kickoffs yet.
+
+### Future Plans
+
+- Quarter and halftime transitions.
+- Full game-clock and play-clock management.
+- Kickoffs, field goals, and extra-point kicks.
+- Player-controlled defense and defensive gameplay.
+- Hash-mark placement and detailed turnover returns.
+
 ---
 
 ### 1. Field Geometry & Ball Placement
@@ -45,22 +66,27 @@ Specification for core game rules, down and distance tracking, scoring, clock ma
     * Possession flips to the opponent.
     * Opponent takes over at the dead-ball spot.
 
+* **Post-Play Updates**:
+  * Apply the result immediately when the play ends; no separate pre-snap transition is required for down, distance, line of scrimmage, or possession.
+
 ---
 
 ### 3. Scoring
 
 * **Touchdown (6 Points)**:
   * Triggered when the ball breaks the plane of the opponent goal line ($X \ge 100.0$) on a run, or a pass is caught in the end zone.
-* **2-Point Conversion (Active Default)**:
-  * Follows every touchdown.
-  * Offense lines up for a single un-timed snap from the **$2\text{ yd}$ line** ($X = 98.0\text{ yds}$).
-  * Crossing into the end zone awards **$+2\text{ points}$**.
-  * If stopped short or turned over, awards **$+0\text{ points}$**.
+* **Post-Touchdown Choice**:
+  * The player chooses a 1-point or 2-point conversion.
+  * A 1-point choice awards **$+1$ point** automatically until kicking is implemented.
+  * A 2-point choice uses one untimed snap from the **$2\text{ yd}$ line** ($X = 98.0\text{ yds}$).
+  * Crossing into the end zone awards **$+2\text{ points}$**; stopping short or turning over awards **$+0$ points**.
+  * After the conversion, the opponent receives a temporary random score of 0, 3, 6, 7, or 8 points, each with a 20% chance. Possession then returns to the player at the 25-yard line.
 * **Safety (2 Points for Opponent)**:
   * Ball carrier tackled inside their own end zone ($X \le 0.0$).
   * Awards **$+2\text{ points}$** to the defense, and defense receives possession via free kick.
-* **[Future Plan] Kicking Game (Field Goals & 1-PT PATs)**:
+* **[Future Plan] Kicking Game (Field Goals & Kickoffs)**:
   * **1-Point PAT Kick**: Extra point kick from the $15\text{ yd}$ line ($X = 85.0$).
+  * Kickoffs will be added later.
   * **Field Goal (3 Points)**: Available on 4th down, or on any down inside the final $2\text{ minutes}$ of either half.
 
 ---

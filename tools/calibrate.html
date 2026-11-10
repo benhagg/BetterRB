@@ -418,7 +418,9 @@
       { id: 'goalLineR',    name: 'Right Goal Line', desc: '100 Yard Line', type: 'vertical', color: '#ffd700' },
       { id: 'endZoneBackR', name: 'Right End Line', desc: 'Back of right end zone', type: 'vertical', color: '#ff8800' },
       { id: 'topSideline',  name: 'Top Sideline', desc: 'Upper out-of-bounds line', type: 'horizontal', color: '#ff3366' },
-      { id: 'bottomSideline', name: 'Bottom Sideline', desc: 'Lower out-of-bounds line', type: 'horizontal', color: '#3399ff' }
+      { id: 'bottomSideline', name: 'Bottom Sideline', desc: 'Lower out-of-bounds line', type: 'horizontal', color: '#3399ff' },
+      { id: 'topHash', name: 'Top Hash Mark', desc: 'Center of the upper hash marks', type: 'horizontal', color: '#00ffff' },
+      { id: 'bottomHash', name: 'Bottom Hash Mark', desc: 'Center of the lower hash marks', type: 'horizontal', color: '#00ffff' }
     ];
 
     // Current calibrated coordinates (defaults initialized from current game.js)
@@ -428,8 +430,35 @@
       goalLineR: 1152,
       endZoneBackR: 1252,
       topSideline: 32,
-      bottomSideline: 206
+      bottomSideline: 206,
+      topHash: null,
+      bottomHash: null
     };
+    const CALIBRATION_STORAGE_KEY = 'retro-bowl-field-calibration-marks';
+
+    function loadSavedMarks() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(CALIBRATION_STORAGE_KEY) || 'null');
+        if (!saved) return;
+        TARGETS.forEach(target => {
+          if (Object.prototype.hasOwnProperty.call(saved, target.id)) {
+            marks[target.id] = saved[target.id];
+          }
+        });
+      } catch (error) {
+        console.warn('Could not load saved calibration marks.', error);
+      }
+    }
+
+    function saveMarks() {
+      try {
+        localStorage.setItem(CALIBRATION_STORAGE_KEY, JSON.stringify(marks));
+      } catch (error) {
+        console.warn('Could not save calibration marks.', error);
+      }
+    }
+
+    loadSavedMarks();
 
     let activeStepIndex = 0;
     let selectedTargetId = TARGETS[0].id;
@@ -474,6 +503,7 @@
     }
 
     function render() {
+      saveMarks();
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       // Draw base field
@@ -550,7 +580,7 @@
         const currentTarget = TARGETS[activeStepIndex];
         bannerText.innerHTML = `Step ${activeStepIndex + 1} of ${TARGETS.length}: Click for <strong>${currentTarget.name}</strong> (${currentTarget.desc})`;
       } else {
-        bannerText.innerHTML = `✓ All 6 marks placed! Review below or hit <strong>Enter</strong> to Export.`;
+        bannerText.innerHTML = `✓ All ${TARGETS.length} marks placed! Review below or hit <strong>Enter</strong> to Export.`;
       }
 
       // Update bottom mark cards
@@ -722,7 +752,11 @@
         endZoneLYards: Number(leftEndZoneYards.toFixed(4)),
         endZoneRYards: Number(rightEndZoneYards.toFixed(4)),
         topNorm: Number(topSidelineNorm.toFixed(4)),
-        bottomNorm: Number(bottomSidelineNorm.toFixed(4))
+        bottomNorm: Number(bottomSidelineNorm.toFixed(4)),
+        hashMarks: {
+          top: marks.topHash,
+          bottom: marks.bottomHash
+        }
       };
     }
 
@@ -752,7 +786,10 @@ const fieldBounds = {
   bottom: ${res.bottomNorm},           // Normalized bottom sideline (${res.bottomSideline} / ${canvas.height})
   endZoneL: ${res.endZoneLYards},        // Back of left end zone in yds (${res.endZoneBackL} px)
   endZoneR: ${res.endZoneRYards}         // Back of right end zone in yds (${res.endZoneBackR} px)
-};`;
+};
+
+// Hash-mark centers, measured directly from the field image.
+const hashMarks = ${JSON.stringify(res.hashMarks, null, 2)};`;
 
       document.getElementById('code-snippet').textContent = snippet;
       document.getElementById('modal-overlay').style.display = 'flex';
@@ -771,6 +808,7 @@ const fieldBounds = {
 
     function downloadJson() {
       const data = computeCalibration();
+      saveMarks();
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
