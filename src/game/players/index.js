@@ -107,7 +107,10 @@
     }
 
     get tackling() {
-      return this.ratings?.tackling ?? 5;
+      const raw = this.ratings?.tackling ?? this.skills?.tackling;
+      if (Number.isFinite(raw)) return raw;
+      if (Number.isFinite(this.rating)) return this.rating;
+      return 5;
     }
 
     // Class instances are re-created when a saved game loads. Keep saved data plain.
@@ -577,14 +580,16 @@
       this.hasBall = Boolean(config.hasBall);
     }
 
-    canTackle(targetPlayer) {
+    canTackle(targetPlayer, isDive = this.isDiving) {
       if (!targetPlayer) return false;
       if (this.tackleMissRecoveryTimer > 0) return false;
       if (targetPlayer.isTackled) return false;
       if (typeof targetPlayer.isImmuneTo === 'function' && targetPlayer.isImmuneTo(this)) return false;
       const dx = targetPlayer.x - this.x;
       const dyYards = (targetPlayer.y - this.y) * LATERAL_YARDS;
-      return Math.hypot(dx, dyYards) <= 0.60;
+      const dist = Math.hypot(dx, dyYards);
+      const reach = isDive ? 1.10 : 0.70;
+      return dist <= reach;
     }
 
     canDiveTackle(targetPlayer) {
@@ -638,7 +643,7 @@
       this.animDistance += forwardStep;
 
       const target = targetPlayer || this.target;
-      if (target && this.canTackle(target)) {
+      if (target && this.canTackle(target, true)) {
         if (typeof onTackle === 'function') {
           onTackle(this, target);
         } else {

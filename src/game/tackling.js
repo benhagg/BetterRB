@@ -35,8 +35,8 @@ export function getCarrierBreakScore(carrier, lateralYards = 25) {
 }
 
 export function getTacklerScore(tackler, isDive = false) {
-  const tackling = Number(tackler?.ratings?.tackling ?? tackler?.rating?.tackling ?? tackler?.tackling ?? 5);
-  const strength = Number(tackler?.ratings?.strength ?? tackler?.rating?.strength ?? tackler?.strength ?? 5);
+  const tackling = Number(tackler?.ratings?.tackling ?? tackler?.rating?.tackling ?? (Number.isFinite(tackler?.tackling) ? tackler.tackling : (Number.isFinite(tackler?.rating) ? tackler.rating : 5)));
+  const strength = Number(tackler?.ratings?.strength ?? tackler?.rating?.strength ?? (Number.isFinite(tackler?.strength) ? tackler.strength : 5));
   const divePenalty = isDive ? DIVE_TACKLE_PENALTY : 0;
   return (tackling * 0.60 + strength * 0.40) - divePenalty;
 }
@@ -71,10 +71,13 @@ export function shouldDefenderDive(defender, carrier, options = {}) {
   const dy = (carrier.y - defender.y) * lateralYards;
   const dist = Math.hypot(dx, dy);
 
+  // If already close enough for wrap-up tackle (<= 0.70 yds), stay on feet!
+  if (dist <= 0.70) return false;
+
   const carrierSpeed = Math.hypot(carrier.velocityX || 0, (carrier.velocityY || 0) * lateralYards);
   const defenderSpeed = defender.speed || 0;
 
-  // 2. Desperation Stop: Runner is within <= 3 yds of goal line or first-down line
+  // 1. Desperation Stop: Runner is within <= 3 yds of goal line or first-down line
   if (carrier.x >= goalLineX - 3.0 && carrier.x <= goalLineX) {
     return true;
   }
@@ -82,18 +85,19 @@ export function shouldDefenderDive(defender, carrier, options = {}) {
     return true;
   }
 
-  // Keep Running / No Dive:
-  // If defender is faster and closing the distance, defender stays on feet to secure a standing tackle.
-  if (defenderSpeed > carrierSpeed) {
+  // 2. Keep Running / No Dive:
+  // If defender is faster and closing the distance, stay on feet to secure wrap-up tackle
+  if (defenderSpeed > carrierSpeed && dist <= 1.8) {
     return false;
   }
 
-  // 1. Runner Pulling Away: Runner speed >= defender speed (cannot catch runner on foot)
-  if (carrierSpeed >= defenderSpeed) {
+  // 3. Runner Pulling Away: Runner speed >= defender speed
+  // Only dive if within reachable closing range (<= 1.6 yds)
+  if (carrierSpeed >= defenderSpeed && dist <= 1.6) {
     return true;
   }
 
-  // 3. Pursuit Window: Trailing range (1.0 - 1.8 yds) with alignment within +/- 45 deg
+  // 4. Pursuit Window: Trailing range (1.0 - 1.8 yds) with alignment within +/- 45 deg
   if (dist >= 1.0 && dist <= 1.8) {
     const dirX = dx / dist;
     const dirY = dy / dist;
@@ -103,7 +107,6 @@ export function shouldDefenderDive(defender, carrier, options = {}) {
     const forwardX = defSpeed > 0.05 ? defVx / defSpeed : (defender.facingLeft ? -1 : 1);
     const forwardY = defSpeed > 0.05 ? defVy / defSpeed : 0;
     const dot = forwardX * dirX + forwardY * dirY;
-    // cos(45 deg) = sqrt(2)/2 ~= 0.7071
     if (dot >= 0.7071) {
       return true;
     }
@@ -122,13 +125,44 @@ export function attemptTackle(tackler, carrier, options = {}) {
 
   if (!carrier) return { success: false, reason: 'no-carrier' };
 
+  const dx = carrier.x - (tackler?.x ?? carrier.x);
+  const dy = (carrier.y - (tackler?.y ?? carrier.y)) * lateralYards;
+  const dist = Math.hypot(dx, dy);
+
   if (typeof carrier.isImmuneTo === 'function' && carrier.isImmuneTo(tackler)) {
+    console.log(
+      `[TACKLE IMMUNE] ${tackler?.name || tackler?.position || 'Defender'} (#${tackler?.id ?? '?'}) ` +
+      `cannot tackle ${carrier?.name || carrier?.position || 'Carrier'} (#${carrier?.id ?? '?'}) ` +
+      `due to active broken-tackle immunity (dist: ${dist.toFixed(2)} yds)`
+    );
     return { success: false, reason: 'immune' };
   }
 
-  const probability = calculateTackleProbability(tackler, carrier, isDive, lateralYards);
+  const speedFactor = getCarrierSpeedFactor(carrier, lateralYards);
+  const carrierStrength = Number(carrier?.ratings?.strength ?? carrier?.rating?.strength ?? carrier?.strength ?? 5);
+  const braceBoost = speedFactor < BRACE_SPEED_THRESHOLD ? BRACE_SCORE_BOOST : 0;
+  const sCarrier = carrierStrength + braceBoost;
+
+  const tacklerTackling = Number(tackler?.ratings?.tackling ?? tackler?.rating?.tackling ?? (Number.isFinite(tackler?.tackling) ? tackler.tackling : (Number.isFinite(tackler?.rating) ? tackler.rating : 5)));
+  const tacklerStrength = Number(tackler?.ratings?.strength ?? tackler?.rating?.strength ?? (Number.isFinite(tackler?.strength) ? tackler.strength : 5));
+  const divePenalty = isDive ? DIVE_TACKLE_PENALTY : 0;
+  const sTackler = (tacklerTackling * 0.60 + tacklerStrength * 0.40) - divePenalty;
+
+  const rawProb = TACKLE_BASE_PROBABILITY + (sTackler - sCarrier) * TACKLE_DIFF_SCALE;
+  const probability = Math.max(0.10, Math.min(0.95, rawProb));
   const randomValue = (typeof roll === 'number') ? roll : Math.random();
   const success = forceSuccess || (randomValue < probability);
+
+  // Detailed console log of every attempted tackle and all factors
+  console.log(
+    `[TACKLE ATTEMPT] ${tackler?.name || tackler?.position || 'Defender'} (#${tackler?.id ?? '?'}) ` +
+    `vs ${carrier?.name || carrier?.position || 'Carrier'} (#${carrier?.id ?? '?'})\n` +
+    `  Type: ${isDive ? 'DIVE TACKLE' : 'STANDING WRAP-UP'} | Distance: ${dist.toFixed(2)} yds\n` +
+    `  Carrier Score: ${sCarrier.toFixed(2)} [Strength: ${carrierStrength}, SpeedFactor: ${speedFactor.toFixed(2)}, BraceBoost: +${braceBoost.toFixed(2)}]\n` +
+    `  Tackler Score: ${sTackler.toFixed(2)} [Tackling: ${tacklerTackling}, Strength: ${tacklerStrength}, DivePenalty: -${divePenalty.toFixed(2)}]\n` +
+    `  Score Diff: ${(sTackler - sCarrier).toFixed(2)} -> Win Probability: ${(probability * 100).toFixed(1)}% | Roll: ${(randomValue * 100).toFixed(1)}%\n` +
+    `  Outcome: ${success ? 'SUCCESS (CARRIER TACKLED)' : 'BROKEN TACKLE (CARRIER STUMBLES)'}`
+  );
 
   if (success) {
     if (typeof carrier.tackled === 'function') {

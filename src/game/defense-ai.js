@@ -257,37 +257,19 @@ import { playEndsFromTackle, shouldDefenderDive, attemptTackle } from './tacklin
         }
       }
 
-      // Keep pursuit selective for the current carrier. Nearby defenders
-      // pursue; everyone else retains their man or zone assignment.
-      if (carrier !== state.defensivePursuitCarrier) {
-        state.defensivePursuitCarrier = carrier || null;
-        state.defensivePursuers = carrier
-          ? [...state.defenders]
-            .filter(defender => !defender.hasBall && !defender.isTackled)
-            .sort((a, b) => distance(a, carrier) - distance(b, carrier))
-            .slice(0, 2)
-          : [];
-        for (const defender of state.defenders) {
-          const ai = defender.defenseAI;
-          if (!ai || state.defensivePursuers.includes(defender)) continue;
-          // A defender breaking on an in-flight pass keeps that assignment
-          // until possession changes. Only clear a ball assignment once a
-          // new carrier exists.
-          if (ai.mode === 'pursuit' || (carrier && ai.mode === 'ball')) {
-            ai.mode = ai.manTargetPlayer ? 'man' : 'coverage';
-            ai.target = null;
-            ai.delay = 0;
-          }
-        }
-      }
-      const pursuers = new Set(state.defensivePursuers || []);
+      const isLiveCarrier = Boolean(carrier && (
+        phase === 'running' ||
+        carrier.hasBall ||
+        (carrier === state.quarterback && carrier.x > state.scrimmagePosition)
+      ));
+
       for (const defender of state.defenders) {
         if (defender.hasBall) continue;
         // Keep the DL still during coverage development. On a live carrier,
-        // only selected pursuers leave their assignments to tackle.
+        // all defenders rally downhill to pursue and tackle.
         const isDefensiveLineman = ['DL', 'DT', 'DE', 'NT', 'EDGE'].includes(String(defender.position || '').toUpperCase());
-        if (isDefensiveLineman && !carrier && defender.defenseAI?.mode !== 'ball') continue;
-        updateDefender(defender, delta, phase, state.pass, carrier && pursuers.has(defender) ? carrier : null);
+        if (isDefensiveLineman && !isLiveCarrier && defender.defenseAI?.mode !== 'ball') continue;
+        updateDefender(defender, delta, phase, state.pass, isLiveCarrier ? carrier : null);
       }
       if (playEndsFromTackle(carrier, state.quarterback)) state.phase = 'complete';
     }

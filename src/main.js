@@ -1,5 +1,6 @@
 import './shared/player-skills.js';
 import './shared/sprites.js';
+import './game/tackling.js';
 import './game/players/index.js';
 import './game/camera.js';
 import './game/passing.js';
