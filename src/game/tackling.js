@@ -9,6 +9,7 @@ export const DIVE_TACKLE_PENALTY = 0;
 export const BROKEN_TACKLE_IMMUNITY = 0.40;
 export const TACKLER_MISS_RECOVERY = 0.60;
 export const TACKLER_DIVE_COOLDOWN = 1.00;
+export const DIVE_MIN_SPEED_RATIO = 0.50;
 
 export const POSITION_STRENGTH_MULTIPLIERS = {
   QB: 0.3,
@@ -106,6 +107,15 @@ export function calculateTackleProbability(tackler, carrier, isDive = false, lat
   return Math.max(0.10, Math.min(0.95, rawProb));
 }
 
+export function getDefenderSpeedRatio(defender, lateralYards = 25) {
+  if (!defender) return 0;
+  const movementRatio = Number(defender._movement?.speedFactor ?? defender.speedFactor ?? 0);
+  const maxSpeed = Number(defender.maxSpeed ?? defender.speed ?? 0);
+  const currentSpeed = Math.hypot(Number(defender.velocityX) || 0, (Number(defender.velocityY) || 0) * lateralYards);
+  const velocityRatio = maxSpeed > 0.05 ? currentSpeed / maxSpeed : (currentSpeed > 0.05 ? 1.0 : 0);
+  return Math.max(0, Math.min(1, Math.max(movementRatio, velocityRatio)));
+}
+
 export function canDefenderDive(defender, carrier, lateralYards = 25) {
   if (!defender || !carrier) return false;
   if (defender.isDiving || (defender.diveCooldownTimer > 0) || (defender.tackleMissRecoveryTimer > 0)) {
@@ -115,6 +125,13 @@ export function canDefenderDive(defender, carrier, lateralYards = 25) {
   if (typeof carrier.isImmuneTo === 'function' && carrier.isImmuneTo(defender)) {
     return false;
   }
+
+  // Dive tackle is not allowed unless the defender is moving at above 50% max speed
+  const speedRatio = getDefenderSpeedRatio(defender, lateralYards);
+  if (speedRatio <= DIVE_MIN_SPEED_RATIO) {
+    return false;
+  }
+
   const dx = carrier.x - defender.x;
   const dy = (carrier.y - defender.y) * lateralYards;
   const dist = Math.hypot(dx, dy);
@@ -293,6 +310,8 @@ const GameTackling = {
   calculateDiveTacklePenalty,
   calculateTackleDiff,
   DIVE_TACKLE_PENALTY,
+  DIVE_MIN_SPEED_RATIO,
+  getDefenderSpeedRatio,
   BROKEN_TACKLE_IMMUNITY,
   TACKLER_MISS_RECOVERY,
   TACKLER_DIVE_COOLDOWN,

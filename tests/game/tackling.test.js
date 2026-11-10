@@ -13,6 +13,8 @@ import {
   calculateDiveTacklePenalty,
   calculateTackleDiff,
   DIVE_TACKLE_PENALTY,
+  DIVE_MIN_SPEED_RATIO,
+  getDefenderSpeedRatio,
   BROKEN_TACKLE_IMMUNITY,
   TACKLER_MISS_RECOVERY,
   TACKLER_DIVE_COOLDOWN,
@@ -202,8 +204,40 @@ describe('tackling rules and resolution', () => {
   });
 
   describe('dive decision logic', () => {
+    it('allows dive only when defender is moving at above 50% max speed', () => {
+      const defender = new DefensivePlayer({ x: 10, y: 0.5 });
+      defender.speed = 6.0;
+      const carrier = new RunningBack({ x: 11.5, y: 0.5 }); // 1.5 yds (in range)
+
+      // Stationary (0% speed)
+      defender.velocityX = 0;
+      defender.velocityY = 0;
+      expect(canDefenderDive(defender, carrier)).toBe(false);
+
+      // At exactly 50% max speed (3.0 / 6.0)
+      defender.velocityX = 3.0;
+      expect(canDefenderDive(defender, carrier)).toBe(false);
+
+      // Under 50% max speed (2.4 / 6.0 = 40%)
+      defender.velocityX = 2.4;
+      expect(canDefenderDive(defender, carrier)).toBe(false);
+
+      // Above 50% max speed (3.6 / 6.0 = 60%)
+      defender.velocityX = 3.6;
+      expect(canDefenderDive(defender, carrier)).toBe(true);
+
+      // Via _movement speedFactor
+      defender.velocityX = 0;
+      defender._movement = { speedFactor: 0.50 };
+      expect(canDefenderDive(defender, carrier)).toBe(false);
+
+      defender._movement = { speedFactor: 0.51 };
+      expect(canDefenderDive(defender, carrier)).toBe(true);
+    });
+
     it('allows dive only within distance range [0.80, 2.20]', () => {
       const defender = new DefensivePlayer({ x: 10, y: 0.5 });
+      defender._movement = { speedFactor: 0.80 };
       const carrier = new RunningBack({ x: 10.5, y: 0.5 }); // 0.5 yds (too close)
       expect(canDefenderDive(defender, carrier)).toBe(false);
 
@@ -216,6 +250,7 @@ describe('tackling rules and resolution', () => {
 
     it('prevents dive when dive cooldown or miss recovery is active', () => {
       const defender = new DefensivePlayer({ x: 10, y: 0.5 });
+      defender._movement = { speedFactor: 0.80 };
       const carrier = new RunningBack({ x: 11.5, y: 0.5 });
       expect(canDefenderDive(defender, carrier)).toBe(true);
 
@@ -230,6 +265,7 @@ describe('tackling rules and resolution', () => {
     it('triggers dive when runner is pulling away', () => {
       const defender = new DefensivePlayer({ x: 10, y: 0.5 });
       defender.speed = 5.0;
+      defender.velocityX = 4.0; // 80% speed > 50%
       const carrier = new RunningBack({ x: 11.5, y: 0.5 });
       // Carrier moving faster than defender
       carrier.velocityX = 6.0;
@@ -241,6 +277,7 @@ describe('tackling rules and resolution', () => {
     it('triggers desperation dive when carrier is within 3 yards of goal line or first down', () => {
       const defender = new DefensivePlayer({ x: 96, y: 0.5 });
       defender.speed = 6.0;
+      defender.velocityX = 4.5; // 75% speed > 50%
       const carrier = new RunningBack({ x: 97.5, y: 0.5 }); // <= 3 yds from goal line at 100
       carrier.velocityX = 2.0;
 
@@ -255,6 +292,7 @@ describe('tackling rules and resolution', () => {
     it('keeps defender on feet when faster and closing distance outside desperation zone', () => {
       const defender = new DefensivePlayer({ x: 20, y: 0.5 });
       defender.speed = 6.0;
+      defender.velocityX = 5.0; // 83% speed > 50%
       const carrier = new RunningBack({ x: 21.5, y: 0.5 });
       carrier.velocityX = 3.0; // Runner slower than defender
       carrier.velocityY = 0;

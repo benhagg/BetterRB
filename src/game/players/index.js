@@ -626,6 +626,17 @@
       if (!targetPlayer || this.isDiving || this.diveCooldownTimer > 0 || this.tackleMissRecoveryTimer > 0) return false;
       if (targetPlayer.isTackled) return false;
       if (typeof targetPlayer.isImmuneTo === 'function' && targetPlayer.isImmuneTo(this)) return false;
+      const tacklingModule = (typeof GameTackling !== 'undefined' ? GameTackling : (typeof window !== 'undefined' ? window.GameTackling : null));
+      if (tacklingModule && typeof tacklingModule.canDefenderDive === 'function') {
+        return tacklingModule.canDefenderDive(this, targetPlayer, LATERAL_YARDS);
+      }
+      const maxSpeed = Number(this.speed || 0);
+      const currentSpeed = Math.hypot(Number(this.velocityX) || 0, (Number(this.velocityY) || 0) * LATERAL_YARDS);
+      const velocityRatio = maxSpeed > 0.05 ? currentSpeed / maxSpeed : 0;
+      const movementRatio = Number(this._movement?.speedFactor ?? 0);
+      const speedRatio = Math.max(velocityRatio, movementRatio);
+      if (speedRatio <= 0.50) return false;
+
       const dx = targetPlayer.x - this.x;
       const dyYards = (targetPlayer.y - this.y) * LATERAL_YARDS;
       const dist = Math.hypot(dx, dyYards);
@@ -647,6 +658,7 @@
 
     diveTackle(ballCarrier) {
       if (this.isDiving || this.diveCooldownTimer > 0 || this.tackleMissRecoveryTimer > 0) return;
+      if (!this.canDiveTackle(ballCarrier)) return;
       this.isDiving = true;
       this.wasDiving = true;
       this.diveProgress = 0;
