@@ -110,15 +110,18 @@ window.RetroSprites = (() => {
     if (cache.has(key)) return cache.get(key);
     const canvas = document.createElement('canvas');
     canvas.width = kind === 'portrait' ? 29 : 16;
-    canvas.height = kind === 'portrait' ? 37 : kind === 'runner' || kind === 'runner_ball' || actionFrames[kind] ? 17 : 16;
+    canvas.height = kind === 'portrait' ? 37 : 17;
     const entry = { canvas, ready: false };
     entry.promise = sourceImage.ready.then(() => {
+      const width = sourceImage.image.naturalWidth || sourceImage.image.width || canvas.width;
+      const height = sourceImage.image.naturalHeight || sourceImage.image.height || canvas.height;
+      canvas.width = width;
+      canvas.height = height;
       const context = canvas.getContext('2d', { willReadFrequently: true });
       context.imageSmoothingEnabled = false;
-      if (actionFrames[kind]) context.drawImage(sourceImage.image, 0, 0);
-      else context.drawImage(sourceImage.image, 0, 0, canvas.width, canvas.height);
-      const image = context.getImageData(0, 0, canvas.width, canvas.height);
-      recolor(image.data, canvas.width, kind, colors);
+      context.drawImage(sourceImage.image, 0, 0, width, height);
+      const image = context.getImageData(0, 0, width, height);
+      recolor(image.data, width, kind, colors);
       context.putImageData(image, 0, 0);
       entry.ready = true;
     });
@@ -175,13 +178,19 @@ window.RetroSprites = (() => {
     if (!entry.ready) return;
     const width = entry.canvas.width * pixelSize;
     const height = entry.canvas.height * pixelSize;
+    // Align multi-size action sprites (e.g. 32x26 ddive/odive, 24x24 tackled)
+    // with the standard 16x17 player baseline and horizontal center
+    const offsetX = Math.round(((entry.canvas.width - 16) / 2) * pixelSize);
+    const offsetY = Math.round((entry.canvas.height - 17) * pixelSize);
+    const drawX = x - offsetX;
+    const drawY = y - offsetY;
     if (flip) {
       context.save();
-      context.translate(x + width, y);
+      context.translate(drawX + width, drawY);
       context.scale(-1, 1);
       context.drawImage(entry.canvas, 0, 0, width, height);
       context.restore();
-    } else context.drawImage(entry.canvas, x, y, width, height);
+    } else context.drawImage(entry.canvas, drawX, drawY, width, height);
   }
 
   return { fieldImage, footballImage, paintPortrait, drawRunner, drawPrePlay, drawAction };

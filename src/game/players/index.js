@@ -673,7 +673,9 @@
       this.animDistance += forwardStep;
 
       const target = targetPlayer || this.target;
-      if (target && this.canTackle(target, true)) {
+      const dist = target ? Math.hypot(target.x - this.x, (target.y - this.y) * LATERAL_YARDS) : Infinity;
+      const canConnect = (this.diveProgress >= 0.25 || dist <= 0.40);
+      if (target && canConnect && this.canTackle(target, true)) {
         if (typeof onTackle === 'function') {
           onTackle(this, target);
         } else {
@@ -734,7 +736,7 @@
         const frame = this.diveProgress < 0.33 ? 0 : this.diveProgress < 0.66 ? 1 : 2;
         if (RetroSprites.drawAction) RetroSprites.drawAction(ctx, x, y, pixel, u, 'ddive', frame, this.facingLeft);
         else RetroSprites.drawRunner(ctx, x, y, pixel, u, 0, this.facingLeft);
-      } else if (this.tackleMissRecoveryTimer > 0 && this.wasDiving) {
+      } else if (this.wasDiving && (this.tackleMissRecoveryTimer > 0 || !this.isMoving)) {
         if (RetroSprites.drawAction) RetroSprites.drawAction(ctx, x, y, pixel, u, 'ddive', 2, this.facingLeft);
         else RetroSprites.drawPrePlay(ctx, x, y, pixel, u, this.kind, this.facingLeft);
       } else if (this.tackleMissRecoveryTimer > 0) {

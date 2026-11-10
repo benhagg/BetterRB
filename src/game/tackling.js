@@ -64,7 +64,7 @@ export function canDefenderDive(defender, carrier, lateralYards = 25) {
 }
 
 export function shouldDefenderDive(defender, carrier, options = {}) {
-  const { lateralYards = 25, firstDownX = null, goalLineX = 100 } = options;
+  const { lateralYards = 25, firstDownX = null, goalLineX = 100, diveRoll = null } = options;
   if (!canDefenderDive(defender, carrier, lateralYards)) return false;
 
   const dx = carrier.x - defender.x;
@@ -85,19 +85,31 @@ export function shouldDefenderDive(defender, carrier, options = {}) {
     return true;
   }
 
-  // 2. Keep Running / No Dive:
+  // 2. Trailing Check:
+  // A defender in front of the carrier downfield should stay on their feet
+  // to make a secure wrap-up tackle rather than lunging early and giving up big plays.
+  const cvx = carrierSpeed > 0.05 ? (carrier.velocityX || 0) / carrierSpeed : 1;
+  const cvy = carrierSpeed > 0.05 ? ((carrier.velocityY || 0) * lateralYards) / carrierSpeed : 0;
+  const trailingDist = dx * cvx + dy * cvy;
+  const isTrailing = trailingDist > 0.2; // Carrier is moving away from defender
+
+  if (!isTrailing) {
+    return false;
+  }
+
+  // 3. Keep Running / No Dive:
   // If defender is faster and closing the distance, stay on feet to secure wrap-up tackle
   if (defenderSpeed > carrierSpeed && dist <= 1.8) {
     return false;
   }
 
-  // 3. Runner Pulling Away: Runner speed >= defender speed
+  // 4. Runner Pulling Away: Runner speed > defender speed
   // Only dive if within reachable closing range (<= 1.6 yds)
-  if (carrierSpeed >= defenderSpeed && dist <= 1.6) {
+  if (carrierSpeed > defenderSpeed && dist <= 1.6) {
     return true;
   }
 
-  // 4. Pursuit Window: Trailing range (1.0 - 1.8 yds) with alignment within +/- 45 deg
+  // 5. Pursuit Window: Trailing range (1.0 - 1.8 yds) with alignment within +/- 45 deg
   if (dist >= 1.0 && dist <= 1.8) {
     const dirX = dx / dist;
     const dirY = dy / dist;
@@ -108,7 +120,8 @@ export function shouldDefenderDive(defender, carrier, options = {}) {
     const forwardY = defSpeed > 0.05 ? defVy / defSpeed : 0;
     const dot = forwardX * dirX + forwardY * dirY;
     if (dot >= 0.7071) {
-      return true;
+      const roll = (typeof diveRoll === 'number') ? diveRoll : Math.random();
+      return roll < 0.06;
     }
   }
 

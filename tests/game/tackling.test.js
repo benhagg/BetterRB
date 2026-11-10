@@ -132,6 +132,32 @@ describe('tackling rules and resolution', () => {
 
       expect(shouldDefenderDive(defender, carrier, { goalLineX: 100, firstDownX: 40 })).toBe(false);
     });
+
+    it('does not trigger dive when defender is in front of the carrier downfield', () => {
+      // Safety downfield at x=40, carrier at x=38.5 running right (velocityX = 6.0)
+      const defender = new DefensivePlayer({ x: 40.0, y: 0.5 });
+      defender.velocityX = -5.0; // Moving toward runner
+      const carrier = new RunningBack({ x: 38.5, y: 0.5 });
+      carrier.velocityX = 6.0;
+
+      // Defender is in front; must stay on feet rather than lunging early
+      expect(shouldDefenderDive(defender, carrier, { goalLineX: 100, firstDownX: 60 })).toBe(false);
+    });
+
+    it('triggers trailing pursuit dive only when roll is within dive window chance', () => {
+      // Defender trailing behind carrier
+      const defender = new DefensivePlayer({ x: 20.0, y: 0.5 });
+      defender.speed = 5.0;
+      defender.velocityX = 5.0;
+      const carrier = new RunningBack({ x: 21.4, y: 0.5 }); // dist = 1.4 yds
+      carrier.velocityX = 5.0; // Equal speed
+
+      // Roll above threshold: stay on feet
+      expect(shouldDefenderDive(defender, carrier, { diveRoll: 0.50, goalLineX: 100, firstDownX: 60 })).toBe(false);
+
+      // Roll below threshold: trigger dive
+      expect(shouldDefenderDive(defender, carrier, { diveRoll: 0.02, goalLineX: 100, firstDownX: 60 })).toBe(true);
+    });
   });
 
   describe('tackle attempt resolution and outcomes', () => {
