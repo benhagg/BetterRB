@@ -2,13 +2,6 @@
 
 Retro Bowl-style 2D football game built with HTML5 Canvas, modern JavaScript, and Vite.
 
-## Game Highlights
-
-- **Dynamic Passing**: Throw to specific receivers (`1`–`5`) or click anywhere on the field. Pass physics calculate trajectory, lead angles, trajectory height, and contested catch windows (dive, jump, standard catches).
-- **Carrier Physics & Tackling**: Momentum, cut deceleration, broken-tackle stumble recoveries, and position-based strength multipliers (QB: `0.3`, WR: `0.5`, RB: `0.9`, TE: `1.0`).
-- **Defense AI & Angle of Attack**: Defenders feature reaction delays, rushers, man-to-man coverage, zone drops, pursuit intercept trajectories, and angle-of-attack tackle calculations with dive-tackle speed constraints (>50% top speed).
-- **Play Calling & Drive Progression**: Down-and-distance tracking, line of scrimmage, pre-snap play cards, and field geometry.
-
 ## Quick Start
 
 ```bash
