@@ -1,0 +1,11 @@
+import './shared/player-skills.js';
+import './shared/sprites.js';
+import './game/players/index.js';
+import './game/camera.js';
+import './game/passing.js';
+import './game/zone-agent.js';
+import './game/defense-ai.js';
+import './game/catching.js';
+import './game/renderer.js';
+import './game/game.js';
+import './app/app.js';

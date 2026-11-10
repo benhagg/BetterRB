@@ -1,0 +1,705 @@
+import { loadSeasonState, saveSeasonState } from './season-store.js';
+import { loadViews } from './view-loader.js';
+import { parseRoute } from './router.js';
+import { createGameLoop } from './game-loop.js';
+import { renderGameScreen } from './game-screen.js';
+import { pickRandomPlays } from './playbook-ui.js';
+import { renderHome } from './screens/home-screen.js';
+import { renderPlayer } from './screens/player-screen.js';
+import { renderRoster } from './screens/roster-screen.js';
+import { renderSchedule } from './screens/schedule-screen.js';
+
+const app = document.querySelector('#app');
+const viewNames = ['shell', 'home', 'roster', 'player', 'schedule', 'game', 'rating', 'portrait'];
+const views = new Map();
+let screen = 'home';
+let seasonState = null;
+let gameSession = null;
+let activeScheduledGame = null;
+let selectedPlayerId = null;
+let rosterGroup = 'offense';
+let gameFullscreen = false;
+const movementKeys = new Set();
+let selectedOffensivePlayIndex = 0;
+let currentPlayOptions = [];
+let activePlay = null;
+let playbooks = { offense: null, defense: null };
+const gameLoop = createGameLoop({
+  app,
+  getSession: () => gameSession,
+  getScreen: () => screen,
+  movementKeys,
+  formatClock,
+  onFrame: updateGameHud
+});
+async function initialize() {
+  app.textContent = 'Loading season...';
+  try {
+    const [state, offensePlays, defensePlays, ...markup] = await Promise.all([
+      loadSeasonState(),
+      fetch('/shared/oplays.json', { cache: 'no-store' }).then(r => r.json()),
+      fetch('/shared/dplays.json', { cache: 'no-store' }).then(r => r.json()),
+      ...loadViews(viewNames)
+    ]);
+    for (let i = 0; i < viewNames.length; i++) {
+      const template = document.createElement('template');
+      template.innerHTML = markup[i];
+      views.set(viewNames[i], template.content);
+    }
+    seasonState = state;
+    playbooks = {
+      offense: expandPlaybookRoutes(offensePlays),
+      defense: expandPlaybookRoutes(defensePlays)
+    };
+    applyRoute();
+    render();
+  } catch (error) {
+    app.textContent = 'Unable to load the game. Please refresh.';
+    console.error(error);
+  }
+}
+
+// Expand reusable route names once when the playbook loads. The game engine and
+// route preview continue to receive the existing array-of-waypoints format.
+function expandPlaybookRoutes(playbook) {
+  const routes = playbook?.routes || {};
+  const offensiveLines = playbook?.offensiveLines || {};
+  const defensiveLines = playbook?.defensiveLines || {};
+  const expand = value => {
+    if (Array.isArray(value)) return value.map(expand);
+    if (!value || typeof value !== 'object') return value;
+    const copy = {};
+    for (const [key, child] of Object.entries(value)) copy[key] = expand(child);
+    if (typeof copy.route === 'string' && Array.isArray(routes[copy.route])) {
+      copy.route = routes[copy.route].map(waypoint => ({ ...waypoint }));
+    }
+    if (typeof copy.offensiveLine === 'string' && Array.isArray(offensiveLines[copy.offensiveLine])) {
+      copy.offensiveLine = offensiveLines[copy.offensiveLine].map(lineman => ({ ...lineman }));
+    }
+    if (typeof copy.defensiveLine === 'string' && Array.isArray(defensiveLines[copy.defensiveLine])) {
+      copy.defensiveLine = defensiveLines[copy.defensiveLine].map(dl => ({ ...dl }));
+    }
+    if (Array.isArray(copy.defensiveLine) && Array.isArray(copy.defenders) && copy.defenders.length < 11) {
+      copy.defenders = [...copy.defensiveLine.map(dl => ({ ...dl })), ...copy.defenders];
+    }
+    return copy;
+  };
+  return { ...playbook, plays: (playbook.plays || []).map(expand) };
+}
+
+function applyRoute(pathname = window.location.pathname) {
+  const route = parseRoute(pathname);
+  screen = route.screen;
+  selectedPlayerId = route.playerId;
+}
+
+function navigate(path, { replace = false } = {}) {
+  if (window.location.pathname !== path) history[replace ? 'replaceState' : 'pushState']({}, '', path);
+  applyRoute(path);
+  render();
+}
+
+function view(name) {
+  return views.get(name).cloneNode(true);
+}
+
+function bindText(root, name, value) {
+  root.querySelector(`[data-bind="${name}"]`).textContent = String(value);
+}
+
+function appendRatings(target, ratings, labels, potentialRatings = null) {
+  for (const [key, label] of labels) {
+    const component = view('rating');
+    const rating = Math.min(10, Math.max(0, Number(ratings?.[key]) || 0));
+    const potential = Math.min(10, Math.max(rating, Number(potentialRatings?.[key]) || rating));
+    bindText(component, 'label', label);
+    bindText(component, 'value', rating);
+    component.querySelectorAll('.rating-block').forEach((block, index) => {
+      block.classList.toggle('filled', index < Math.round(rating));
+      block.classList.toggle('potential', index >= Math.round(rating) && index < Math.round(potential));
+    });
+    target.append(component);
+  }
+}
+
+function appendPortrait(target, team, player, index) {
+  const component = view('portrait');
+  const portrait = component.querySelector('.pixel-player');
+  const defaults = [0, 1, 2, 3, 5, 6, 7, 8, 9];
+  const frame = Number.isInteger(player.portrait) ? player.portrait : defaults[index % defaults.length];
+  RetroSprites.paintPortrait(portrait, frame, team.colors.home || team.colors).catch(error => console.error(error));
+  target.append(component);
+}
+
+function persistState() {
+  return saveSeasonState(seasonState);
+}
+
+function nextScheduledGame() {
+  return seasonState?.schedule.find(game => !game.played) || null;
+}
+
+function teamTitle(team) {
+  return team.city === team.name ? team.city : `${team.city} ${team.name}`;
+}
+
+function shell(content) {
+  const component = view('shell');
+  const next = nextScheduledGame();
+  const week = next ? next.week : seasonState.schedule.length + 1;
+  bindText(component, 'season-week', `SEASON ${seasonState.season} · WEEK ${String(week).padStart(2, '0')}`);
+  component.querySelector('[data-content]').append(content);
+  return component;
+}
+
+function legacyHome() {
+  const component = view('home');
+  const next = nextScheduledGame();
+  const team = seasonState.team;
+  const record = seasonState.record;
+  bindText(component, 'city', team.city.toUpperCase());
+  bindText(component, 'team-name', team.name.toUpperCase());
+  bindText(component, 'abbreviation', team.abbreviation);
+  bindText(component, 'record', `${record.wins}-${record.losses}-${record.ties}`);
+  bindText(component, 'fans', Number(team.fans || 0).toLocaleString());
+  bindText(component, 'cap', `$${team.cap || 0}M`);
+  bindText(component, 'next-title', next ? `UP NEXT · WEEK ${next.week}` : 'SEASON COMPLETE');
+  bindText(component, 'player-name', team.name.toUpperCase());
+  bindText(component, 'opponent-name', next ? next.opponent.name.toUpperCase() : 'FINAL');
+  bindText(component, 'play-label', next ? 'PLAY GAME' : 'SEASON COMPLETE');
+  component.querySelector('[data-bind="play-button"]').dataset.action = next ? 'game' : 'schedule';
+  return component;
+}
+
+function legacyRosterPanel() {
+  const component = view('roster');
+  const team = seasonState.team;
+  const grid = component.querySelector('[data-bind="player-grid"]');
+  const cardTemplate = component.querySelector('[data-template="player-card"]');
+  bindText(component, 'team-title', `${team.city.toUpperCase()} ${team.name.toUpperCase()}`);
+  const defensePositions = new Set(['DL', 'DE', 'DT', 'NT', 'EDGE', 'LB', 'ILB', 'MLB', 'OLB', 'DB', 'CB', 'S', 'FS', 'SS']);
+  const showDefense = rosterGroup === 'defense';
+  const players = team.players.filter(player => defensePositions.has(player.position) === showDefense);
+  bindText(component, 'player-count', `${players.length} PLAYERS`);
+  component.querySelector('[data-bind="empty-roster"]').hidden = players.length > 0;
+  component.querySelectorAll('[data-action="roster-group"]').forEach(tab => tab.classList.toggle('active', tab.dataset.group === rosterGroup));
+  for (const player of players) {
+    const card = cardTemplate.content.cloneNode(true);
+    const button = card.querySelector('.player-card');
+    button.dataset.playerId = player.id;
+    button.setAttribute('aria-label', `View ${player.name}, ${player.position}`);
+    bindText(card, 'position', player.position);
+    bindText(card, 'name', String(player.name || '').trim().split(/\s+/).at(-1));
+    bindText(card, 'overall', player.rating ?? 0);
+    appendPortrait(card.querySelector('[data-bind="portrait"]'), team, player, team.players.indexOf(player));
+    grid.append(card);
+  }
+  return component;
+}
+
+function legacyPlayerPanel() {
+  const team = seasonState.team;
+  const player = team.players.find(item => String(item.id) === selectedPlayerId);
+  if (!player) return rosterPanel();
+  const component = view('player');
+  bindText(component, 'name', player.name.toUpperCase());
+  bindText(component, 'position', player.position);
+  bindText(component, 'team-title', `${team.city} ${team.name}`);
+  bindText(component, 'rating', player.rating ?? 0);
+  bindText(component, 'potential', player.potential ?? player.rating ?? 0);
+  appendPortrait(component.querySelector('[data-bind="portrait"]'), team, player, team.players.indexOf(player));
+  const skill = PlayerSkills.forPosition(player.position);
+  appendRatings(component.querySelector('[data-bind="ratings"]'), player.ratings, [['strength', 'STRENGTH'], ['speed', 'SPEED'], ['agility', 'AGILITY'], [skill.key, skill.label]], player.potentialRatings);
+  return component;
+}
+
+function legacySchedulePanel() {
+  const component = view('schedule');
+  const current = nextScheduledGame();
+  const rowTemplate = component.querySelector('[data-template="schedule-row"]');
+  const games = component.querySelector('[data-bind="games"]');
+  for (const game of seasonState.schedule) {
+    const row = rowTemplate.content.cloneNode(true);
+    row.querySelector('.schedule-row').classList.toggle('current', game === current);
+    bindText(row, 'week', `Wk ${game.week}`);
+    bindText(row, 'matchup', `${game.location === 'HOME' ? '@' : 'vs'} ${teamTitle(game.opponent)}`);
+    bindText(row, 'score', game.score ? `${game.score[0]}-${game.score[1]}` : '–');
+    games.append(row);
+  }
+  return component;
+}
+
+function legacyGamePanel() {
+  const component = view('game');
+  const state = gameSession.state;
+  const playerIsHome = activeScheduledGame.location === 'HOME';
+  const homeTeam = playerIsHome ? gameSession.team1 : gameSession.team2;
+  const awayTeam = playerIsHome ? gameSession.team2 : gameSession.team1;
+  bindText(component, 'home-team', homeTeam.abbreviation);
+  bindText(component, 'home-score', playerIsHome ? state.score1 : state.score2);
+  bindText(component, 'away-team', awayTeam.abbreviation);
+  bindText(component, 'away-score', playerIsHome ? state.score2 : state.score1);
+  bindText(component, 'quarter', `Qt${state.quarter}`);
+  component.querySelector('#game-clock').textContent = formatClock(state.clockSeconds);
+  const carrierBanner = component.querySelector('#ball-carrier-banner');
+  if (carrierBanner) {
+    const carrier = typeof gameSession.getBallCarrier === 'function' ? gameSession.getBallCarrier() : null;
+    if (carrier && carrier.name && carrier.position) {
+      carrierBanner.classList.remove('hidden');
+      bindText(carrierBanner, 'carrier-name', carrier.name);
+      bindText(carrierBanner, 'carrier-pos', carrier.position);
+    } else {
+      carrierBanner.classList.add('hidden');
+    }
+  }
+  renderPlayCards(component);
+  return component;
+}
+
+function legacyPickRandomPlays(allPlays, count = 3) {
+  if (!Array.isArray(allPlays) || allPlays.length === 0) return [];
+  const shuffled = [...allPlays].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, Math.min(count, allPlays.length));
+}
+
+function home() { return renderHome({ view, bindText, state: seasonState, nextGame: nextScheduledGame }); }
+function rosterPanel() { return renderRoster({ view, bindText, appendPortrait, state: seasonState, group: rosterGroup }); }
+function playerPanel() { return renderPlayer({ view, bindText, appendPortrait, appendRatings, state: seasonState, playerId: selectedPlayerId, renderRoster: rosterPanel }); }
+function schedulePanel() { return renderSchedule({ view, bindText, state: seasonState, nextGame: nextScheduledGame, teamTitle }); }
+function gamePanel() {
+  return renderGameScreen({ view, bindText, session: gameSession, scheduledGame: activeScheduledGame, formatClock, renderPlayCards });
+}
+
+function setupPreSnapPlays() {
+  const allPlays = playbooks.offense?.plays || [];
+  currentPlayOptions = pickRandomPlays(allPlays, 3);
+  activePlay = currentPlayOptions[0] || allPlays[0] || null;
+}
+
+function renderPlayDiagramSVG(play) {
+  const width = 200, height = 100;
+  const losX = 55;
+  const centerY = 50;
+  const toSvgAcross = yards => Math.min(95, Math.max(5, centerY - ((yards ?? 0) / 25) * 85));
+  const toSvgX = (startX, dx) => Math.min(195, Math.max(5, startX + dx * 4.2));
+  const toSvgY = (startY, dy) => Math.min(95, Math.max(5, startY + (dy / 25) * 85));
+
+  let svg = `<svg viewBox="0 0 ${width} ${height}" width="100%" height="100%" class="play-diagram-svg">`;
+  svg += `<rect width="${width}" height="${height}" fill="#162c20" rx="3"/>`;
+  svg += `<line x1="${losX}" y1="4" x2="${losX}" y2="96" stroke="#5caeff" stroke-width="2" stroke-dasharray="3,3"/>`;
+  svg += `<line x1="110" y1="4" x2="110" y2="96" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>`;
+  svg += `<line x1="165" y1="4" x2="165" y2="96" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>`;
+
+  const isRun = String(play.playtype || play.playType || '').toLowerCase() === 'run';
+
+  // OL dots & blocking scheme
+  const ol = play.formation?.offensiveLine || [];
+  ol.forEach(lineman => {
+    const lx = losX + (lineman.offset ?? -0.5) * 6;
+    const ly = toSvgAcross(lineman.across);
+    svg += `<circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="2.5" fill="#90caf9"/>`;
+    if (isRun) {
+      const bx = lx + 12;
+      svg += `<line x1="${lx.toFixed(1)}" y1="${ly.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${ly.toFixed(1)}" stroke="#ff7043" stroke-width="1.5"/>`;
+      svg += `<polygon points="${bx.toFixed(1)},${(ly - 2).toFixed(1)} ${(bx + 3).toFixed(1)},${ly.toFixed(1)} ${bx.toFixed(1)},${(ly + 2).toFixed(1)}" fill="#ff7043"/>`;
+    }
+  });
+
+  // QB dot
+  const qb = play.formation?.quarterback || { across: 0, offset: -3 };
+  const qbx = losX + (qb.offset ?? -3) * 6;
+  const qby = toSvgAcross(qb.across);
+  svg += `<circle cx="${qbx.toFixed(1)}" cy="${qby.toFixed(1)}" r="3" fill="#ffe18a"/>`;
+
+  // Receivers & routes
+  const receivers = play.formation?.receivers || [];
+  receivers.forEach(r => {
+    const rx = losX + (r.offset ?? -0.5) * 6;
+    const ry = toSvgAcross(r.across);
+    svg += `<circle cx="${rx.toFixed(1)}" cy="${ry.toFixed(1)}" r="2.5" fill="#ffffff"/>`;
+    if (r.receiverNumber && !isRun) {
+      svg += `<text x="${(rx - 7).toFixed(1)}" y="${(ry + 2.5).toFixed(1)}" fill="#ffe18a" font-size="7" font-weight="bold" text-anchor="middle" font-family="monospace">${r.receiverNumber}</text>`;
+    }
+    if (!isRun && r.route && r.route.length) {
+      let curX = rx, curY = ry;
+      let pathD = `M ${rx.toFixed(1)} ${ry.toFixed(1)}`;
+      r.route.forEach(wp => {
+        const nx = toSvgX(rx, wp.dx);
+        const ny = toSvgY(ry, wp.dy);
+        pathD += ` L ${nx.toFixed(1)} ${ny.toFixed(1)}`;
+        curX = nx;
+        curY = ny;
+      });
+      const last = r.route[r.route.length - 1];
+      const endX = toSvgX(rx, last.dx);
+      const endY = toSvgY(ry, last.dy);
+      const angle = Math.atan2(endY - curY, endX - curX);
+      const left = `${(endX - 5 * Math.cos(angle - 0.5)).toFixed(1)},${(endY - 5 * Math.sin(angle - 0.5)).toFixed(1)}`;
+      const right = `${(endX - 5 * Math.cos(angle + 0.5)).toFixed(1)},${(endY - 5 * Math.sin(angle + 0.5)).toFixed(1)}`;
+      svg += `<path d="${pathD}" fill="none" stroke="#4da3ff" stroke-width="1.5"/>`;
+      svg += `<polygon points="${endX.toFixed(1)},${endY.toFixed(1)} ${left} ${right}" fill="#4da3ff"/>`;
+    }
+  });
+
+  // Running Back & path
+  const rb = play.formation?.runningBack;
+  if (rb) {
+    const rbx = losX + (rb.offset ?? -4) * 6;
+    const rby = toSvgAcross(rb.across);
+    svg += `<circle cx="${rbx.toFixed(1)}" cy="${rby.toFixed(1)}" r="3" fill="${isRun ? '#00e676' : '#80d8ff'}"/>`;
+    if (rb.receiverNumber && !isRun) {
+      svg += `<text x="${(rbx - 8).toFixed(1)}" y="${(rby + 2.5).toFixed(1)}" fill="${isRun ? '#00e676' : '#80d8ff'}" font-size="7" font-weight="bold" text-anchor="middle" font-family="monospace">${rb.receiverNumber}</text>`;
+    }
+    if (!isRun && rb.route && rb.route.length) {
+      let curX = rbx, curY = rby;
+      let pathD = `M ${rbx.toFixed(1)} ${rby.toFixed(1)}`;
+      rb.route.forEach(wp => {
+        const nx = toSvgX(rbx, wp.dx);
+        const ny = toSvgY(rby, wp.dy);
+        pathD += ` L ${nx.toFixed(1)} ${ny.toFixed(1)}`;
+        curX = nx;
+        curY = ny;
+      });
+      const last = rb.route[rb.route.length - 1];
+      const endX = toSvgX(rbx, last.dx);
+      const endY = toSvgY(rby, last.dy);
+      const angle = Math.atan2(endY - curY, endX - curX);
+      const left = `${(endX - 5 * Math.cos(angle - 0.5)).toFixed(1)},${(endY - 5 * Math.sin(angle - 0.5)).toFixed(1)}`;
+      const right = `${(endX - 5 * Math.cos(angle + 0.5)).toFixed(1)},${(endY - 5 * Math.sin(angle + 0.5)).toFixed(1)}`;
+      svg += `<path d="${pathD}" fill="none" stroke="#4da3ff" stroke-width="1.5"/>`;
+      svg += `<polygon points="${endX.toFixed(1)},${endY.toFixed(1)} ${left} ${right}" fill="#4da3ff"/>`;
+    }
+  }
+
+  svg += `</svg>`;
+  return svg;
+}
+
+function isPreSnapCardsVisible() {
+  const overlay = app.querySelector('#play-select-overlay');
+  return Boolean(
+    screen === 'game' &&
+    gameSession?.state?.phase === 'preplay' &&
+    overlay &&
+    !overlay.classList.contains('hidden')
+  );
+}
+
+function finalizePreSnapPlay() {
+  const overlay = app.querySelector('#play-select-overlay');
+  if (overlay) {
+    overlay.classList.add('hidden');
+  }
+  if (activePlay && gameSession && typeof gameSession.setOffensivePlay === 'function') {
+    gameSession.setOffensivePlay(activePlay);
+  }
+}
+
+function updatePlayCardsSelection() {
+  const overlay = app.querySelector('#play-select-overlay');
+  if (!overlay) return;
+  const cards = overlay.querySelectorAll('.play-card');
+  cards.forEach((card, idx) => {
+    const play = currentPlayOptions[idx];
+    const isSelected = activePlay && play && activePlay.id === play.id;
+    card.classList.toggle('selected', Boolean(isSelected));
+    const footer = card.querySelector('.play-card-footer');
+    if (footer) {
+      footer.innerHTML = isSelected ? '&#9654; SELECTED' : `PRESS [${idx + 1}] OR CLICK`;
+    }
+  });
+}
+
+function navigatePreSnapPlay(direction) {
+  if (!isPreSnapCardsVisible()) return;
+  if (!currentPlayOptions || currentPlayOptions.length === 0) return;
+  let currentIndex = currentPlayOptions.findIndex(p => p.id === activePlay?.id);
+  if (currentIndex === -1) currentIndex = 0;
+  const newIndex = (currentIndex + direction + currentPlayOptions.length) % currentPlayOptions.length;
+  activePlay = currentPlayOptions[newIndex];
+  if (gameSession && typeof gameSession.setOffensivePlay === 'function') {
+    gameSession.setOffensivePlay(activePlay);
+  }
+  updatePlayCardsSelection();
+}
+
+function selectPreSnapPlay(index) {
+  if (!isPreSnapCardsVisible()) return false;
+  if (!currentPlayOptions || index < 0 || index >= currentPlayOptions.length) return false;
+  activePlay = currentPlayOptions[index];
+  finalizePreSnapPlay();
+  return true;
+}
+
+function renderPlayCards(root = app) {
+  const overlay = root.querySelector('#play-select-overlay');
+  const cardsRow = root.querySelector('#play-cards-row');
+  if (!overlay || !cardsRow) return;
+
+  if (!gameSession || gameSession.state.phase !== 'preplay') {
+    overlay.classList.add('hidden');
+    return;
+  }
+
+  overlay.classList.remove('hidden');
+  cardsRow.innerHTML = '';
+  if (!currentPlayOptions.length) {
+    setupPreSnapPlays();
+  }
+  currentPlayOptions.forEach((play, index) => {
+    const isRun = String(play.playtype || play.playType || '').toLowerCase() === 'run';
+    const isSelected = activePlay && activePlay.id === play.id;
+    const card = document.createElement('div');
+    card.className = `play-card ${isSelected ? 'selected' : ''}`;
+    card.setAttribute('data-play-id', play.id);
+    card.innerHTML = `
+      <div class="play-card-header">
+        <span class="play-card-name" title="${play.name}"><strong style="color:#ffe18a">[${index + 1}]</strong> ${play.name}</span>
+        <span class="play-card-type-badge ${isRun ? 'run' : 'pass'}">${isRun ? 'RUN' : 'PASS'}</span>
+      </div>
+      <div class="play-card-diagram">
+        ${renderPlayDiagramSVG(play)}
+      </div>
+      <div class="play-card-footer">
+        ${isSelected ? '&#9654; SELECTED' : `PRESS [${index + 1}] OR CLICK`}
+      </div>
+    `;
+    card.addEventListener('click', (event) => {
+      event.stopPropagation();
+      selectPreSnapPlay(index);
+    });
+    cardsRow.appendChild(card);
+  });
+}
+
+function formatClock(seconds) {
+  const remaining = Math.ceil(Math.max(0, seconds));
+  return `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}`;
+}
+
+function updateGameHud(session) {
+  const carrierBanner = app.querySelector('#ball-carrier-banner');
+  if (!carrierBanner) return;
+  const carrier = typeof session.getBallCarrier === 'function' ? session.getBallCarrier() : null;
+  carrierBanner.classList.toggle('hidden', !(carrier?.name && carrier?.position));
+  if (!carrier?.name || !carrier?.position) return;
+  bindText(carrierBanner, 'carrier-name', carrier.name);
+  bindText(carrierBanner, 'carrier-pos', carrier.position);
+}
+
+function stopGameLoop() { gameLoop.stop(); }
+function startGameLoop() { gameLoop.start(); }
+
+function render() {
+  stopGameLoop();
+  if (screen === 'game' && !gameSession) screen = 'home';
+  document.body.classList.toggle('game-mode', screen === 'game' && !!gameSession);
+  if (!seasonState) return;
+  let content;
+  if (screen === 'roster') content = rosterPanel();
+  else if (screen === 'player') content = playerPanel();
+  else if (screen === 'schedule') content = schedulePanel();
+  else if (screen === 'game' && gameSession) content = gamePanel();
+  else content = home();
+  app.replaceChildren(shell(content));
+  if (screen === 'game' && gameSession) startGameLoop();
+}
+
+function randomDefensePlay() {
+  const dPlays = playbooks.defense?.plays;
+  if (!Array.isArray(dPlays) || !dPlays.length) return null;
+  return dPlays[Math.floor(Math.random() * dPlays.length)];
+}
+
+function beginNextGame() {
+  activeScheduledGame = nextScheduledGame();
+  if (!activeScheduledGame) return;
+  setupPreSnapPlays();
+  gameSession = playGame(seasonState.team, activeScheduledGame.opponent, null, {
+    offense: activePlay || playbooks.offense?.plays?.[0],
+    defense: randomDefensePlay(),
+    defenseOptions: playbooks.defense?.plays || []
+  });
+  gameSession.state.week = activeScheduledGame.week;
+  gameSession.state.isHome = activeScheduledGame.location === 'HOME';
+  screen = 'game';
+}
+
+function leaveGame() {
+  if (screen !== 'game') return;
+  stopGameLoop();
+  navigate('/');
+  gameSession = null;
+  activeScheduledGame = null;
+  if (gameFullscreen && document.fullscreenElement && document.exitFullscreen) {
+    document.exitFullscreen().catch(error => console.error(error));
+  }
+}
+
+function requestGameFullscreen() {
+  if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+    try {
+      Promise.resolve(document.documentElement.requestFullscreen()).then(() => {
+        if (screen !== 'game' && document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen().catch(error => console.error(error));
+        }
+      }).catch(() => {});
+    } catch (_) {
+      // The field still fills the browser window if fullscreen is unavailable.
+    }
+  }
+}
+
+app.addEventListener('click', async event => {
+  const target = event.target.closest('[data-action]');
+  const action = target?.dataset.action;
+  if (!action) {
+    if (screen === 'game' && gameSession && event.target?.id === 'game-canvas') {
+      const canvas = event.target;
+      if (typeof canvas.focus === 'function') canvas.focus();
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const canvasX = (event.clientX - rect.left) * scaleX;
+      const canvasY = (event.clientY - rect.top) * scaleY;
+      if (typeof gameSession.throwPassToCanvasCoords === 'function') {
+        gameSession.throwPassToCanvasCoords(canvasX, canvasY, canvas.width, canvas.height);
+      }
+    }
+    return;
+  }
+  if (action === 'home') {
+    if (screen === 'game') {
+      leaveGame();
+      return;
+    }
+    navigate('/');
+    return;
+  } else if (action === 'roster') {
+    navigate('/roster');
+    return;
+  } else if (action === 'schedule') {
+    navigate('/schedule');
+    return;
+  } else if (action === 'roster-group') {
+    rosterGroup = target.dataset.group === 'defense' ? 'defense' : 'offense';
+    render();
+    return;
+  } else if (action === 'player') {
+    navigate(`/roster/${encodeURIComponent(target.dataset.playerId)}`);
+    return;
+  } else if (action === 'game') {
+    beginNextGame();
+    if (screen === 'game') {
+      requestGameFullscreen();
+      navigate('/game');
+      return;
+    }
+  } else if (action === 'restart-run' && gameSession) {
+    stopGameLoop();
+    gameSession.reset();
+  }
+  render();
+});
+
+window.addEventListener('popstate', () => {
+  applyRoute();
+  render();
+});
+
+window.addEventListener('keydown', event => {
+  const key = event.key.toLowerCase();
+
+  // If in game and pre-snap play cards are currently visible on field:
+  if (isPreSnapCardsVisible()) {
+    if (key === 'w' || key === 'arrowup') {
+      event.preventDefault();
+      navigatePreSnapPlay(-1);
+      return;
+    }
+    if (key === 's' || key === 'arrowdown') {
+      event.preventDefault();
+      navigatePreSnapPlay(1);
+      return;
+    }
+    if (key === 'enter' || event.code === 'Space' || key === ' ') {
+      event.preventDefault();
+      finalizePreSnapPlay();
+      return;
+    }
+    if (['1', '2', '3'].includes(key) && !event.repeat) {
+      event.preventDefault();
+      selectPreSnapPlay(parseInt(key, 10) - 1);
+      return;
+    }
+  }
+
+  // Snapping the ball only happens when cards are NOT covering the field
+  if (screen === 'game' && (event.code === 'Space' || key === ' ')) {
+    event.preventDefault();
+    if (!event.repeat && gameSession) {
+      movementKeys.clear();
+      gameSession.pressSpace();
+    }
+    return;
+  }
+  if (screen === 'game' && ['1', '2', '3', '4', '5'].includes(key) && !event.repeat && gameSession) {
+    event.preventDefault();
+    if (gameSession.state.playType === 'run') return;
+    gameSession.throwPass(parseInt(key, 10));
+    return;
+  }
+  if (screen === 'game' && key === 'escape') {
+    event.preventDefault();
+    leaveGame();
+    return;
+  }
+  if (screen === 'game' && key === 'r' && !event.repeat) {
+    event.preventDefault();
+    stopGameLoop();
+    setupPreSnapPlays();
+    gameSession.reset();
+    if (activePlay && typeof gameSession.setOffensivePlay === 'function') {
+      gameSession.setOffensivePlay(activePlay);
+    }
+    render();
+    return;
+  }
+  if (screen === 'game' && key === 'p' && !event.repeat && isPreSnapCardsVisible()) {
+    event.preventDefault();
+    const plays = playbooks.offense?.plays || [];
+    if (plays.length > 1) {
+      selectedOffensivePlayIndex = (selectedOffensivePlayIndex + 1) % plays.length;
+      const currentWeek = gameSession.state.week;
+      const currentHome = gameSession.state.isHome;
+      const currentFieldPos = gameSession.state.fieldPosition;
+      gameSession = playGame(seasonState.team, activeScheduledGame.opponent, {
+        fieldPosition: currentFieldPos,
+        scrimmagePosition: currentFieldPos
+      }, {
+        offense: plays[selectedOffensivePlayIndex],
+        defense: randomDefensePlay(),
+        defenseOptions: playbooks.defense?.plays || []
+      });
+      gameSession.state.week = currentWeek;
+      gameSession.state.isHome = currentHome;
+      render();
+    }
+    return;
+  }
+  if (screen === 'game' && ['w', 's', 'a', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
+    event.preventDefault();
+    movementKeys.add(key);
+  }
+});
+window.addEventListener('keyup', event => movementKeys.delete(event.key.toLowerCase()));
+window.addEventListener('blur', () => movementKeys.clear());
+document.addEventListener('fullscreenchange', () => {
+  if (document.fullscreenElement === document.documentElement && screen === 'game') gameFullscreen = true;
+  else if (gameFullscreen && !document.fullscreenElement) {
+    gameFullscreen = false;
+    if (screen === 'game') leaveGame();
+  }
+});
+
+initialize();

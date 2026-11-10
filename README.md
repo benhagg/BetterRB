@@ -1,9 +1,9 @@
 # Better RB
 
-Retro Bowl-style 2D football game built with HTML5 Canvas and Node.js.
+Retro Bowl-style 2D football game built with HTML5 Canvas and Vite.
 
 ## Getting Started
-Start the local server with `npm start`, then open `http://localhost:3000`.
+Start the local static server with `npm start`, then open `http://localhost:3000`.
 
 ## Controls & Gameplay
 - **Pre-Snap**: Press `1`, `2`, or `3` (or click play cards) to select a play. Press `Space` to snap.
@@ -16,6 +16,8 @@ Start the local server with `npm start`, then open `http://localhost:3000`.
 - **Hotkeys**: `Space` to snap, `R` to reset pre-snap, `Esc` to exit game.
 
 ## Data & Assets
-- `data/oplays.json`: Offensive playbook (pass & run formations, routes, and receiver numbers).
-- `data/save_1/`: Active season state (`roster.json`, `season.json`, `scores.txt`).
-- `images/`: Field, player portrait, and sprite assets.
+- `public/shared/oplays.json`: Offensive playbook (pass and run formations, routes, and receiver numbers).
+- `public/shared/dplays.json`: Defensive playbook.
+- `public/data/default_state.json`: Initial season seed. Active progress is stored in the browser with IndexedDB.
+- `public/images/`: Field, player portrait, and sprite assets.
+- `npm run new-season`: Generates fresh seed data with `scripts/start-new-game.js`.

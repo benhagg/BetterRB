@@ -7,8 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "node server.js",
-    "new-season": "node scripts/start-new-season.js",
+    "start": "vite",
+    "new-season": "node scripts/start-new-game.js",
     "test": "vitest run",
     "test:watch": "vitest"
   },
