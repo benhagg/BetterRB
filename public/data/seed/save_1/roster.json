@@ -13,7 +13,7 @@
         "strength": 10,
         "speed": 10,
         "agility": 1,
-        "accuracy": 10
+        "accuracy": 1
       },
       "potentialRatings": {
         "strength": 6,
@@ -34,7 +34,7 @@
       "potentialSkillCredits": 18,
       "ratings": {
         "strength": 4,
-        "speed": 10,
+        "speed": 5,
         "agility": 10,
         "catching": 3
       },
@@ -57,7 +57,7 @@
       "potentialSkillCredits": 27,
       "ratings": {
         "strength": 2,
-        "speed": 10,
+        "speed": 5,
         "agility": 10,
         "catching": 1
       },

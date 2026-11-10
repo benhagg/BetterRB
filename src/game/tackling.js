@@ -118,7 +118,7 @@ export function getDefenderSpeedRatio(defender, lateralYards = 25) {
 
 export function canDefenderDive(defender, carrier, lateralYards = 25) {
   if (!defender || !carrier) return false;
-  if (defender.isDiving || (defender.diveCooldownTimer > 0) || (defender.tackleMissRecoveryTimer > 0)) {
+  if (defender.isDiving || defender.isGettingUp || (defender.diveCooldownTimer > 0) || (defender.tackleMissRecoveryTimer > 0)) {
     return false;
   }
   if (carrier.isTackled) return false;
@@ -212,6 +212,7 @@ export function attemptTackle(tackler, carrier, options = {}) {
   } = options;
 
   if (!carrier) return { success: false, reason: 'no-carrier' };
+  if (tackler?.isGettingUp) return { success: false, reason: 'getting-up' };
   if (tackler?.pancakeTimer > 0 || tackler?.isPancaked) {
     return { success: false, reason: 'pancaked' };
   }
@@ -279,6 +280,10 @@ export function attemptTackle(tackler, carrier, options = {}) {
       tackler.isMoving = false;
       if (tackler.velocityX !== undefined) tackler.velocityX = 0;
       if (tackler.velocityY !== undefined) tackler.velocityY = 0;
+      if (isDive) {
+        tackler.diveCooldownTimer = Math.max(tackler.diveCooldownTimer || 0, TACKLER_DIVE_COOLDOWN);
+        tackler.beginGetUp?.();
+      }
     }
     return { success: true, probability, roll: randomValue };
   } else {
@@ -297,6 +302,7 @@ export function attemptTackle(tackler, carrier, options = {}) {
       tackler.tackleMissRecoveryTimer = TACKLER_MISS_RECOVERY;
       if (isDive) {
         tackler.diveCooldownTimer = TACKLER_DIVE_COOLDOWN;
+        tackler.beginGetUp?.();
       }
     }
     return { success: false, probability, roll: randomValue };

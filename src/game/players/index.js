@@ -2,6 +2,9 @@
   const LATERAL_YARDS = 25; // Playable sideline-to-sideline width used for movement scaling.
   // The visible sideline area renders vertical yards at a smaller pixel scale than horizontal yards.
   const SCREEN_DIAGONAL_YARD_SCALE = 1.38;
+  const DIVE_ANIMATION_SECONDS = 0.45;
+  const DIVE_SLIDE_SECONDS = 0.25;
+  const GET_UP_SECONDS = 1.0;
 
   function speedMultiplier(position) {
     if (typeof PlayerSkills !== 'undefined' && typeof PlayerSkills.speedMultiplier === 'function') {
@@ -79,9 +82,17 @@
       this.animDistance = 0;
       this.facingLeft = Boolean(config.facingLeft);
       this.isMoving = false;
+      this.isGettingUp = Boolean(config.isGettingUp);
+      this.getUpTimer = Number.isFinite(config.getUpTimer) ? config.getUpTimer : 0;
+      this.diveElapsed = Number.isFinite(config.diveElapsed) ? config.diveElapsed : 0;
+      this.diveDirX = Number.isFinite(config.diveDirX) ? config.diveDirX : 0;
+      this.diveDirY = Number.isFinite(config.diveDirY) ? config.diveDirY : 0;
+      this.diveSlideDistance = Number.isFinite(config.diveSlideDistance) ? config.diveSlideDistance : 0;
+      this.diveSlideMoved = Number.isFinite(config.diveSlideMoved) ? config.diveSlideMoved : 0;
       this.isBlocking = Boolean(config.isBlocking);
       this.isPancaked = Boolean(config.isPancaked);
       this.pancakeTimer = Number.isFinite(config.pancakeTimer) ? config.pancakeTimer : 0;
+      this.shedImmunity = Number.isFinite(config.shedImmunity) ? config.shedImmunity : 0;
       this.speedModifier = Number.isFinite(config.speedModifier) ? config.speedModifier : 1;
       this.phase = config.phase ?? 'preplay';
     }
@@ -130,7 +141,11 @@
         lastDirX: this.lastDirX, lastDirY: this.lastDirY, autoRun: this.autoRun,
         animDistance: this.animDistance, facingLeft: this.facingLeft, isMoving: this.isMoving,
         phase: this.phase, hasBall: this.hasBall, isDiving: this.isDiving,
+        isGettingUp: this.isGettingUp, getUpTimer: this.getUpTimer,
+        diveElapsed: this.diveElapsed, diveDirX: this.diveDirX, diveDirY: this.diveDirY,
+        diveSlideDistance: this.diveSlideDistance, diveSlideMoved: this.diveSlideMoved,
         isBlocking: this.isBlocking, isPancaked: this.isPancaked, pancakeTimer: this.pancakeTimer,
+        shedImmunity: this.shedImmunity,
         speedModifier: this.speedModifier,
         diveProgress: this.diveProgress, diveCooldownTimer: this.diveCooldownTimer,
         tackleMissRecoveryTimer: this.tackleMissRecoveryTimer, stumbleTimer: this.stumbleTimer,
@@ -162,8 +177,15 @@
       this.velocityY = 0;
       this._movement = null;
       this.isDiving = false;
+      this.isGettingUp = false;
+      this.getUpTimer = 0;
       this.wasDiving = false;
       this.diveProgress = 0;
+      this.diveElapsed = 0;
+      this.diveDirX = 0;
+      this.diveDirY = 0;
+      this.diveSlideDistance = 0;
+      this.diveSlideMoved = 0;
       this.diveCooldownTimer = 0;
       this.tackleMissRecoveryTimer = 0;
       this.stumbleTimer = 0;
@@ -172,6 +194,7 @@
       this.isBlocking = false;
       this.isPancaked = false;
       this.pancakeTimer = 0;
+      this.shedImmunity = 0;
       this.speedModifier = 1;
       this._tackleImmunities?.clear();
     }
@@ -327,6 +350,92 @@
       }
     }
 
+    startDiveMotion(directionX, directionY) {
+      const length = Math.hypot(directionX, directionY) || 1;
+      this.diveDirX = directionX / length;
+      this.diveDirY = directionY / length;
+      const speed = Math.hypot(this.velocityX || 0, (this.velocityY || 0) * LATERAL_YARDS)
+        || this.speed * (this._movement?.speedFactor || 0);
+      this.diveSlideDistance = Math.min(1.1, Math.max(0.25, speed * DIVE_SLIDE_SECONDS * 0.5));
+      this.diveSlideMoved = 0;
+      this.diveElapsed = 0;
+      this.diveProgress = 0;
+      this.isDiving = true;
+      this.isGettingUp = false;
+      this.getUpTimer = 0;
+      this.velocityX = 0;
+      this.velocityY = 0;
+      this.isMoving = false;
+      if (this._movement) {
+        this._movement.speedFactor = 0;
+        this._movement.direction = { x: this.diveDirX, y: this.diveDirY };
+        this._movement.cut = null;
+        this._movement.deceleration = null;
+      }
+    }
+
+    advanceDiveMotion(delta) {
+      if (!this.isDiving) return true;
+      const stepTime = Math.max(0, delta);
+      this.diveElapsed = (this.diveElapsed || 0) + stepTime;
+      this.diveProgress = Math.min(1, this.diveElapsed / DIVE_ANIMATION_SECONDS);
+      const slideProgress = Math.min(1, this.diveElapsed / DIVE_SLIDE_SECONDS);
+      const easedProgress = 1 - (1 - slideProgress) ** 2;
+      const totalDistance = this.diveSlideDistance * easedProgress;
+      const forwardStep = Math.max(0, totalDistance - this.diveSlideMoved);
+      this.diveSlideMoved = totalDistance;
+      const dirX = Number.isFinite(this.diveDirX) ? this.diveDirX : 0;
+      const dirY = Number.isFinite(this.diveDirY) ? this.diveDirY : 0;
+      this.x = Math.max(-10, Math.min(110, this.x + dirX * forwardStep));
+      this.y = Math.max(-0.02, Math.min(0.95, this.y + (dirY * forwardStep) / LATERAL_YARDS));
+      this.animDistance += forwardStep;
+      this.isMoving = forwardStep > 0.001;
+      this.velocityX = stepTime > 0 ? dirX * forwardStep / stepTime : 0;
+      this.velocityY = stepTime > 0 ? (dirY * forwardStep / stepTime) / LATERAL_YARDS : 0;
+      if (this.diveProgress >= 1) {
+        this.velocityX = 0;
+        this.velocityY = 0;
+        this.isMoving = false;
+        if (this._movement) this._movement.speedFactor = 0;
+        return true;
+      }
+      return false;
+    }
+
+    beginGetUp() {
+      this.isDiving = false;
+      this.isGettingUp = true;
+      this.getUpTimer = GET_UP_SECONDS;
+      this.wasDiving = true;
+      this.diveProgress = 0;
+      this.velocityX = 0;
+      this.velocityY = 0;
+      this.isMoving = false;
+      if (this._movement) {
+        this._movement.speedFactor = 0;
+        this._movement.cut = null;
+        this._movement.deceleration = null;
+      }
+    }
+
+    updateGetUp(delta) {
+      if (!this.isGettingUp) return false;
+      const step = Math.max(0, delta);
+      this.getUpTimer = Math.max(0, this.getUpTimer - step);
+      this.tackleMissRecoveryTimer = Math.max(0, (this.tackleMissRecoveryTimer || 0) - step);
+      this.diveCooldownTimer = Math.max(0, (this.diveCooldownTimer || 0) - step);
+      this.velocityX = 0;
+      this.velocityY = 0;
+      this.isMoving = false;
+      if (this._movement) this._movement.speedFactor = 0;
+      if (this.getUpTimer > 0) return false;
+      this.isGettingUp = false;
+      this.wasDiving = false;
+      this.tackleMissRecoveryTimer = 0;
+      this.getUpTimer = 0;
+      return true;
+    }
+
     run(delta, targetX, targetY) {
       const dx = targetX - this.x;
       const dyYards = (targetY - this.y) * LATERAL_YARDS;
@@ -394,10 +503,13 @@
       this.catchDirection = config.catchDirection ?? null;
     }
 
-    dive() {
-      if (this.isDiving || this.isTackled) return;
-      this.isDiving = true;
-      this.diveProgress = 0;
+    dive(direction = null) {
+      if (this.isDiving || this.isGettingUp || this.isTackled) return;
+      const speed = Math.hypot(this.velocityX || 0, (this.velocityY || 0) * LATERAL_YARDS);
+      const directionX = direction?.vx ?? (speed > 0.05 ? this.velocityX / speed : Number(this.lastDirX) || 1);
+      const directionY = direction?.vy ?? (speed > 0.05 ? ((this.velocityY || 0) * LATERAL_YARDS) / speed : Number(this.lastDirY) || 0);
+      this.startDiveMotion(directionX, directionY);
+      this.wasDiving = true;
       this.autoRun = null;
     }
 
@@ -424,6 +536,13 @@
     beginCatch(type, dir = null) {
       this.catchBall(dir);
       if (type === 'standard') return;
+      if (this.isDiving) {
+        this.isDiving = false;
+        this.diveProgress = 0;
+        this.velocityX = 0;
+        this.velocityY = 0;
+        this.isMoving = false;
+      }
       this.catchType = type;
       this.catchElapsed = 0;
       this.catchDirection = this.autoRun || dir || { vx: this.lastDirX || 1, vy: this.lastDirY || 0 };
@@ -529,15 +648,12 @@
         this.tackledElapsed = (this.tackledElapsed || 0) + delta;
       }
       this.tickTimers?.(delta);
+      if (this.isGettingUp) {
+        this.updateGetUp(delta);
+        return;
+      }
       if (this.isDiving) {
-        this.diveProgress += delta / 0.4;
-        const forwardStep = this.speed * 1.25 * delta;
-        this.x += forwardStep;
-        this.animDistance += forwardStep;
-        if (this.diveProgress >= 1) {
-          this.isDiving = false;
-          this.diveProgress = 0;
-        }
+        if (this.advanceDiveMotion(delta)) this.beginGetUp();
       }
     }
 
@@ -589,6 +705,11 @@
       } else if (this.catchType === 'dive') {
         const frame = this.catchElapsed < 0.15 ? 0 : this.catchElapsed < 0.3 ? 1 : 2;
         RetroSprites.drawAction(ctx, x, y, pixel, u, 'dive_catch', frame, this.facingLeft);
+      } else if (this.isGettingUp) {
+        RetroSprites.drawAction(ctx, x, y, pixel, u, 'odive', 2, this.facingLeft);
+      } else if (this.isDiving) {
+        const frame = this.diveProgress < 0.33 ? 0 : this.diveProgress < 0.66 ? 1 : 2;
+        RetroSprites.drawAction(ctx, x, y, pixel, u, 'odive', frame, this.facingLeft);
       } else if (this.isTackled) {
         const frame = (this.tackledElapsed || 0) < 0.15 ? 0 : ((this.tackledElapsed || 0) < 0.30 ? 1 : 2);
         if (RetroSprites.drawAction) RetroSprites.drawAction(ctx, x, y, pixel, u, 'tackled', frame, this.facingLeft);
@@ -627,6 +748,7 @@
 
     canTackle(targetPlayer, isDive = this.isDiving) {
       if (!targetPlayer) return false;
+      if (this.isGettingUp) return false;
       if (this.tackleMissRecoveryTimer > 0) return false;
       if (targetPlayer.isTackled) return false;
       if (typeof targetPlayer.isImmuneTo === 'function' && targetPlayer.isImmuneTo(this)) return false;
@@ -638,7 +760,7 @@
     }
 
     canDiveTackle(targetPlayer) {
-      if (!targetPlayer || this.isDiving || this.diveCooldownTimer > 0 || this.tackleMissRecoveryTimer > 0) return false;
+      if (!targetPlayer || this.isDiving || this.isGettingUp || this.diveCooldownTimer > 0 || this.tackleMissRecoveryTimer > 0) return false;
       if (targetPlayer.isTackled) return false;
       if (typeof targetPlayer.isImmuneTo === 'function' && targetPlayer.isImmuneTo(this)) return false;
       const tacklingModule = (typeof GameTackling !== 'undefined' ? GameTackling : (typeof window !== 'undefined' ? window.GameTackling : null));
@@ -672,32 +794,20 @@
     }
 
     diveTackle(ballCarrier) {
-      if (this.isDiving || this.diveCooldownTimer > 0 || this.tackleMissRecoveryTimer > 0) return;
+      if (this.isDiving || this.isGettingUp || this.diveCooldownTimer > 0 || this.tackleMissRecoveryTimer > 0) return;
       if (!this.canDiveTackle(ballCarrier)) return;
-      this.isDiving = true;
-      this.wasDiving = true;
-      this.diveProgress = 0;
-      this.diveElapsed = 0;
       this.target = ballCarrier;
       const dx = ballCarrier.x - this.x;
       const dyYards = (ballCarrier.y - this.y) * LATERAL_YARDS;
       const dist = Math.hypot(dx, dyYards) || 1;
-      this.diveDirX = dx / dist;
-      this.diveDirY = dyYards / dist;
+      this.startDiveMotion(dx / dist, dyYards / dist);
+      this.wasDiving = true;
       this.facingLeft = this.diveDirX < 0;
     }
 
     updateDive(delta, targetPlayer, onTackle) {
       if (!this.isDiving) return;
-      this.diveElapsed = (this.diveElapsed || 0) + delta;
-      this.diveProgress = Math.min(1, this.diveElapsed / 0.45);
-
-      const forwardStep = this.speed * 1.40 * delta;
-      const dirX = Number.isFinite(this.diveDirX) ? this.diveDirX : (this.facingLeft ? -1 : 1);
-      const dirY = Number.isFinite(this.diveDirY) ? this.diveDirY : 0;
-      this.x = Math.max(-10, Math.min(110, this.x + dirX * forwardStep));
-      this.y = Math.max(-0.02, Math.min(0.95, this.y + (dirY * forwardStep) / LATERAL_YARDS));
-      this.animDistance += forwardStep;
+      const animationComplete = this.advanceDiveMotion(delta);
 
       const target = targetPlayer || this.target;
       const dist = target ? Math.hypot(target.x - this.x, (target.y - this.y) * LATERAL_YARDS) : Infinity;
@@ -708,16 +818,19 @@
         } else {
           this.tackle(target, { isDive: true });
         }
-      } else if (this.diveProgress >= 1) {
-        this.isDiving = false;
-        this.diveProgress = 0;
-        this.wasDiving = true;
+      }
+      if (animationComplete && this.isDiving) {
         this.tackleMissRecoveryTimer = 0.60;
         this.diveCooldownTimer = 1.00;
+        this.beginGetUp();
       }
     }
 
     pursue(targetPlayer, delta) {
+      if (this.isGettingUp) {
+        this.updateGetUp(delta);
+        return;
+      }
       if (this.diveCooldownTimer > 0) {
         this.diveCooldownTimer = Math.max(0, this.diveCooldownTimer - delta);
       }
@@ -766,6 +879,9 @@
       if (this.isBlocking) {
         RetroSprites.drawAction(ctx, x, y, pixel, u, 'blocking', Math.floor(this.animDistance * 2) % 2, this.facingLeft);
       } else if (this.isPancaked) {
+        RetroSprites.drawAction(ctx, x, y, pixel, u, 'ddive', 2, this.facingLeft);
+      } else if (this.isGettingUp) {
+        // Placeholder until the dedicated get-up animation is added.
         RetroSprites.drawAction(ctx, x, y, pixel, u, 'ddive', 2, this.facingLeft);
       } else if (this.isDiving) {
         const frame = this.diveProgress < 0.33 ? 0 : this.diveProgress < 0.66 ? 1 : 2;

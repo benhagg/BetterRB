@@ -24,6 +24,7 @@ let selectedOffensivePlayIndex = 0;
 let currentPlayOptions = [];
 let activePlay = null;
 let playbooks = { offense: null, defense: null };
+let gameHmrPaused = false;
 const gameLoop = createGameLoop({
   app,
   getSession: () => gameSession,
@@ -493,6 +494,13 @@ function startGameLoop() { gameLoop.start(); }
 function render() {
   stopGameLoop();
   if (screen === 'game' && !gameSession) screen = 'home';
+  const shouldPauseHmr = screen === 'game' && !!gameSession;
+  if (gameHmrPaused !== shouldPauseHmr) {
+    gameHmrPaused = shouldPauseHmr;
+    if (import.meta.hot) {
+      import.meta.hot.send('better-rb:game-session', { active: gameHmrPaused });
+    }
+  }
   document.body.classList.toggle('game-mode', screen === 'game' && !!gameSession);
   if (!seasonState) return;
   let content;

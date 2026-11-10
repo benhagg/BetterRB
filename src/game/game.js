@@ -364,12 +364,27 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
   const blocking = createBlockingEngine({ state, lateralYards });
   const passing = GamePassing.create({
     state, lateralYards, fieldBounds, passTarget, quarterbackIsBehindLineOfScrimmage,
-    onPassReleased: pass => { defenseAI.onPassReleased(pass); catching?.schedule(pass); }
+    onPassReleased: pass => { defenseAI.onPassReleased(pass); }
   });
-  catching = GameCatching.create({ state, lateralYards, defenseAI });
+  catching = GameCatching.create({
+    state,
+    lateralYards,
+    defenseAI,
+    field,
+    getCanvasSize: () => {
+      const canvas = typeof document !== 'undefined' ? document.getElementById('game-canvas') : null;
+      return { width: canvas?.width || 960, height: canvas?.height || 540 };
+    }
+  });
   defenseAI.initialize(state.defenders, selectedPlays.defense?.coverage || 'man');
 
   function resolveCatch(contact, input) {
+    if (contact.deflection) {
+      state.quarterback.hasBall = false;
+      state.pass.resolution = { type: 'deflection', time: contact.time };
+      startDeflectedBounce(contact);
+      return;
+    }
     const { player, ball, catchType, interception } = contact;
     state.pass.resolution = {
       playerId: player.id,
@@ -442,6 +457,14 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
   function movePlayer(delta, input = {}) {
     const carrier = ballCarrier();
     if (!carrier || carrier.isTackled) return;
+    if (carrier.isGettingUp) {
+      carrier.updateGetUp?.(delta);
+      return;
+    }
+    if (carrier.isDiving) {
+      if (carrier.advanceDiveMotion?.(delta)) carrier.beginGetUp?.();
+      return;
+    }
 
     const isDefensiveReturner = state.defenders.includes(carrier);
     const isPocketQb = (carrier === state.quarterback && state.phase === 'passing');
@@ -500,6 +523,29 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     state.phase = 'bouncing';
   }
 
+  function startDeflectedBounce(contact) {
+    const pass = state.pass;
+    if (!pass || !contact?.ball || !Number.isFinite(contact.ball.z)) {
+      startIncompleteBounce();
+      return;
+    }
+    state.bounce = {
+      x: contact.ball.x,
+      y: contact.ball.y,
+      z: Math.max(0, contact.ball.z),
+      velocityX: ((pass.targetX - pass.fromX) / pass.duration) * 0.65,
+      velocityY: ((pass.targetY - pass.fromY) / pass.duration) * 0.65,
+      // A contested touch sends the ball down immediately, then the normal
+      // bounce update and renderer take over.
+      velocityZ: -8,
+      restitution: 0.45,
+      friction: 0.5,
+      bounces: 0,
+      maxBounces: 3
+    };
+    state.phase = 'bouncing';
+  }
+
   function update(seconds, input = {}) {
     const delta = Number.isFinite(seconds) ? Math.max(0, Math.min(seconds, 0.1)) : 0;
     if (state.phase === 'preplay') {
@@ -512,6 +558,11 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       const carrier = ballCarrier();
       if (carrier?.isTackled) {
         carrier.tackledElapsed = (carrier.tackledElapsed || 0) + delta;
+      }
+      for (const player of [
+        ...(state.receivers || []), state.runningBack, ...(state.defenders || [])
+      ].filter(Boolean)) {
+        if (player.isGettingUp) player.updateGetUp?.(delta);
       }
       return state;
     }
@@ -567,15 +618,16 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       state.pass.heightFeet = currentHeight;
       state.pass.heightfeet = currentHeight;
       for (const player of [...state.receivers, state.runningBack]) {
+        if (player.isDiving || player.isGettingUp) {
+          player.update(delta);
+          continue;
+        }
         if (!player.hasBall) {
           if (pursuers.includes(player)
             && state.pass.progress * state.pass.duration >= GameDefenseAI.RECEIVER_BREAK_DELAY) {
             // Pass pursuers use the same movement acceleration and deceleration as routes.
             player.run(delta, state.pass.targetX, state.pass.targetY);
           } else {
-            // Non-targeted receivers keep running their assigned routes while
-            // the ball is airborne. Catch-volume contests can be layered on
-            // later without turning every route runner into a blocker.
             player.runRoute(delta);
           }
         }
