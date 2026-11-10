@@ -37,10 +37,17 @@ export function getCarrierBreakScore(carrier) {
   return strength * multiplier;
 }
 
-export function getTacklerScore(tackler, isDive = false) {
+export function calculateDiveTacklePenalty(cosAngle = 0, isDive = false) {
+  if (!isDive || typeof cosAngle !== 'number' || cosAngle >= 0) return 0;
+  // Dive tackle penalty of 2 * cos(AoA) only if cosAngle < 0 (penalty for defender)
+  // Subtracted from tacklerScore as 2 * |cosAngle| = -2 * cosAngle
+  return -2 * cosAngle;
+}
+
+export function getTacklerScore(tackler, isDive = false, cosAngle = 0) {
   const tackling = Number(tackler?.ratings?.tackling ?? tackler?.rating?.tackling ?? (Number.isFinite(tackler?.tackling) ? tackler.tackling : (Number.isFinite(tackler?.rating) ? tackler.rating : 5)));
   const strength = Number(tackler?.ratings?.strength ?? tackler?.rating?.strength ?? (Number.isFinite(tackler?.strength) ? tackler.strength : 5));
-  const divePenalty = isDive ? (Number.isFinite(DIVE_TACKLE_PENALTY) ? DIVE_TACKLE_PENALTY : 0) : 0;
+  const divePenalty = calculateDiveTacklePenalty(cosAngle, isDive);
   return (strength * 0.50 + tackling * 0.75) - divePenalty;
 }
 
@@ -83,12 +90,13 @@ export function calculateTackleDiff(tackler, carrier, options = {}) {
   const multiplier = getPositionStrengthMultiplier(carrier?.position);
   const carrierScore = carrierStrength * multiplier;
 
-  const tacklerScore = getTacklerScore(tackler, isDive);
   const { cosAngle, angleDeg } = calculateAngleOfAttack(tackler, carrier, lateralYards);
+  const divePenalty = calculateDiveTacklePenalty(cosAngle, isDive);
+  const tacklerScore = getTacklerScore(tackler, isDive, cosAngle);
 
-  // diff = strength * multiplier - (def strength * 0.5 + def tackle * .75) - (cos(angle of attack))
+  // diff = strength * multiplier - (def strength * 0.5 + def tackle * .75 - divePenalty) - (cos(angle of attack))
   const diff = carrierScore - tacklerScore - cosAngle;
-  return { diff, carrierScore, tacklerScore, cosAngle, angleDeg, carrierStrength, multiplier };
+  return { diff, carrierScore, tacklerScore, cosAngle, angleDeg, carrierStrength, multiplier, divePenalty };
 }
 
 export function calculateTackleProbability(tackler, carrier, isDive = false, lateralYards = 25) {
@@ -208,7 +216,8 @@ export function attemptTackle(tackler, carrier, options = {}) {
     cosAngle,
     angleDeg,
     carrierStrength,
-    multiplier
+    multiplier,
+    divePenalty
   } = calculateTackleDiff(tackler, carrier, { isDive, lateralYards });
 
   const rawProb = TACKLE_BASE_PROBABILITY - diff * TACKLE_DIFF_SCALE;
@@ -226,7 +235,7 @@ export function attemptTackle(tackler, carrier, options = {}) {
     `vs ${carrier?.name || carrier?.position || 'Carrier'} (#${carrier?.id ?? '?'})\n` +
     `  Type: ${isDive ? 'DIVE TACKLE' : 'STANDING WRAP-UP'} | Distance: ${dist.toFixed(2)} yds\n` +
     `  Carrier: Pos=${carrierPos}, Strength=${carrierStrength}, Mult=${multiplier.toFixed(2)} -> CarrierScore=${carrierScore.toFixed(2)}\n` +
-    `  Defender: Strength=${tacklerStrength} (*0.5=${(tacklerStrength * 0.5).toFixed(2)}), Tackling=${tacklerTackling} (*0.75=${(tacklerTackling * 0.75).toFixed(2)}) -> DefScore=${tacklerScore.toFixed(2)}\n` +
+    `  Defender: Strength=${tacklerStrength} (*0.5=${(tacklerStrength * 0.5).toFixed(2)}), Tackling=${tacklerTackling} (*0.75=${(tacklerTackling * 0.75).toFixed(2)})${isDive ? `, DivePenalty=-${divePenalty.toFixed(2)}` : ''} -> DefScore=${tacklerScore.toFixed(2)}\n` +
     `  Angle of Attack: ${angleDeg.toFixed(1)}° (cos=${cosAngle.toFixed(3)}) [${cosAngle > 0.5 ? 'FRONT HIT' : cosAngle < -0.5 ? 'REAR HIT' : 'FLANK/ANGLE HIT'}]\n` +
     `  Formula: diff = ${carrierScore.toFixed(2)} - ${tacklerScore.toFixed(2)} - (${cosAngle.toFixed(3)}) = ${diff.toFixed(2)}\n` +
     `  Tackle Probability: ${(probability * 100).toFixed(1)}% | Roll: ${(randomValue * 100).toFixed(1)}%\n` +
@@ -281,6 +290,7 @@ const GameTackling = {
   POSITION_STRENGTH_MULTIPLIERS,
   getPositionStrengthMultiplier,
   calculateAngleOfAttack,
+  calculateDiveTacklePenalty,
   calculateTackleDiff,
   DIVE_TACKLE_PENALTY,
   BROKEN_TACKLE_IMMUNITY,

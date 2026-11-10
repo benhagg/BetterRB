@@ -10,6 +10,7 @@ import {
   POSITION_STRENGTH_MULTIPLIERS,
   getPositionStrengthMultiplier,
   calculateAngleOfAttack,
+  calculateDiveTacklePenalty,
   calculateTackleDiff,
   DIVE_TACKLE_PENALTY,
   BROKEN_TACKLE_IMMUNITY,
@@ -53,11 +54,35 @@ describe('tackling rules and resolution', () => {
       expect(getCarrierBreakScore(wr)).toBeCloseTo(5.0); // 10 * 0.5
     });
 
-    it('calculates tackler score: def strength * 0.5 + def tackle * 0.75', () => {
+    it('calculates tackler score: def strength * 0.5 + def tackle * 0.75 minus dive penalty if cos < 0', () => {
       const defender = new DefensivePlayer({ ratings: { strength: 6, tackling: 8 } });
-      // 6 * 0.50 + 8 * 0.75 = 3.0 + 6.0 = 9.0
+      // Standing wrap-up: 6 * 0.50 + 8 * 0.75 = 3.0 + 6.0 = 9.0
       expect(getTacklerScore(defender, false)).toBeCloseTo(9.0);
-      expect(getTacklerScore(defender, true)).toBeCloseTo(9.0);
+
+      // Dive from front (cos = 1 >= 0): no penalty -> 9.0
+      expect(getTacklerScore(defender, true, 1.0)).toBeCloseTo(9.0);
+
+      // Dive from flank (cos = 0 >= 0): no penalty -> 9.0
+      expect(getTacklerScore(defender, true, 0.0)).toBeCloseTo(9.0);
+
+      // Dive from behind (cos = -1.0 < 0): penalty of -2 * (-1.0) = 2.0 -> 7.0
+      expect(getTacklerScore(defender, true, -1.0)).toBeCloseTo(7.0);
+
+      // Dive from trailing angle (cos = -0.5 < 0): penalty of -2 * (-0.5) = 1.0 -> 8.0
+      expect(getTacklerScore(defender, true, -0.5)).toBeCloseTo(8.0);
+    });
+
+    it('calculates dive tackle penalty: 2 * cos(angle) only if cos < 0', () => {
+      // Standing tackle never has penalty
+      expect(calculateDiveTacklePenalty(-1.0, false)).toBe(0);
+
+      // Dive from front or flank (cos >= 0) has no penalty
+      expect(calculateDiveTacklePenalty(1.0, true)).toBe(0);
+      expect(calculateDiveTacklePenalty(0.0, true)).toBe(0);
+
+      // Dive from behind (cos < 0) has penalty for defender
+      expect(calculateDiveTacklePenalty(-1.0, true)).toBeCloseTo(2.0);
+      expect(calculateDiveTacklePenalty(-0.5, true)).toBeCloseTo(1.0);
     });
   });
 
@@ -106,6 +131,22 @@ describe('tackling rules and resolution', () => {
       defender.y = 0.5;
       const rearRes = calculateTackleDiff(defender, carrier);
       expect(rearRes.diff).toBeCloseTo(1.0);
+      expect(rearRes.divePenalty).toBe(0);
+
+      // Case 2b: Rear dive tackle (cos = -1 < 0) -> penalty of 2.0 reduces defScore to 7.0
+      // diff = 9.0 - 7.0 - (-1) = +3.0
+      const rearDiveRes = calculateTackleDiff(defender, carrier, { isDive: true });
+      expect(rearDiveRes.divePenalty).toBeCloseTo(2.0);
+      expect(rearDiveRes.tacklerScore).toBeCloseTo(7.0);
+      expect(rearDiveRes.diff).toBeCloseTo(3.0);
+
+      // Case 1b: Front dive tackle (cos = 1 >= 0) -> no dive penalty
+      defender.x = 21;
+      defender.y = 0.5;
+      const frontDiveRes = calculateTackleDiff(defender, carrier, { isDive: true });
+      expect(frontDiveRes.divePenalty).toBe(0);
+      expect(frontDiveRes.tacklerScore).toBeCloseTo(9.0);
+      expect(frontDiveRes.diff).toBeCloseTo(-1.0);
 
       // Case 3: Flank hit (cos = 0) -> diff = 9.0 - 9.0 - 0 = 0.0 (neutral)
       defender.x = 20;
@@ -135,7 +176,10 @@ describe('tackling rules and resolution', () => {
       // Rear hit decreases tackle probability: diff = +1 -> prob = 0.60 - (1)*0.08 = 0.52
       defender.x = 19;
       defender.y = 0.5;
-      expect(calculateTackleProbability(defender, carrier)).toBeCloseTo(0.52);
+      expect(calculateTackleProbability(defender, carrier, false)).toBeCloseTo(0.52);
+
+      // Rear dive tackle applies 2 * cos penalty (diff = +3) -> prob = 0.60 - (3)*0.08 = 0.36
+      expect(calculateTackleProbability(defender, carrier, true)).toBeCloseTo(0.36);
 
       // Extreme defender advantage clamps to 0.95
       const eliteDefender = new DefensivePlayer({ ratings: { strength: 20, tackling: 20 } });
