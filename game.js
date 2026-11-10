@@ -513,7 +513,13 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
 
   function update(seconds, input = {}) {
     const delta = Number.isFinite(seconds) ? Math.max(0, Math.min(seconds, 0.1)) : 0;
-    if (state.phase === 'preplay' || state.phase === 'complete' || state.clockSeconds <= 0) return state;
+    if (state.phase === 'preplay') {
+      // Keep man defenders aligned to the current offensive formation while
+      // play selection is open; the snap should not trigger a late assignment run.
+      defenseAI.initialize(state.defenders, selectedPlays.defense?.coverage || 'man');
+      return state;
+    }
+    if (state.phase === 'complete' || state.clockSeconds <= 0) return state;
     if (state.phase === 'passing' || state.phase === 'running') {
       if (state.playType === 'run' && !state.runningBack.hasBall && state.possession !== 'defense') {
         state.runningBack.runRoute(delta);
