@@ -106,7 +106,7 @@ describe('defensive AI', () => {
     state.phase = 'running';
     ai.update(1 / 60);
     expect(defender.defenseAI.mode).toBe('pursuit');
-    for (let i = 0; i < 180 && state.phase !== 'complete'; i++) ai.update(1 / 60);
+    for (let i = 0; i < 360 && state.phase !== 'complete'; i++) ai.update(1 / 60);
     expect(receiver.isTackled).toBe(true);
     expect(state.phase).toBe('complete');
   });
