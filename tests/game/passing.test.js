@@ -14,7 +14,7 @@ describe('high-clearance pass arc', () => {
     const targetHeight = 4;
     const profile = Passing.throwProfile(distance, targetHeight, strength);
 
-    const gravity = 32.174;
+    const gravity = profile.gravity;
     const timeToApex = profile.launchVelocity / gravity;
     const expectedDuration = timeToApex
       + Math.sqrt(2 * (profile.apexHeight - targetHeight) / gravity);

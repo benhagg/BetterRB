@@ -1,18 +1,19 @@
 (function (root) {
   // --- Tunable Throw & Accuracy Physics Coefficients ---
-  const releaseHeightFeet = 6;
-  const targetHeightFeet = 4;
-  const gravityFeetPerSecondSquared = 32.174;
+  const METERS_PER_YARD = 0.9144;
+  const FEET_PER_METER = 3.28084;
+  const releaseHeightMeters = 2.1;
+  const defaultCatchHeightMeters = 1.8;
+  const gravityMetersPerSecondSquared = 9.81;
+  const releaseHeightFeet = releaseHeightMeters * FEET_PER_METER;
+  const targetHeightFeet = defaultCatchHeightMeters * FEET_PER_METER;
   const feetPerYard = 3.0;
 
-  // Vertical clearance is intentionally independent from horizontal travel time.
-  // A pass needs to clear defenders without becoming slower downfield.
+  // Kept for the legacy throw-arc helpers exposed to the UI and tests.
   const ARC_STRENGTH_REDUCTION = 0.015;
   const ARC_START_YARDS = 3;
   const ARC_MAX_YARDS = 25;
   const MAX_ARC_FEET = 15;
-  const SHORT_PASS_MAX_YARDS = 5;
-  const SHORT_PASS_SPEED_YPS = 20;
   const MIN_THROW_DISTANCE_YARDS = 15;
   const MAX_THROW_DISTANCE_YARDS = 30;
 
@@ -42,14 +43,6 @@
 
   function desiredApexForDistance(distanceYards) {
     return releaseHeightFeet + calculateThrowArc(distanceYards);
-  }
-
-  // Retains the legacy flight-time relationship so changing the visual arc
-  // does not change how quickly the ball covers ground.
-  function calculateTimingArc(distanceYards, strength = 5) {
-    const d = Math.max(0, Number(distanceYards) || 0);
-    const s = Math.max(0, Math.min(10, Number(strength) || 5));
-    return Math.max(0, 0.01 * d * (1 - 0.02 * s));
   }
 
   function calculateSigma(distanceYards) {
@@ -97,43 +90,96 @@
     return { inaccuracyX, inaccuracyY, inaccuracyHeightFeet, sigma };
   }
 
-  function throwProfile(distanceYards, targetHeight = targetHeightFeet, strength = 5) {
+  function solveFootballTrajectory(distanceYards, catchHeightMeters = defaultCatchHeightMeters) {
+    const distance = Math.max(0, Number(distanceYards) || 0);
+    const targetHeightMeters = Number.isFinite(catchHeightMeters)
+      ? catchHeightMeters : defaultCatchHeightMeters;
+    const rangeMeters = distance * METERS_PER_YARD;
+    let angleDegrees = 14 + (0.40 * distance) - (0.0012 * distance ** 2);
+    angleDegrees = Math.max(14, Math.min(42, angleDegrees));
+    const angleRadians = angleDegrees * Math.PI / 180;
+    const cosine = Math.cos(angleRadians);
+    const sine = Math.sin(angleRadians);
+    const tangent = Math.tan(angleRadians);
+    const denominator = 2 * cosine ** 2
+      * (rangeMeters * tangent + releaseHeightMeters - targetHeightMeters);
+    const initialVelocityMps = denominator > 0 && rangeMeters > 0
+      ? Math.sqrt((gravityMetersPerSecondSquared * rangeMeters ** 2) / denominator)
+      : 0;
+    const hangTimeSeconds = initialVelocityMps > 0
+      ? rangeMeters / (initialVelocityMps * cosine)
+      : 0;
+    const peakHeightMeters = releaseHeightMeters
+      + (initialVelocityMps * sine) ** 2 / (2 * gravityMetersPerSecondSquared);
+    const points = [];
+    const steps = 20;
+
+    for (let i = 0; i <= steps; i++) {
+      const xMeters = (rangeMeters * i) / steps;
+      const xYards = xMeters / METERS_PER_YARD;
+      const yMeters = initialVelocityMps > 0
+        ? releaseHeightMeters + (xMeters * tangent)
+          - (gravityMetersPerSecondSquared * xMeters ** 2)
+            / (2 * (initialVelocityMps * cosine) ** 2)
+        : releaseHeightMeters;
+      points.push({
+        xYards: Number(xYards.toFixed(2)),
+        yFeet: Number(Math.max(0, yMeters * FEET_PER_METER).toFixed(2))
+      });
+    }
+
+    return {
+      targetDistanceYards: distance,
+      angleDegrees,
+      angleRadians,
+      initialVelocityMps,
+      initialVelocityMph: initialVelocityMps * 2.23694,
+      peakHeightFeet: peakHeightMeters * FEET_PER_METER,
+      hangTimeSeconds,
+      trajectoryPath: points
+    };
+  }
+
+  function calculateFootballTrajectory(distanceYards, catchHeightMeters = defaultCatchHeightMeters) {
+    const trajectory = solveFootballTrajectory(distanceYards, catchHeightMeters);
+    return {
+      targetDistanceYards: trajectory.targetDistanceYards,
+      launchAngleDegrees: Number(trajectory.angleDegrees.toFixed(2)),
+      initialVelocityMps: Number(trajectory.initialVelocityMps.toFixed(2)),
+      initialVelocityMph: Number(trajectory.initialVelocityMph.toFixed(2)),
+      peakHeightFeet: Number(trajectory.peakHeightFeet.toFixed(2)),
+      hangTimeSeconds: Number(trajectory.hangTimeSeconds.toFixed(2)),
+      trajectoryPath: trajectory.trajectoryPath
+    };
+  }
+
+  function throwProfile(distanceYards, targetHeight = targetHeightFeet) {
     const resolvedTargetHeight = Number.isFinite(targetHeight) ? targetHeight : targetHeightFeet;
     const distance = Math.max(0, Number(distanceYards) || 0);
-    if (distance <= SHORT_PASS_MAX_YARDS) {
-      const duration = Math.max(0.05, distance / SHORT_PASS_SPEED_YPS);
-      return {
-        launchVelocity: (resolvedTargetHeight - releaseHeightFeet) / duration,
-        duration,
-        apexHeight: releaseHeightFeet,
-        arc: 0,
-        gravity: 0,
-        apexAt: 0,
-        releaseHeight: releaseHeightFeet,
-        targetHeight: resolvedTargetHeight,
-        flat: true
-      };
-    }
-    const arc = calculateThrowArc(distanceYards, strength);
-    const timingArc = calculateTimingArc(distanceYards, strength);
-    const timingApex = Math.max(releaseHeightFeet, resolvedTargetHeight) + timingArc * distanceYards;
-    const timingLaunchVelocity = Math.sqrt(2 * gravityFeetPerSecondSquared * (timingApex - releaseHeightFeet));
-    const timingDuration = timingLaunchVelocity / gravityFeetPerSecondSquared
-      + Math.sqrt(2 * (timingApex - resolvedTargetHeight) / gravityFeetPerSecondSquared);
-    const duration = Math.max(0.001, timingDuration);
+    const trajectory = solveFootballTrajectory(distance, resolvedTargetHeight / FEET_PER_METER);
+    const angleRadians = trajectory.angleRadians;
+    const initialVelocityMps = trajectory.initialVelocityMps;
+    const launchVelocity = initialVelocityMps * Math.sin(angleRadians) * FEET_PER_METER;
+    const duration = Math.max(0.001, trajectory.hangTimeSeconds);
+    const apexHeight = trajectory.peakHeightFeet;
+    const gravity = gravityMetersPerSecondSquared * FEET_PER_METER;
+    const apexAt = Math.max(0, Math.min(1, launchVelocity / gravity / duration));
 
-    // h(p) = linear height + arc * 4p(1-p). This reaches the new high
-    // clearance arc while arriving at the same time as the legacy throw.
-    const gravity = gravityFeetPerSecondSquared;
-    const apexHeight = Math.max(releaseHeightFeet + 0.1, desiredApexForDistance(distanceYards));
-    const riseToApex = apexHeight - releaseHeightFeet;
-    const launchVelocity = Math.sqrt(2 * gravity * riseToApex);
-    const timeToApex = launchVelocity / gravity;
-    const timeFromApex = Math.sqrt(2 * (apexHeight - resolvedTargetHeight) / gravity);
-    const projectileDuration = Math.max(0.001, timeToApex + timeFromApex);
-    const apexAt = timeToApex / projectileDuration;
-    return { launchVelocity, duration: projectileDuration, apexHeight, arc, gravity, apexAt,
-      releaseHeight: releaseHeightFeet, targetHeight: resolvedTargetHeight };
+    return {
+      launchVelocity,
+      horizontalVelocityYardsPerSecond: initialVelocityMps * Math.cos(angleRadians) / METERS_PER_YARD,
+      duration,
+      apexHeight,
+      arc: Math.max(0, apexHeight - releaseHeightFeet),
+      gravity,
+      apexAt,
+      releaseHeight: releaseHeightFeet,
+      targetHeight: resolvedTargetHeight,
+      launchAngleDegrees: trajectory.angleDegrees,
+      initialVelocityMps,
+      initialVelocityMph: trajectory.initialVelocityMps * 2.23694,
+      trajectoryPath: trajectory.trajectoryPath
+    };
   }
 
   function arcHeightAt(progress, profile) {
@@ -384,6 +430,7 @@
         return throwHeightAt(progress, distanceYards, targetHeight, getQbStrength());
       },
       throwProfile: (distanceYards, targetHeight) => throwProfile(distanceYards, targetHeight, getQbStrength()),
+      calculateFootballTrajectory,
       throwPass,
       throwPassToLocation,
       updateWindup,
@@ -399,6 +446,7 @@
   const api = {
     create,
     throwProfile,
+    calculateFootballTrajectory,
     throwHeightAt,
     calculateThrowArc,
     desiredApexForDistance,
