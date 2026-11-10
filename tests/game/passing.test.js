@@ -2,6 +2,12 @@ import { describe, expect, it } from 'vitest';
 import Passing from '../../src/game/passing.js';
 
 describe('high-clearance pass arc', () => {
+  it('scales the maximum throw distance from 15 to 30 yards by strength', () => {
+    expect(Passing.maxThrowDistance(0)).toBe(15);
+    expect(Passing.maxThrowDistance(5)).toBe(22.5);
+    expect(Passing.maxThrowDistance(10)).toBe(30);
+  });
+
   it('uses gravity to reach a bounded deep-pass apex', () => {
     const distance = 15;
     const strength = 5;

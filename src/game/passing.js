@@ -13,6 +13,8 @@
   const MAX_ARC_FEET = 15;
   const SHORT_PASS_MAX_YARDS = 5;
   const SHORT_PASS_SPEED_YPS = 20;
+  const MIN_THROW_DISTANCE_YARDS = 15;
+  const MAX_THROW_DISTANCE_YARDS = 30;
 
   // Inaccuracy base & distance coefficients (less is more accurate)
   const C_BASE = 0.10;
@@ -53,6 +55,25 @@
   function calculateSigma(distanceYards) {
     const d = Math.max(0, Number(distanceYards) || 0);
     return C_BASE + (ALPHA * d) + (BETA * d * d);
+  }
+
+  function maxThrowDistance(strength = 0) {
+    const rating = Math.max(0, Math.min(10, Number(strength) || 0));
+    return MIN_THROW_DISTANCE_YARDS
+      + (MAX_THROW_DISTANCE_YARDS - MIN_THROW_DISTANCE_YARDS) * (rating / 10);
+  }
+
+  function limitThrowTarget(fromX, fromY, targetX, targetY, strength = 0, lateralScale = 25) {
+    const dx = targetX - fromX;
+    const dy = (targetY - fromY) * lateralScale;
+    const distance = Math.hypot(dx, dy);
+    const limit = maxThrowDistance(strength);
+    if (distance <= limit || distance < 0.0001) return { x: targetX, y: targetY };
+    const scale = limit / distance;
+    return {
+      x: fromX + dx * scale,
+      y: fromY + (dy * scale) / lateralScale
+    };
   }
 
   function randomGaussian() {
@@ -177,6 +198,9 @@
 
       const fromX = state.quarterback.x;
       const fromY = state.quarterback.y;
+      const limitedTarget = limitThrowTarget(fromX, fromY, targetX, targetY, getQbStrength(), lateralYards);
+      targetX = limitedTarget.x;
+      targetY = limitedTarget.y;
       state.quarterback.facingLeft = targetX < fromX;
       state.quarterback.isMoving = false;
       state.quarterback.velocityX = 0;
@@ -248,6 +272,10 @@
         duration = throwProfile(distance, targetHeightFeet, getQbStrength()).duration;
       }
 
+      const limitedTarget = limitThrowTarget(fromX, fromY, targetX, targetY, getQbStrength(), lateralYards);
+      targetX = limitedTarget.x;
+      targetY = limitedTarget.y;
+
       const intendedDistance = distance;
       const qbWasMoving = Boolean(isRunningThrow)
         || Boolean(state.throwWindup?.wasMoving)
@@ -311,7 +339,8 @@
       if (!Number.isFinite(targetX) || !Number.isFinite(targetY)) return;
       const clampedX = Math.max(fieldBounds.endZoneL, Math.min(fieldBounds.endZoneR, targetX));
       const clampedY = Math.max(fieldBounds.top, Math.min(fieldBounds.bottom, targetY));
-      queue({ targetX: clampedX, targetY: clampedY });
+      const limited = limitThrowTarget(state.quarterback.x, state.quarterback.y, clampedX, clampedY, getQbStrength(), lateralYards);
+      queue({ targetX: limited.x, targetY: limited.y });
     }
 
     function throwPass(target, maybeY) {
@@ -362,7 +391,8 @@
       calculateInaccuracy,
       calculateThrowArc,
       desiredApexForDistance,
-      arcFactor
+      arcFactor,
+      maxThrowDistance
     };
   }
 
@@ -373,6 +403,7 @@
     calculateThrowArc,
     desiredApexForDistance,
     arcFactor,
+    maxThrowDistance,
     calculateSigma,
     calculateInaccuracy,
     releaseHeightFeet,
