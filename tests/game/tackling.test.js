@@ -33,9 +33,9 @@ describe('tackling rules and resolution', () => {
       // Above 80% speed: no brace boost
       expect(getCarrierBreakScore(carrier)).toBe(6);
 
-      // Under 80% speed: +2.5 brace boost
+      // Under 80% speed: +BRACE_SCORE_BOOST brace boost
       carrier._movement = { speedFactor: 0.50 };
-      expect(getCarrierBreakScore(carrier)).toBe(8.5);
+      expect(getCarrierBreakScore(carrier)).toBe(6 + BRACE_SCORE_BOOST);
     });
 
     it('calculates tackler score for standing vs dive tackle', () => {
@@ -43,8 +43,8 @@ describe('tackling rules and resolution', () => {
       // Standing: 8 * 0.60 + 5 * 0.40 = 4.8 + 2.0 = 6.8
       expect(getTacklerScore(defender, false)).toBeCloseTo(6.8);
 
-      // Dive: 6.8 - 2.0 = 4.8
-      expect(getTacklerScore(defender, true)).toBeCloseTo(4.8);
+      // Dive: 6.8 - DIVE_TACKLE_PENALTY
+      expect(getTacklerScore(defender, true)).toBeCloseTo(6.8 - DIVE_TACKLE_PENALTY);
     });
 
     it('calculates tackle probability and clamps to [0.10, 0.95]', () => {

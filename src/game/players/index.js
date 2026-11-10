@@ -155,6 +155,22 @@
       this.velocityX = 0;
       this.velocityY = 0;
       this._movement = null;
+      this.isDiving = false;
+      this.wasDiving = false;
+      this.diveProgress = 0;
+      this.diveCooldownTimer = 0;
+      this.tackleMissRecoveryTimer = 0;
+      this.stumbleTimer = 0;
+      this.stumbleDuration = 0;
+      this.stumbleMultiplier = 1;
+      this._tackleImmunities?.clear();
+    }
+
+    tickTimers(delta) {
+      if (this.stumbleTimer > 0) {
+        this.stumbleTimer = Math.max(0, this.stumbleTimer - delta);
+      }
+      this.updateTackleImmunities?.(delta);
     }
 
     movementStep(delta, requestedX, requestedY) {
@@ -272,12 +288,13 @@
       }
 
       if (this.stumbleTimer > 0) {
-        this.stumbleTimer = Math.max(0, this.stumbleTimer - delta);
+        const stumbleCap = this.stumbleMultiplier || 0.5;
+        if (movement.speedFactor > stumbleCap) {
+          movement.speedFactor = stumbleCap;
+        }
       }
-      this.updateTackleImmunities?.(delta);
 
-      const stumbleFactor = (this.stumbleTimer > 0) ? (this.stumbleMultiplier || 0.5) : 1.0;
-      const factor = Math.max(0, Math.min(1, movement.speedFactor)) * stumbleFactor;
+      const factor = Math.max(0, Math.min(1, movement.speedFactor));
       this.velocityX = (movement.direction.x * this.speed * factor) || 0;
       this.velocityY = ((movement.direction.y * this.speed * factor) / LATERAL_YARDS) || 0;
       this.lastDirX = movement.direction.x;
@@ -459,7 +476,11 @@
 
     stumble(duration = 0.3, speedMultiplier = 0.5) {
       this.stumbleTimer = duration;
+      this.stumbleDuration = duration;
       this.stumbleMultiplier = speedMultiplier;
+      if (this._movement) {
+        this._movement.speedFactor = Math.min(this._movement.speedFactor, speedMultiplier);
+      }
     }
 
     setTackleImmunity(defender, duration = 0.40) {
@@ -494,10 +515,7 @@
       if (this.isTackled) {
         this.tackledElapsed = (this.tackledElapsed || 0) + delta;
       }
-      if (this.stumbleTimer > 0) {
-        this.stumbleTimer = Math.max(0, this.stumbleTimer - delta);
-      }
-      this.updateTackleImmunities?.(delta);
+      this.tickTimers?.(delta);
       if (this.isDiving) {
         this.diveProgress += delta / 0.4;
         const forwardStep = this.speed * 1.25 * delta;
@@ -508,6 +526,16 @@
           this.diveProgress = 0;
         }
       }
+    }
+
+    drawStumble(ctx, coords, pixel, uniform) {
+      const u = uniform || this.uniform;
+      const x = Math.round(coords.screenX - 8 * pixel);
+      // Visible stumble: rapid footwork cadence and slight vertical bob
+      const bob = Math.sin((this.stumbleTimer || 0) * 30) > 0 ? pixel : 0;
+      const y = Math.round(coords.screenY - 8 * pixel) + bob;
+      const frame = Math.floor((this.animDistance * 2 + (this.stumbleTimer || 0) * 12)) % 6;
+      RetroSprites.drawRunner(ctx, x, y, pixel, u, frame, this.facingLeft, true);
     }
 
     drawRouteBadge(ctx, coords, pixel) {
@@ -554,6 +582,8 @@
         const frame = this.diveProgress < 0.33 ? 0 : this.diveProgress < 0.66 ? 1 : 2;
         if (RetroSprites.drawAction) RetroSprites.drawAction(ctx, x, y, pixel, u, 'odive', frame, this.facingLeft);
         else RetroSprites.drawRunner(ctx, x, y, pixel, u, 0, this.facingLeft);
+      } else if (this.stumbleTimer > 0 && this.hasBall) {
+        this.drawStumble(ctx, coords, pixel, uniform);
       } else if (this.hasBall) {
         RetroSprites.drawRunner(ctx, x, y, pixel, u, Math.floor(this.animDistance * 1.5), this.facingLeft, true);
       } else {
@@ -638,8 +668,8 @@
       const forwardStep = this.speed * 1.40 * delta;
       const dirX = Number.isFinite(this.diveDirX) ? this.diveDirX : (this.facingLeft ? -1 : 1);
       const dirY = Number.isFinite(this.diveDirY) ? this.diveDirY : 0;
-      this.x += dirX * forwardStep;
-      this.y += (dirY * forwardStep) / LATERAL_YARDS;
+      this.x = Math.max(-10, Math.min(110, this.x + dirX * forwardStep));
+      this.y = Math.max(-0.02, Math.min(0.95, this.y + (dirY * forwardStep) / LATERAL_YARDS));
       this.animDistance += forwardStep;
 
       const target = targetPlayer || this.target;
@@ -652,6 +682,7 @@
       } else if (this.diveProgress >= 1) {
         this.isDiving = false;
         this.diveProgress = 0;
+        this.wasDiving = true;
         this.tackleMissRecoveryTimer = 0.60;
         this.diveCooldownTimer = 1.00;
       }
@@ -663,6 +694,9 @@
       }
       if (this.tackleMissRecoveryTimer > 0) {
         this.tackleMissRecoveryTimer = Math.max(0, this.tackleMissRecoveryTimer - delta);
+        if (this.tackleMissRecoveryTimer <= 0) {
+          this.wasDiving = false;
+        }
         this.coastToStop(delta);
         return;
       }
@@ -703,11 +737,10 @@
       } else if (this.tackleMissRecoveryTimer > 0 && this.wasDiving) {
         if (RetroSprites.drawAction) RetroSprites.drawAction(ctx, x, y, pixel, u, 'ddive', 2, this.facingLeft);
         else RetroSprites.drawPrePlay(ctx, x, y, pixel, u, this.kind, this.facingLeft);
+      } else if (this.tackleMissRecoveryTimer > 0) {
+        RetroSprites.drawPrePlay(ctx, x, y, pixel, u, this.kind, this.facingLeft);
       } else if (this.hasBall) {
         RetroSprites.drawRunner(ctx, x, y, pixel, u, Math.floor(this.animDistance * 1.5), this.facingLeft, true);
-      } else if (this.diveCooldownTimer > 0.5 || this.tackleMissRecoveryTimer > 0) {
-        if (RetroSprites.drawAction) RetroSprites.drawAction(ctx, x, y, pixel, u, 'resting', 0, this.facingLeft);
-        else RetroSprites.drawPrePlay(ctx, x, y, pixel, u, this.kind, this.facingLeft);
       } else if (this.isBackpedaling && this.isMoving) {
         const frame = 5 - (Math.floor(this.animDistance * 1.5) % 6);
         RetroSprites.drawRunner(ctx, x, y, pixel, u, frame, true);

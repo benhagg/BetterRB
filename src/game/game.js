@@ -1,4 +1,4 @@
-import { cameraTrailingYards, fieldBounds, lateralYards, passGravityFeetPerSecondSquared, runnerTrailingYards } from './field-config.js';
+import { cameraTrailingYards, field, fieldBounds, lateralYards, passGravityFeetPerSecondSquared, runnerTrailingYards } from './field-config.js';
 import { acrossToY as projectAcrossToY } from './formation.js';
 import { nearestDefender } from './blocking.js';
 import { clampToField } from './movement.js';
@@ -309,8 +309,6 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
   }
 
   // The original field image runs horizontally, with the sidelines at the top and bottom.
-  const field = { x: 0, y: 0, width: 1305, height: 240, goalLine: 152, pixelsPerYard: 10, topSideline: 32, bottomSideline: 206 };
-
   function syncQuarterbackState() {
     state.fieldPosition = state.quarterback.x;
     state.playerY = state.quarterback.y;
@@ -516,13 +514,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       }
       return state;
     }
-    const currentCarrier = ballCarrier();
-    if (currentCarrier) {
-      if (currentCarrier.stumbleTimer > 0) {
-        currentCarrier.stumbleTimer = Math.max(0, currentCarrier.stumbleTimer - delta);
-      }
-      currentCarrier.updateTackleImmunities?.(delta);
-    }
+
     if (state.phase === 'passing' || state.phase === 'running') {
       const defenseHasBall = state.defenders.some(defender => defender.hasBall);
       if (state.playType === 'run' && state.quarterback.hasBall

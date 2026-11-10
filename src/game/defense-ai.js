@@ -158,6 +158,9 @@ import { playEndsFromTackle, shouldDefenderDive, attemptTackle } from './tacklin
       }
       if (defender.tackleMissRecoveryTimer > 0) {
         defender.tackleMissRecoveryTimer = Math.max(0, defender.tackleMissRecoveryTimer - delta);
+        if (defender.tackleMissRecoveryTimer <= 0) {
+          defender.wasDiving = false;
+        }
         defender.coastToStop(delta);
         return;
       }
@@ -251,9 +254,13 @@ import { playEndsFromTackle, shouldDefenderDive, attemptTackle } from './tacklin
         : state.receivers.find(p => p.hasBall) || (qbRunning ? state.quarterback : null);
 
       if (carrier) {
-        carrier.updateTackleImmunities?.(delta);
-        if (carrier.stumbleTimer > 0) {
-          carrier.stumbleTimer = Math.max(0, carrier.stumbleTimer - delta);
+        if (typeof carrier.tickTimers === 'function') {
+          carrier.tickTimers(delta);
+        } else {
+          carrier.updateTackleImmunities?.(delta);
+          if (carrier.stumbleTimer > 0) {
+            carrier.stumbleTimer = Math.max(0, carrier.stumbleTimer - delta);
+          }
         }
       }
 

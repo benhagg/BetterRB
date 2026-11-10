@@ -98,5 +98,81 @@ describe('Player Classes & Physics', () => {
     expect(distBuggy).toBeLessThan(0.2);
     expect(distRun).toBeGreaterThan(distBuggy * 10);
   });
+
+  it('loses speed on stumble and caps speedFactor until stumbleTimer expires', () => {
+    const rb = new RunningBack({ position: 'RB', ratings: { speed: 8, agility: 5 } });
+    rb.isMoving = true;
+    rb.velocityX = rb.speed;
+    rb._movement = { speedFactor: 1.0, direction: { x: 1, y: 0 }, hasDirection: true };
+
+    // Trigger stumble
+    rb.stumble(0.3, 0.5);
+    expect(rb._movement.speedFactor).toBe(0.5);
+    expect(rb.stumbleTimer).toBe(0.3);
+
+    // During stumble, movementStep caps speedFactor to 0.5
+    rb.movementStep(1 / 60, 1, 0);
+    expect(rb._movement.speedFactor).toBeLessThanOrEqual(0.5);
+
+    // Tick stumble timer to expiration
+    rb.tickTimers(0.3);
+    expect(rb.stumbleTimer).toBe(0);
+
+    // Now re-accelerates
+    rb.movementStep(1 / 60, 1, 0);
+    expect(rb._movement.speedFactor).toBeGreaterThan(0.5);
+  });
+
+  it('draws prone ddive for dive recovery, preplay for standing miss recovery, and never draws resting', () => {
+    const calls = [];
+    globalThis.RetroSprites = {
+      drawAction: (ctx, x, y, pixel, u, kind, frame, flip) => {
+        calls.push({ type: 'drawAction', kind, frame, flip });
+      },
+      drawPrePlay: (ctx, x, y, pixel, u, kind, flip) => {
+        calls.push({ type: 'drawPrePlay', kind, flip });
+      },
+      drawRunner: (ctx, x, y, pixel, u, frame, flip) => {
+        calls.push({ type: 'drawRunner', frame, flip });
+      }
+    };
+
+    const defender = new DefensivePlayer({ position: 'DB' });
+    const fakeCtx = {};
+    const coords = { screenX: 100, screenY: 100 };
+
+    // 1. Standing miss recovery: should draw drawPrePlay, never resting
+    defender.tackleMissRecoveryTimer = 0.5;
+    defender.wasDiving = false;
+    defender.draw(fakeCtx, coords, 2, {});
+    expect(calls.some(c => c.kind === 'resting')).toBe(false);
+    expect(calls[calls.length - 1].type).toBe('drawPrePlay');
+
+    // 2. Dive miss recovery: should draw ddive frame 2, never resting
+    defender.wasDiving = true;
+    defender.draw(fakeCtx, coords, 2, {});
+    expect(calls.some(c => c.kind === 'resting')).toBe(false);
+    expect(calls[calls.length - 1]).toEqual({ type: 'drawAction', kind: 'ddive', frame: 2, flip: true });
+
+    // 3. Clear timers: should resume normal draw
+    defender.tackleMissRecoveryTimer = 0;
+    defender.wasDiving = false;
+    defender.diveCooldownTimer = 0.8; // cooldown active, but on feet!
+    defender.isMoving = true;
+    defender.draw(fakeCtx, coords, 2, {});
+    expect(calls.some(c => c.kind === 'resting')).toBe(false);
+  });
+
+  it('clamps coordinates to field bounds during updateDive', () => {
+    const defender = new DefensivePlayer({ x: 109.5, y: 0.94 });
+    defender.isDiving = true;
+    defender.diveDirX = 1;
+    defender.diveDirY = 1;
+
+    // A large step that would push defender out of bounds
+    defender.updateDive(1.0);
+    expect(defender.x).toBeLessThanOrEqual(110);
+    expect(defender.y).toBeLessThanOrEqual(0.95);
+  });
 });
 
