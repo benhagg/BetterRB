@@ -63,6 +63,24 @@ describe('catch volume', () => {
     expect(engine.probability(receiver, { x: -0.5, y: 0.5, z: 4 })).not.toBeNull();
     expect(engine.probability(receiver, { x: -0.7, y: 0.5, z: 4 })).toBeNull();
   });
+
+  it('reduces an offensive catch chance when a defender is nearby', () => {
+    const receiver = player({ x: 10, y: 0.5, ratings: { catching: 10, agility: 5 } });
+    const defender = player({ id: 'db', position: 'DB', x: 10, y: 0.5 });
+    const uncontested = catcher([receiver]).probability(receiver, { x: 10, y: 0.5, z: 4 });
+    const contested = catcher([receiver], [defender]).probability(receiver, { x: 10, y: 0.5, z: 4 });
+
+    expect(contested.contestPenalty).toBeCloseTo(0.15);
+    expect(contested.chance).toBeCloseTo(uncontested.chance * 0.85);
+  });
+
+  it('does not penalize a receiver when the nearest defender is outside the contest radius', () => {
+    const receiver = player({ x: 10, y: 0.5 });
+    const defender = player({ id: 'db', position: 'DB', x: 12.1, y: 0.5 });
+    const result = catcher([receiver], [defender]).probability(receiver, { x: 10, y: 0.5, z: 4 });
+
+    expect(result.contestPenalty).toBe(0);
+  });
 });
 
 describe('catch scheduling', () => {

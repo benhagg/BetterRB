@@ -11,6 +11,8 @@
   const SIMULTANEOUS_WINDOW = SIMULATION_STEP + 0.001;
   const GRAVITY = 32.174;
   const DEFENDER_LAUNCH_EXCLUSION_YARDS = 3;
+  const CONTEST_RADIUS_YARDS = 2;
+  const MAX_CONTEST_PENALTY = 0.15;
 
   function playerRating(player, name, fallback = 5) {
     const value = player?.ratings?.[name] ?? player?.rating?.[name] ?? player?.[name];
@@ -45,7 +47,19 @@
       return null;
     }
 
-    function probability(player, ball) {
+    function contestPenalty(player, defenders) {
+      const closest = (defenders || [])
+        .filter(defender => defender && !defender.isTackled && !defender.hasBall)
+        .reduce((distance, defender) => Math.min(distance, Math.hypot(
+          defender.x - player.x,
+          (defender.y - player.y) * lateralYards
+        )), Infinity);
+      if (closest >= CONTEST_RADIUS_YARDS) return { distance: closest, penalty: 0 };
+      const proximity = 1 - closest / CONTEST_RADIUS_YARDS;
+      return { distance: closest, penalty: MAX_CONTEST_PENALTY * proximity ** 2 };
+    }
+
+    function probability(player, ball, defenders = state.defenders) {
       if (ball.z <= HEIGHT_MIN_FEET || ball.z > HEIGHT_MAX_JUMP_FEET) return null;
       const heading = headingFor(player, ball.x, ball.y);
       const dx = ball.x - player.x;
@@ -59,10 +73,14 @@
       const catchingRating = playerRating(player, 'catching');
       const skillBase = 0.3 * (catchingRating / 10);
       const positionBonus = 0.9 * (1 - distance ** 2);
-      const chance = Math.max(0, Math.min(1, skillBase + positionBonus)) * heightFactor;
+      const contest = contestPenalty(player, defenders);
+      const chance = Math.max(0, Math.min(1, skillBase + positionBonus))
+        * heightFactor * (1 - contest.penalty);
       return {
         chance,
         normalizedDistance: distance,
+        contestDistance: contest.distance,
+        contestPenalty: contest.penalty,
         catchType: ball.z < 2 ? 'dive' : ball.z > HEIGHT_JUMP_THRESHOLD_FEET ? 'jump' : 'standard'
       };
     }
@@ -138,8 +156,21 @@
             if (isDefenseClone) defenseAI.updateDefender(sim, SIMULATION_STEP, 'thrown', pass, null);
             else advance(sim, SIMULATION_STEP, playerRating(player, 'agility'), target);
           }
+        }
+        const simulatedDefenders = candidates
+          .filter(candidate => candidate.side === 'defense')
+          .map(({ player }) => {
+            const sim = sims.get(player);
+            const isDefenseClone = defenseAI && player.defenseAI;
+            return isDefenseClone
+              ? sim
+              : { ...player, x: sim.x, y: sim.y, velocityX: sim.direction.x * sim.speed * sim.speedFactor, velocityY: sim.direction.y * sim.speed * sim.speedFactor / lateralYards };
+          });
+        for (const { player, side } of candidates) {
+          const sim = sims.get(player);
+          const isDefenseClone = side === 'defense' && defenseAI && player.defenseAI;
           const simulatedPlayer = isDefenseClone ? sim : { ...player, x: sim.x, y: sim.y, velocityX: sim.direction.x * sim.speed * sim.speedFactor, velocityY: sim.direction.y * sim.speed * sim.speedFactor / lateralYards };
-          const result = probability(simulatedPlayer, ball);
+          const result = probability(simulatedPlayer, ball, side === 'offense' ? simulatedDefenders : []);
           if (!result) continue;
           const previous = best.get(player);
           if (!previous || result.chance > previous.chance) {
@@ -166,6 +197,7 @@
           + ` skill=${skillContribution.toFixed(3)}`
           + ` passAccuracy=${passAccuracyContribution.toFixed(3)}`
           + ` heightFactor=${heightFactor.toFixed(3)}`
+          + ` contestPenalty=${attempt.contestPenalty.toFixed(3)}`
           + ` probability=${attempt.chance.toFixed(3)}`
           + ` roll=${attempt.roll.toFixed(3)}`);
       });
