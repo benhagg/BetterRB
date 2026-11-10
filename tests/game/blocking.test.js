@@ -49,4 +49,28 @@ describe('blocking rules', () => {
     expect(blocker.velocityX).toBe(0);
     expect(defender.velocityX).toBe(0);
   });
+
+  it('moves toward a block target using the real frame delta', () => {
+    let receivedDelta = null;
+    const blocker = player('OL', { strength: 8, blocking: 8 }, {
+      run: delta => { receivedDelta = delta; }
+    });
+    const defender = player('DL', { strength: 4, tackling: 4 }, { x: 27 });
+    const engine = createBlockingEngine({ state: { defenders: [defender] }, lateralYards: 25, random: () => 0.99 });
+    engine.update([blocker], 1 / 60, null);
+    expect(receivedDelta).toBeCloseTo(1 / 60);
+  });
+
+  it('limits a defender to two simultaneous blockers', () => {
+    const defender = player('DL', { strength: 4, tackling: 4 }, { x: 25.5 });
+    const blockers = [
+      player('OL', { strength: 8, blocking: 8 }),
+      player('OL', { strength: 8, blocking: 8 }),
+      player('OL', { strength: 8, blocking: 8 })
+    ];
+    const engine = createBlockingEngine({ state: { defenders: [defender] }, lateralYards: 25, random: () => 0.99 });
+    engine.update(blockers, 0.1, null);
+    expect(engine.engagements.get(defender).blockers.size).toBe(2);
+    expect(blockers.filter(blocker => blocker.isBlocking)).toHaveLength(2);
+  });
 });

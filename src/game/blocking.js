@@ -10,12 +10,13 @@ export function isDown(player) {
   return Boolean(player?.isDiving || player?.pancakeTimer > 0 || player?.isTackled);
 }
 
-export function nearestDefender(player, defenders, lateralYards, { includeEngaged = true } = {}) {
+export function nearestDefender(player, defenders, lateralYards, { includeEngaged = true, filter = null } = {}) {
   let defender = null;
   let distance = Infinity;
   for (const candidate of defenders || []) {
     if (isDown(candidate)) continue;
     if (!includeEngaged && candidate.isBlocking) continue;
+    if (filter && !filter(candidate)) continue;
     const candidateDistance = Math.hypot(candidate.x - player.x, (candidate.y - player.y) * lateralYards);
     if (candidateDistance < distance) {
       defender = candidate;
@@ -67,6 +68,7 @@ function clearBlockState(player) {
 
 export function createBlockingEngine({ state, lateralYards = 25, random = Math.random }) {
   const engagements = new Map();
+  const MAX_BLOCKERS_PER_DEFENDER = 2;
 
   function release(engagement, defenderSpeedModifier = 1) {
     const { defender, blockers } = engagement;
@@ -129,11 +131,19 @@ export function createBlockingEngine({ state, lateralYards = 25, random = Math.r
     return release(engagement, clamp(1 - (defenderDiff / 5) * 0.8, 0.2, 1));
   }
 
-  function tryStartBlock(blocker) {
-    const { defender, distance } = nearestDefender(blocker, state.defenders, lateralYards);
+  function tryStartBlock(blocker, delta, options) {
+    const { defender, distance } = nearestDefender(blocker, state.defenders, lateralYards, {
+      filter: candidate => {
+        const engagement = engagements.get(candidate);
+        const hasRoom = !engagement || engagement.blockers.size < MAX_BLOCKERS_PER_DEFENDER;
+        return hasRoom && (!options.targetFilter || options.targetFilter(candidate, blocker));
+      }
+    });
     if (!defender) return false;
     if (distance > BLOCK_ENGAGE_RADIUS) {
-      blocker.run?.(0.1, defender.x, defender.y);
+      // Movement must always use the caller's real frame delta so Player.run
+      // continues to enforce speed, acceleration, deceleration, and cuts.
+      blocker.run?.(delta, defender.x, defender.y);
       return false;
     }
     const whiffChance = clamp(0.35 - rating(blocker, 'blocking') * 0.025, 0.05, 0.35);
@@ -146,7 +156,7 @@ export function createBlockingEngine({ state, lateralYards = 25, random = Math.r
     return true;
   }
 
-  function update(blockers, delta, carrier) {
+  function update(blockers, delta, carrier, options = {}) {
     for (const defender of state.defenders || []) {
       if (defender.pancakeTimer > 0) {
         defender.pancakeTimer = Math.max(0, defender.pancakeTimer - delta);
@@ -159,7 +169,7 @@ export function createBlockingEngine({ state, lateralYards = 25, random = Math.r
     }
     for (const blocker of blockers || []) {
       if (!blocker || blocker.hasBall || isDown(blocker) || blocker.isBlocking) continue;
-      tryStartBlock(blocker);
+      tryStartBlock(blocker, delta, options);
     }
     for (const engagement of [...engagements.values()]) {
       if ((carrier && carrier.x - engagement.defender.x >= BLOCK_DISENGAGE_DISTANCE) || isDown(engagement.defender)) {

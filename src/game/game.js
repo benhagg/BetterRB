@@ -621,7 +621,20 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       if (state.runningBack && (state.playType !== 'run' || state.runningBack.hasBall)) {
         eligibleBlockers.push(state.runningBack);
       }
-      blocking.update(eligibleBlockers, delta, ballCarrier());
+      const carrier = ballCarrier();
+      const runBlockLimit = Math.max(state.scrimmagePosition + 2, (carrier?.x ?? state.scrimmagePosition) + 6);
+      blocking.update(eligibleBlockers, delta, carrier, {
+        targetFilter: (defender, blocker) => {
+          const isOffensiveLineman = ['OL', 'OT', 'OG', 'C'].includes(String(blocker.position || '').toUpperCase());
+          if (!isOffensiveLineman) return true;
+          // Run blockers may get downfield, but stay in a six-yard lane from
+          // their initial alignment and never roam far ahead of the runner.
+          const withinLane = Math.abs(defender.y - blocker.startY) * lateralYards <= 6;
+          return defender.x >= state.scrimmagePosition - 1
+            && defender.x <= runBlockLimit
+            && withinLane;
+        }
+      });
     } else if (state.phase === 'passing') {
       if (state.receivers) {
         for (const rec of state.receivers) {
@@ -631,7 +644,12 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       if (state.playType !== 'run' && !state.runningBack.hasBall) {
         state.runningBack.runRoute(delta);
       }
-      blocking.update(state.offensiveLine || [], delta, state.quarterback);
+      blocking.update(state.offensiveLine || [], delta, state.quarterback, {
+        // Pass protection stays around the pocket: linemen block rushers in
+        // the backfield rather than chasing coverage downfield.
+        targetFilter: defender => defender.x >= state.quarterback.x - 3
+          && defender.x <= state.scrimmagePosition + 0.5
+      });
     }
     defenseAI.update(delta);
     passing.updateWindup(delta);
