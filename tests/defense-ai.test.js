@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import PlayerClasses from '../player-classes.js';
 import DefenseAI from '../game-defense-ai.js';
 
-const { DefensivePlayer, WideReceiver, Quarterback } = PlayerClasses;
+const { DefensivePlayer, WideReceiver, TightEnd, Quarterback } = PlayerClasses;
 const bounds = { top: 0, bottom: 1, endZoneL: 0, endZoneR: 100 };
 
 function setup(role = 'zone') {
@@ -52,6 +52,41 @@ describe('defensive AI', () => {
     receiver.routeIndex = 1;
     ai.update(1 / 60);
     expect(defender.defenseAI.delay).toBeCloseTo(0.2);
+  });
+
+  it('lines man defenders up beside their assigned receiver before the snap', () => {
+    const receivers = [
+      new WideReceiver({ position: 'WR', x: 31, y: 0.22, receiverNumber: 1 }),
+      new TightEnd({ x: 29, y: 0.5, receiverNumber: 2 }),
+      new WideReceiver({ position: 'WR', x: 31, y: 0.78, receiverNumber: 3 })
+    ];
+    const defenders = [
+      Object.assign(new DefensivePlayer({ position: 'DB' }), { role: 'man', manTarget: 'WR1', coverageOffset: 2 }),
+      Object.assign(new DefensivePlayer({ position: 'DB' }), { role: 'man', manTarget: 'WR2', coverageOffset: 3 })
+    ];
+    const state = {
+      phase: 'preplay',
+      defenders,
+      receivers,
+      runningBack: null,
+      quarterback: { x: 25, y: 0.5 }
+    };
+    const ai = DefenseAI.create({ state, lateralYards: 25, fieldBounds: bounds });
+
+    ai.initialize(defenders, 'man');
+
+    expect(defenders[0].defenseAI.manTargetPlayer).toBe(receivers[0]);
+    expect(defenders[0].y).toBe(receivers[0].y);
+    expect(defenders[0].x).toBe(receivers[0].x + 2);
+    expect(defenders[1].defenseAI.manTargetPlayer).toBe(receivers[2]);
+    expect(defenders[1].y).toBe(receivers[2].y);
+    expect(defenders[1].x).toBe(receivers[2].x + 3);
+
+    // Reinitializing for a changed offensive formation must realign the same
+    // matchup instead of leaving its defender at the old receiver location.
+    receivers[2].y = 0.7;
+    ai.initialize(defenders, 'man');
+    expect(defenders[1].y).toBe(receivers[2].y);
   });
 
   it('contests receivers in a zone and returns to the anchor when they leave', () => {

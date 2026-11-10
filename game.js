@@ -3,7 +3,7 @@
 const fieldBounds = {top: -.02, bottom: 0.95, endZoneL: 2.217644291800185, endZoneR: 101.66747130270615};
 const cameraTrailingYards = 5;
 const runnerTrailingYards = 15;
-const lateralYards = 17;
+const lateralYards = 25;
 // Formation `across` is yards from midfield; positive values move toward the top sideline.
 const acrossToY = yards => 0.5 - (yards ?? 0) / lateralYards;
 const passGravityFeetPerSecondSquared = 32.174;
@@ -24,6 +24,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     phase: 'preplay',
     playType,
     ...savedState,
+    possession: 'offense',
     team1,
     team2
   };
@@ -521,7 +522,9 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     }
     if (state.phase === 'complete' || state.clockSeconds <= 0) return state;
     if (state.phase === 'passing' || state.phase === 'running') {
-      if (state.playType === 'run' && !state.runningBack.hasBall && state.possession !== 'defense') {
+      const defenseHasBall = state.defenders.some(defender => defender.hasBall);
+      if (state.playType === 'run' && state.quarterback.hasBall
+        && !state.runningBack.hasBall && !defenseHasBall) {
         state.runningBack.runRoute(delta);
         if (state.runningBack.x >= state.quarterback.x - 0.1) {
           state.quarterback.hasBall = false;
@@ -667,6 +670,9 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
   function pressSpace() {
     if (state.clockSeconds <= 0) return;
     if (state.phase === 'preplay') {
+      // Reapply matchups to the selected offensive formation on the snap
+      // frame so defenders cannot start from stale slot coordinates.
+      defenseAI.initialize(state.defenders, selectedPlays.defense?.coverage || 'man');
       if (state.playType === 'run') {
         state.phase = 'running';
         state.quarterback.phase = 'passing';
@@ -705,6 +711,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     state.quarter = 1;
     state.scrimmagePosition = state.fieldPosition;
     state.phase = 'preplay';
+    state.possession = 'offense';
     state.playType = String(selectedPlays.offense?.playType || selectedPlays.offense?.playtype || selectedPlays.offense?.type || 'pass').toLowerCase();
     delete state.pass;
     delete state.bounce;
@@ -745,6 +752,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
 
   function setOffensivePlay(play) {
     if (state.phase !== 'preplay' || !play) return;
+    state.possession = 'offense';
     selectedPlays.offense = play;
     state.playType = String(play.playtype || play.playType || play.type || 'pass').toLowerCase();
     const isRun = state.playType === 'run';

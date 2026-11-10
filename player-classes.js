@@ -1,5 +1,5 @@
 (function (root) {
-  const LATERAL_YARDS = 17; // Playable sideline-to-sideline width used for movement scaling.
+  const LATERAL_YARDS = 25; // Playable sideline-to-sideline width used for movement scaling.
   // The visible sideline area renders vertical yards at a smaller pixel scale than horizontal yards.
   const SCREEN_DIAGONAL_YARD_SCALE = 1.38;
 
@@ -388,20 +388,23 @@
       this.catchElapsed = 0;
       this.catchDirection = this.autoRun || dir || { vx: this.lastDirX || 1, vy: this.lastDirY || 0 };
       this.autoRun = null;
+      if (type === 'jump') {
+        this.velocityX = 0;
+        this.velocityY = 0;
+        this.isMoving = false;
+        if (this._movement) this._movement.speedFactor = 0;
+      }
       this.phase = 'catching';
     }
 
     updateCatch(delta) {
       if (!this.catchType) return false;
-      const duration = this.catchType === 'jump' ? 0.55 : 0.45;
+      const duration = this.catchType === 'jump' ? 0.8 : 0.45;
       this.catchElapsed += delta;
       if (this.catchType === 'jump') {
-        const dir = this.catchDirection || { vx: 1, vy: 0 };
-        const length = Math.hypot(dir.vx, dir.vy) || 1;
-        const step = this.speed * 0.5 * delta;
-        this.x += (dir.vx / length) * step;
-        this.y += ((dir.vy / length) * step) / LATERAL_YARDS;
-        this.animDistance += step;
+        this.velocityX = 0;
+        this.velocityY = 0;
+        this.isMoving = false;
       }
       if (this.catchElapsed < duration) return false;
       const type = this.catchType;
@@ -482,7 +485,7 @@
       if (this.phase === 'preplay') {
         RetroSprites.drawPrePlay(ctx, x, y, pixel, u, this.kind, this.facingLeft);
       } else if (this.catchType === 'jump') {
-        const frame = this.catchElapsed < 0.27 ? 0 : 1;
+        const frame = this.catchElapsed < 0.4 ? 0 : 1;
         RetroSprites.drawAction(ctx, x, y, pixel, u, 'jump_catch', frame, this.facingLeft);
       } else if (this.catchType === 'dive') {
         const frame = this.catchElapsed < 0.15 ? 0 : this.catchElapsed < 0.3 ? 1 : 2;

@@ -6,7 +6,7 @@
   const RECEIVER_BREAK_DELAY = 0.05;
   const PURSUIT_MAX_LEAD_TIME = 1.5;
 
-  function calculateDefenderReactionDelay(defender, target, lateralYards = 17) {
+  function calculateDefenderReactionDelay(defender, target, lateralYards = 25) {
     if (defender.isBackpedaling) return 0;
     const vx = defender.velocityX || 0;
     const vy = (defender.velocityY || 0) * lateralYards;
@@ -20,7 +20,7 @@
     return 0.15 * (1 - dot);
   }
 
-  function create({ state, lateralYards = 17, fieldBounds, zoneEngine }) {
+  function create({ state, lateralYards = 25, fieldBounds, zoneEngine }) {
     const distance = (a, b) => Math.hypot(a.x - b.x, (a.y - b.y) * lateralYards);
     const alignmentOffsetFor = (defender, receiver) => receiver === state.runningBack
       ? 0
@@ -216,13 +216,35 @@
       const qbRunning = state.quarterback?.hasBall && state.quarterback.x > state.scrimmagePosition;
       const carrier = state.runningBack?.hasBall ? state.runningBack
         : state.receivers.find(p => p.hasBall) || (qbRunning ? state.quarterback : null);
+
+      // Keep pursuit selective for the current carrier. Nearby defenders
+      // pursue; everyone else retains their man or zone assignment.
+      if (carrier !== state.defensivePursuitCarrier) {
+        state.defensivePursuitCarrier = carrier || null;
+        state.defensivePursuers = carrier
+          ? [...state.defenders]
+            .filter(defender => !defender.hasBall && !defender.isTackled)
+            .sort((a, b) => distance(a, carrier) - distance(b, carrier))
+            .slice(0, 2)
+          : [];
+        for (const defender of state.defenders) {
+          const ai = defender.defenseAI;
+          if (!ai || state.defensivePursuers.includes(defender)) continue;
+          if (ai.mode === 'pursuit' || ai.mode === 'ball') {
+            ai.mode = ai.manTargetPlayer ? 'man' : 'coverage';
+            ai.target = null;
+            ai.delay = 0;
+          }
+        }
+      }
+      const pursuers = new Set(state.defensivePursuers || []);
       for (const defender of state.defenders) {
         if (defender.hasBall) continue;
-        // Keep the DL still during coverage development, then send every
-        // defender after the carrier once possession changes.
+        // Keep the DL still during coverage development. On a live carrier,
+        // only selected pursuers leave their assignments to tackle.
         const isDefensiveLineman = ['DL', 'DT', 'DE', 'NT', 'EDGE'].includes(String(defender.position || '').toUpperCase());
         if (isDefensiveLineman && !carrier && defender.defenseAI?.mode !== 'ball') continue;
-        updateDefender(defender, delta, phase, state.pass, carrier);
+        updateDefender(defender, delta, phase, state.pass, carrier && pursuers.has(defender) ? carrier : null);
       }
       if (carrier?.isTackled || state.quarterback?.isTackled) state.phase = 'complete';
     }

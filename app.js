@@ -328,9 +328,9 @@ function renderPlayDiagramSVG(play) {
   const width = 200, height = 100;
   const losX = 55;
   const centerY = 50;
-  const toSvgAcross = yards => Math.min(95, Math.max(5, centerY - ((yards ?? 0) / 17) * 85));
+  const toSvgAcross = yards => Math.min(95, Math.max(5, centerY - ((yards ?? 0) / 25) * 85));
   const toSvgX = (startX, dx) => Math.min(195, Math.max(5, startX + dx * 4.2));
-  const toSvgY = (startY, dy) => Math.min(95, Math.max(5, startY + (dy / 17) * 85));
+  const toSvgY = (startY, dy) => Math.min(95, Math.max(5, startY + (dy / 25) * 85));
 
   let svg = `<svg viewBox="0 0 ${width} ${height}" width="100%" height="100%" class="play-diagram-svg">`;
   svg += `<rect width="${width}" height="${height}" fill="#162c20" rx="3"/>`;

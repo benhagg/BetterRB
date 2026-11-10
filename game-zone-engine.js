@@ -27,7 +27,7 @@
     spy: { type: 'spy', lane: [0, 1] }
   };
 
-  function create({ state, lateralYards = 17, fieldBounds }) {
+  function create({ state, lateralYards = 25, fieldBounds }) {
     const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
     const clampTarget = target => ({
       x: clamp(target.x, fieldBounds.endZoneL, fieldBounds.endZoneR),
