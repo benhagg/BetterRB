@@ -349,7 +349,7 @@ describe('tackling rules and resolution', () => {
       const result = attemptTackle(defender, carrier, { roll: 0.99, isDive: true }); // guaranteed break
       expect(result.success).toBe(false);
       expect(carrier.isTackled).toBe(false);
-      expect(carrier.stumbleTimer).toBeCloseTo(0.3);
+      expect(carrier.stumbleTimer).toBeCloseTo(1.0);
       expect(carrier.isImmuneTo(defender)).toBe(true);
       expect(defender.tackleMissRecoveryTimer).toBeCloseTo(TACKLER_MISS_RECOVERY);
       expect(defender.diveCooldownTimer).toBeCloseTo(TACKLER_DIVE_COOLDOWN);

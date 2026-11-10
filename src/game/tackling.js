@@ -286,7 +286,7 @@ export function attemptTackle(tackler, carrier, options = {}) {
     if (typeof carrier.breakTackle === 'function') {
       carrier.breakTackle(tackler);
     } else {
-      carrier.stumble?.(0.3, 0.5);
+      carrier.stumble?.(1.0, 0.5);
       carrier.setTackleImmunity?.(tackler, BROKEN_TACKLE_IMMUNITY);
     }
 

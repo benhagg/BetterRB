@@ -487,7 +487,7 @@
       }
     }
 
-    stumble(duration = 0.3, speedMultiplier = 0.5) {
+    stumble(duration = 1.0, speedMultiplier = 0.5) {
       this.stumbleTimer = duration;
       this.stumbleDuration = duration;
       this.stumbleMultiplier = speedMultiplier;
@@ -520,7 +520,7 @@
     }
 
     breakTackle(defender) {
-      this.stumble(0.3, 0.5);
+      this.stumble(1.0, 0.5);
       this.setTackleImmunity(defender, 0.40);
     }
 

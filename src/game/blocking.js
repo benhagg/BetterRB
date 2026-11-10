@@ -224,7 +224,7 @@ export function createBlockingEngine({ state, lateralYards = 25, random = Math.r
     const whiffChance = clamp(0.35 - rating(blocker, 'blocking') * 0.025, 0.05, 0.35);
     if (random() < whiffChance) {
       blocker.blockRecoveryTimer = BLOCK_WHIFF_RECOVERY_SECONDS;
-      blocker.stumble?.(BLOCK_WHIFF_RECOVERY_SECONDS, 0.4);
+      blocker.stumble?.(1.0, 0.4);
       return false;
     }
     engage(blocker, defender);
