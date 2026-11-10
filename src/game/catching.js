@@ -12,7 +12,7 @@
   const GRAVITY = 32.174;
   const DEFENDER_LAUNCH_EXCLUSION_YARDS = 3;
   const CONTEST_RADIUS_YARDS = 2;
-  const MAX_CONTEST_PENALTY = 0.15;
+  const MAX_CONTEST_PENALTY = 0.50;
 
   function playerRating(player, name, fallback = 5) {
     const value = player?.ratings?.[name] ?? player?.rating?.[name] ?? player?.[name];

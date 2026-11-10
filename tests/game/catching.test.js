@@ -70,8 +70,8 @@ describe('catch volume', () => {
     const uncontested = catcher([receiver]).probability(receiver, { x: 10, y: 0.5, z: 4 });
     const contested = catcher([receiver], [defender]).probability(receiver, { x: 10, y: 0.5, z: 4 });
 
-    expect(contested.contestPenalty).toBeCloseTo(0.15);
-    expect(contested.chance).toBeCloseTo(uncontested.chance * 0.85);
+    expect(contested.contestPenalty).toBeCloseTo(0.50);
+    expect(contested.chance).toBeCloseTo(uncontested.chance * 0.50);
   });
 
   it('does not penalize a receiver when the nearest defender is outside the contest radius', () => {
@@ -109,7 +109,7 @@ describe('catch scheduling', () => {
     expect(engine.resolve(thrown, 1)).toBeNull();
   });
 
-  it('gives the intended receiver the tie-break over a defender', () => {
+  it('allows a directly overlapping defender to win a contested catch', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     const receiver = player({ id: 'wr', ratings: { catching: 5, agility: 5 } });
     const defender = player({ id: 'db', name: 'DB', position: 'DB', receiverNumber: null, ratings: { catching: 5, agility: 5 } });
@@ -119,7 +119,7 @@ describe('catch scheduling', () => {
     engine.schedule(thrown);
     const result = engine.resolve(thrown, 1);
 
-    expect(result.player).toBe(receiver);
-    expect(result.interception).toBe(false);
+    expect(result.player).toBe(defender);
+    expect(result.interception).toBe(true);
   });
 });

@@ -20,7 +20,7 @@
   ```
 
 - Nearby defenders reduce offensive catch probability: no penalty at 2+ yards;
-  up to 15% reduction when a defender is on the receiver.
+  up to 50% reduction when the closest defender is directly on the receiver.
 
 - DBs and LBs may currently contest and intercept passes.
 
