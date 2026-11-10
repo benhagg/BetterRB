@@ -62,14 +62,14 @@
         "defenders": [
           {
             "position": "LB",
-            "role": "zone",
+            "role": "rush",
             "zone": "middle",
             "across": 2,
             "offset": 4
           },
           {
             "position": "LB",
-            "role": "man",
+            "role": "rush",
             "manTarget": "TE",
             "coverageOffset": 4
           },

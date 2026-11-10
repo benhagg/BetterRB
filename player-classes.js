@@ -769,10 +769,13 @@
     }
 
     draw(ctx, coords, pixel, uniform) {
-      const u = uniform || this.uniform;
-      const x = Math.round(coords.screenX - 8 * pixel);
-      const y = Math.round(coords.screenY - 8 * pixel);
-      RetroSprites.drawPrePlay(ctx, x, y, pixel, u, 'lineman', false);
+      if (this.phase === 'preplay') {
+        const x = Math.round(coords.screenX - 8 * pixel);
+        const y = Math.round(coords.screenY - 8 * pixel);
+        RetroSprites.drawPrePlay(ctx, x, y, pixel, uniform || this.uniform, 'lineman', false);
+        return;
+      }
+      super.draw(ctx, coords, pixel, uniform);
     }
   }
 

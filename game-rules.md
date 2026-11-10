@@ -127,3 +127,4 @@ const POINTS_EXTRA_POINT_KICK = 1;      // Reserved for future kicking implement
 1. **Hash Mark Placement**: Snap from near/far hash marks based on lateral end of play.
 2. **Kicking Engine**: Field goals and 1-PT extra point kicks via aim/power meter.
 3. **Turnover Returns**: Live defensive returns on fumbles and interceptions instead of immediate dead-ball whistle.
+

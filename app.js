@@ -328,6 +328,7 @@ function renderPlayDiagramSVG(play) {
   const width = 200, height = 100;
   const losX = 55;
   const centerY = 50;
+  const toSvgAcross = yards => Math.min(95, Math.max(5, centerY - ((yards ?? 0) / 17) * 85));
   const toSvgX = (startX, dx) => Math.min(195, Math.max(5, startX + dx * 4.2));
   const toSvgY = (startY, dy) => Math.min(95, Math.max(5, startY + (dy / 17) * 85));
 
@@ -343,7 +344,7 @@ function renderPlayDiagramSVG(play) {
   const ol = play.formation?.offensiveLine || [];
   ol.forEach(lineman => {
     const lx = losX + (lineman.offset ?? -0.5) * 6;
-    const ly = centerY + (lineman.across ?? 0) * 85;
+    const ly = toSvgAcross(lineman.across);
     svg += `<circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="2.5" fill="#90caf9"/>`;
     if (isRun) {
       const bx = lx + 12;
@@ -355,14 +356,14 @@ function renderPlayDiagramSVG(play) {
   // QB dot
   const qb = play.formation?.quarterback || { across: 0, offset: -3 };
   const qbx = losX + (qb.offset ?? -3) * 6;
-  const qby = centerY + (qb.across ?? 0) * 85;
+  const qby = toSvgAcross(qb.across);
   svg += `<circle cx="${qbx.toFixed(1)}" cy="${qby.toFixed(1)}" r="3" fill="#ffe18a"/>`;
 
   // Receivers & routes
   const receivers = play.formation?.receivers || [];
   receivers.forEach(r => {
     const rx = losX + (r.offset ?? -0.5) * 6;
-    const ry = centerY + (r.across ?? 0) * 85;
+    const ry = toSvgAcross(r.across);
     svg += `<circle cx="${rx.toFixed(1)}" cy="${ry.toFixed(1)}" r="2.5" fill="#ffffff"/>`;
     if (r.receiverNumber && !isRun) {
       svg += `<text x="${(rx - 7).toFixed(1)}" y="${(ry + 2.5).toFixed(1)}" fill="#ffe18a" font-size="7" font-weight="bold" text-anchor="middle" font-family="monospace">${r.receiverNumber}</text>`;
@@ -392,7 +393,7 @@ function renderPlayDiagramSVG(play) {
   const rb = play.formation?.runningBack;
   if (rb) {
     const rbx = losX + (rb.offset ?? -4) * 6;
-    const rby = centerY + (rb.across ?? 0) * 85;
+    const rby = toSvgAcross(rb.across);
     svg += `<circle cx="${rbx.toFixed(1)}" cy="${rby.toFixed(1)}" r="3" fill="${isRun ? '#00e676' : '#80d8ff'}"/>`;
     if (rb.receiverNumber && !isRun) {
       svg += `<text x="${(rbx - 8).toFixed(1)}" y="${(rby + 2.5).toFixed(1)}" fill="${isRun ? '#00e676' : '#80d8ff'}" font-size="7" font-weight="bold" text-anchor="middle" font-family="monospace">${rb.receiverNumber}</text>`;

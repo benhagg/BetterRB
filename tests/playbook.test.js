@@ -29,6 +29,37 @@ describe('Playbook Data Validation', () => {
     });
   });
 
+  it('keeps defensive formation offsets at least 3 yards for LBs/DBs and 0.5 yards for DLs/LBs', () => {
+    const dplaysRaw = fs.readFileSync(path.resolve(__dirname, '../data/dplays.json'), 'utf8');
+    const dplays = JSON.parse(dplaysRaw);
+    const sharedLineSlots = Object.values(dplays.defensiveLines || {}).flat();
+    const playSlots = (dplays.plays || []).flatMap(play => [
+      ...(Array.isArray(play.formation?.defensiveLine) ? play.formation.defensiveLine : []),
+      ...(play.formation?.defenders || [])
+    ]);
+    const slots = [...sharedLineSlots, ...playSlots];
+    const checkedSlots = slots.filter(slot => ['DL', 'LB', 'DB'].includes(String(slot.position || '').toUpperCase()));
+
+    expect(checkedSlots.length).toBeGreaterThan(0);
+    checkedSlots.forEach(slot => {
+      const position = String(slot.position).toUpperCase();
+      // `across`, `offset`, and `coverageOffset` are all measured in yards.
+      const downfieldOffset = Number.isFinite(slot.coverageOffset)
+        ? slot.coverageOffset
+        : (Number.isFinite(slot.offset) ? slot.offset : 0);
+      const acrossYards = Number.isFinite(slot.across) ? slot.across : 0;
+      const alignmentDistance = Math.hypot(downfieldOffset, acrossYards);
+      const label = `${slot.position} (${slot.manTarget || slot.zone || slot.role || 'formation slot'})`;
+
+      if (position === 'LB' || position === 'DB') {
+        expect(alignmentDistance, label).toBeGreaterThanOrEqual(3);
+      }
+      if (position === 'DL' || position === 'LB') {
+        expect(alignmentDistance, label).toBeGreaterThanOrEqual(0.5);
+      }
+    });
+  });
+
   it('validates oplays.json formations have 11 players total', () => {
     const oplaysRaw = fs.readFileSync(path.resolve(__dirname, '../data/oplays.json'), 'utf8');
     const oplays = JSON.parse(oplaysRaw);

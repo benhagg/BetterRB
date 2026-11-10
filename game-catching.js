@@ -10,6 +10,7 @@
   const SIMULATION_STEP = 1 / 60;
   const SIMULTANEOUS_WINDOW = SIMULATION_STEP + 0.001;
   const GRAVITY = 32.174;
+  const DEFENDER_LAUNCH_EXCLUSION_YARDS = 3;
 
   function playerRating(player, name, fallback = 5) {
     const value = player?.ratings?.[name] ?? player?.rating?.[name] ?? player?.[name];
@@ -17,11 +18,15 @@
   }
 
   function create({ state, lateralYards, defenseAI }) {
-    function eligiblePlayers() {
+    function eligiblePlayers(pass) {
       const offense = [...(state.receivers || []), state.runningBack].filter(Boolean)
         .map(player => ({ player, side: 'offense' }));
       const defense = (state.defenders || [])
         .filter(player => ['DB', 'LB'].includes(String(player.position || '').toUpperCase()))
+        .filter(player => Math.hypot(
+          player.x - pass.fromX,
+          (player.y - pass.fromY) * lateralYards
+        ) >= DEFENDER_LAUNCH_EXCLUSION_YARDS)
         .map(player => ({ player, side: 'defense' }));
       return [...offense, ...defense];
     }
@@ -105,7 +110,7 @@
 
     function schedule(pass) {
       if (!pass || pass.catchPlan) return pass?.catchPlan;
-      const candidates = eligiblePlayers();
+      const candidates = eligiblePlayers(pass);
       const sims = new Map(candidates.map(({ player, side }) => {
         if (side === 'defense' && defenseAI && player.defenseAI) {
           const clone = Object.assign(Object.create(Object.getPrototypeOf(player)), player);
