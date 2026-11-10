@@ -73,4 +73,34 @@ describe('blocking rules', () => {
     expect(engine.engagements.get(defender).blockers.size).toBe(2);
     expect(blockers.filter(blocker => blocker.isBlocking)).toHaveLength(2);
   });
+
+  it('applies correct shed speed modifier based on defensive advantage', () => {
+    const weakBlocker = player('WR', { strength: 0 }, { x: 25 });
+    const strongDefender = player('DL', { strength: 10, tackling: 10 }, { x: 25.5 });
+    const engineStrong = createBlockingEngine({
+      state: { defenders: [strongDefender] },
+      lateralYards: 25,
+      random: () => 0.99
+    });
+    engineStrong.update([weakBlocker], 0.1, null);
+    expect(strongDefender.isBlocking).toBe(true);
+
+    engineStrong.update([weakBlocker], 0.5, null);
+    expect(strongDefender.isBlocking).toBe(false);
+    expect(strongDefender.speedModifier).toBeCloseTo(0.8);
+
+    const evenBlocker = player('OL', { strength: 5, blocking: 5 }, { x: 25 });
+    const evenDefender = player('DL', { strength: 5, tackling: 5 }, { x: 25.5 });
+    const engineEven = createBlockingEngine({
+      state: { defenders: [evenDefender] },
+      lateralYards: 25,
+      random: () => 0.99
+    });
+    engineEven.update([evenBlocker], 0.1, null);
+    expect(evenDefender.isBlocking).toBe(true);
+
+    engineEven.update([evenBlocker], 0.5, null);
+    expect(evenDefender.isBlocking).toBe(false);
+    expect(evenDefender.speedModifier).toBeCloseTo(0);
+  });
 });

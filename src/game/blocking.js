@@ -128,7 +128,8 @@ export function createBlockingEngine({ state, lateralYards = 25, random = Math.r
       if (engagement.holdElapsed >= holdTime) release(engagement);
       return;
     }
-    return release(engagement, clamp(1 - (defenderDiff / 5) * 0.8, 0.2, 1));
+    const speedDecrease = clamp(1 - (defenderDiff / 5) * 0.8, 0.2, 1);
+    return release(engagement, 1 - speedDecrease);
   }
 
   function tryStartBlock(blocker, delta, options) {
