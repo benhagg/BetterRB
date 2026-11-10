@@ -1,4 +1,4 @@
-import { playEndsFromTackle } from './tackling.js';
+import { playEndsFromTackle, shouldDefenderDive, attemptTackle } from './tackling.js';
 
 (function (root) {
   const ZONE_CONTEST_RADIUS = 3;
@@ -152,6 +152,27 @@ import { playEndsFromTackle } from './tackling.js';
     function updateDefender(defender, delta, phase, pass, carrier) {
       const ai = defender.defenseAI;
       if (!ai || defender.isTackled) return;
+
+      if (defender.diveCooldownTimer > 0) {
+        defender.diveCooldownTimer = Math.max(0, defender.diveCooldownTimer - delta);
+      }
+      if (defender.tackleMissRecoveryTimer > 0) {
+        defender.tackleMissRecoveryTimer = Math.max(0, defender.tackleMissRecoveryTimer - delta);
+        defender.coastToStop(delta);
+        return;
+      }
+      if (defender.isDiving) {
+        const target = carrier || (defender.role === 'rush' ? state.quarterback : null);
+        defender.updateDive?.(delta, target, (def, car) => {
+          attemptTackle(def, car, {
+            isDive: true,
+            lateralYards,
+            forceSuccess: car === state.quarterback && state.phase === 'passing'
+          });
+        });
+        return;
+      }
+
       if (carrier && ai.mode !== 'pursuit') {
         ai.mode = 'pursuit';
         ai.delay = calculateDefenderReactionDelay(defender, carrier, lateralYards);
@@ -162,8 +183,13 @@ import { playEndsFromTackle } from './tackling.js';
         return;
       }
       if (ai.mode === 'pursuit' && carrier) {
-        if (defender.canTackle?.(carrier)) defender.tackle(carrier);
-        else move(defender, pursueTarget(defender, carrier), delta);
+        if (defender.canTackle?.(carrier)) {
+          defender.tackle(carrier, { isDive: false, lateralYards });
+        } else if (shouldDefenderDive(defender, carrier, { lateralYards, firstDownX: state.firstDownPosition, goalLineX: 100 })) {
+          defender.diveTackle(carrier);
+        } else {
+          move(defender, pursueTarget(defender, carrier), delta);
+        }
         return;
       }
       if (ai.mode === 'ball' && pass && ai.target) {
@@ -172,8 +198,13 @@ import { playEndsFromTackle } from './tackling.js';
       }
       if (defender.role === 'rush') {
         if (!state.quarterback?.hasBall) { defender.coastToStop(delta); return; }
-        if (defender.canTackle?.(state.quarterback)) defender.tackle(state.quarterback);
-        else move(defender, state.quarterback, delta);
+        if (defender.canTackle?.(state.quarterback)) {
+          defender.tackle(state.quarterback, { isDive: false, forceSuccess: true, lateralYards });
+        } else if (shouldDefenderDive(defender, state.quarterback, { lateralYards, goalLineX: 100 })) {
+          defender.diveTackle(state.quarterback);
+        } else {
+          move(defender, state.quarterback, delta);
+        }
         return;
       }
       if (ai.mode === 'man' || defender.role === 'man') {
@@ -218,6 +249,13 @@ import { playEndsFromTackle } from './tackling.js';
       const qbRunning = state.quarterback?.hasBall && state.quarterback.x > state.scrimmagePosition;
       const carrier = state.runningBack?.hasBall ? state.runningBack
         : state.receivers.find(p => p.hasBall) || (qbRunning ? state.quarterback : null);
+
+      if (carrier) {
+        carrier.updateTackleImmunities?.(delta);
+        if (carrier.stumbleTimer > 0) {
+          carrier.stumbleTimer = Math.max(0, carrier.stumbleTimer - delta);
+        }
+      }
 
       // Keep pursuit selective for the current carrier. Nearby defenders
       // pursue; everyone else retains their man or zone assignment.

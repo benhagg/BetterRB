@@ -509,7 +509,20 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       defenseAI.initialize(state.defenders, selectedPlays.defense?.coverage || 'man');
       return state;
     }
-    if (state.phase === 'complete' || state.clockSeconds <= 0) return state;
+    if (state.phase === 'complete' || state.clockSeconds <= 0) {
+      const carrier = ballCarrier();
+      if (carrier?.isTackled) {
+        carrier.tackledElapsed = (carrier.tackledElapsed || 0) + delta;
+      }
+      return state;
+    }
+    const currentCarrier = ballCarrier();
+    if (currentCarrier) {
+      if (currentCarrier.stumbleTimer > 0) {
+        currentCarrier.stumbleTimer = Math.max(0, currentCarrier.stumbleTimer - delta);
+      }
+      currentCarrier.updateTackleImmunities?.(delta);
+    }
     if (state.phase === 'passing' || state.phase === 'running') {
       const defenseHasBall = state.defenders.some(defender => defender.hasBall);
       if (state.playType === 'run' && state.quarterback.hasBall
