@@ -95,7 +95,8 @@
     const targetHeightMeters = Number.isFinite(catchHeightMeters)
       ? catchHeightMeters : defaultCatchHeightMeters;
     const rangeMeters = distance * METERS_PER_YARD;
-    let angleDegrees = 14 + (0.40 * distance) - (0.0012 * distance ** 2);
+    const longThrowAngleBoost = 0.03 * Math.max(0, distance - 10);
+    let angleDegrees = 14 + (0.40 * distance) - (0.0012 * distance ** 2) + longThrowAngleBoost;
     angleDegrees = Math.max(14, Math.min(42, angleDegrees));
     const angleRadians = angleDegrees * Math.PI / 180;
     const cosine = Math.cos(angleRadians);
