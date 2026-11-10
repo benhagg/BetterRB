@@ -40,7 +40,6 @@ window.RetroSprites = (() => {
     dropback: ['/images/actions/dropback.png', '/images/actions/dropback1.png'],
     pass: ['/images/actions/pass.png', '/images/actions/pass1.png'],
     ddive: ['/images/actions/ddive.png', '/images/actions/ddive1.png', '/images/actions/ddive2.png'],
-    odive: ['/images/actions/odive.png', '/images/actions/odive1.png', '/images/actions/odive2.png'],
     dive_catch: ['/images/actions/dive_catch.png', '/images/actions/dive_catch_1.png', '/images/actions/dive_catch_2.png'],
     jump_catch: ['/images/actions/jump_catch.png', '/images/actions/jump_catch_1.png'],
     tackled: ['/images/actions/tackled.png', '/images/actions/tackled1.png', '/images/actions/tackled2.png'],

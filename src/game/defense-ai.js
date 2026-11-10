@@ -152,6 +152,21 @@ import { playEndsFromTackle, shouldDefenderDive, attemptTackle } from './tacklin
     function updateDefender(defender, delta, phase, pass, carrier) {
       const ai = defender.defenseAI;
       if (!ai || defender.isTackled) return;
+      if (defender.pancakeTimer > 0) {
+        defender.coastToStop(delta);
+        return;
+      }
+      if (defender.isBlocking) {
+        const blockDistance = carrier
+          ? Math.hypot(carrier.x - defender.x, (carrier.y - defender.y) * lateralYards)
+          : Infinity;
+        if (carrier && blockDistance <= 0.5 && defender.canTackle?.(carrier)) {
+          defender.tackle(carrier, { isDive: false, lateralYards });
+        } else {
+          defender.coastToStop(delta);
+        }
+        return;
+      }
 
       if (defender.diveCooldownTimer > 0) {
         defender.diveCooldownTimer = Math.max(0, defender.diveCooldownTimer - delta);

@@ -1,6 +1,6 @@
 import { cameraTrailingYards, field, fieldBounds, lateralYards, passGravityFeetPerSecondSquared, runnerTrailingYards } from './field-config.js';
 import { acrossToY as projectAcrossToY } from './formation.js';
-import { nearestDefender } from './blocking.js';
+import { createBlockingEngine } from './blocking.js';
 import { clampToField } from './movement.js';
 import { playTypeFor } from './play-flow.js';
 
@@ -344,6 +344,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
   let catching;
   const zoneEngine = GameZoneEngine.create({ state, lateralYards, fieldBounds });
   const defenseAI = GameDefenseAI.create({ state, lateralYards, fieldBounds, zoneEngine });
+  const blocking = createBlockingEngine({ state, lateralYards });
   const passing = GamePassing.create({
     state, lateralYards, fieldBounds, passTarget, quarterbackIsBehindLineOfScrimmage,
     onPassReleased: pass => { defenseAI.onPassReleased(pass); catching?.schedule(pass); }
@@ -419,23 +420,6 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     const minCos = Math.cos(halfAngleRad);
 
     return dot >= minCos;
-  }
-
-  const BLOCK_ENGAGE_RADIUS = 0.75;
-
-  function blockNearestDefender(player, delta) {
-    const { defender, distance } = nearestDefender(player, state.defenders, lateralYards);
-    if (defender) {
-      if (distance <= BLOCK_ENGAGE_RADIUS) {
-        player.block(defender);
-      } else {
-        player.blockingTarget = null;
-        player.run(delta, defender.x, defender.y);
-      }
-    } else {
-      player.blockingTarget = null;
-      player.runRoute(delta);
-    }
   }
 
   function movePlayer(delta, input = {}) {
@@ -637,11 +621,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       if (state.runningBack && (state.playType !== 'run' || state.runningBack.hasBall)) {
         eligibleBlockers.push(state.runningBack);
       }
-      for (const player of eligibleBlockers) {
-        if (!player.hasBall) {
-          blockNearestDefender(player, delta);
-        }
-      }
+      blocking.update(eligibleBlockers, delta, ballCarrier());
     } else if (state.phase === 'passing') {
       if (state.receivers) {
         for (const rec of state.receivers) {
@@ -651,6 +631,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       if (state.playType !== 'run' && !state.runningBack.hasBall) {
         state.runningBack.runRoute(delta);
       }
+      blocking.update(state.offensiveLine || [], delta, state.quarterback);
     }
     defenseAI.update(delta);
     passing.updateWindup(delta);
@@ -699,6 +680,7 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
   }
 
   function reset() {
+    blocking.reset();
     state.fieldPosition = 25;
     state.playerY = 0.5;
     state.clockSeconds = 900;

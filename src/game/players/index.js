@@ -79,6 +79,10 @@
       this.animDistance = 0;
       this.facingLeft = Boolean(config.facingLeft);
       this.isMoving = false;
+      this.isBlocking = Boolean(config.isBlocking);
+      this.isPancaked = Boolean(config.isPancaked);
+      this.pancakeTimer = Number.isFinite(config.pancakeTimer) ? config.pancakeTimer : 0;
+      this.speedModifier = Number.isFinite(config.speedModifier) ? config.speedModifier : 1;
       this.phase = config.phase ?? 'preplay';
     }
 
@@ -126,6 +130,8 @@
         lastDirX: this.lastDirX, lastDirY: this.lastDirY, autoRun: this.autoRun,
         animDistance: this.animDistance, facingLeft: this.facingLeft, isMoving: this.isMoving,
         phase: this.phase, hasBall: this.hasBall, isDiving: this.isDiving,
+        isBlocking: this.isBlocking, isPancaked: this.isPancaked, pancakeTimer: this.pancakeTimer,
+        speedModifier: this.speedModifier,
         diveProgress: this.diveProgress, diveCooldownTimer: this.diveCooldownTimer,
         tackleMissRecoveryTimer: this.tackleMissRecoveryTimer, stumbleTimer: this.stumbleTimer,
         isTackled: this.isTackled, receiverNumber: this.receiverNumber,
@@ -163,6 +169,10 @@
       this.stumbleTimer = 0;
       this.stumbleDuration = 0;
       this.stumbleMultiplier = 1;
+      this.isBlocking = false;
+      this.isPancaked = false;
+      this.pancakeTimer = 0;
+      this.speedModifier = 1;
       this._tackleImmunities?.clear();
     }
 
@@ -295,11 +305,12 @@
       }
 
       const factor = Math.max(0, Math.min(1, movement.speedFactor));
-      this.velocityX = (movement.direction.x * this.speed * factor) || 0;
-      this.velocityY = ((movement.direction.y * this.speed * factor) / LATERAL_YARDS) || 0;
+      const effectiveSpeed = this.speed * (this.speedModifier ?? 1);
+      this.velocityX = (movement.direction.x * effectiveSpeed * factor) || 0;
+      this.velocityY = ((movement.direction.y * effectiveSpeed * factor) / LATERAL_YARDS) || 0;
       this.lastDirX = movement.direction.x;
       this.lastDirY = movement.direction.y;
-      return { direction: movement.direction, step: this.speed * factor * delta, isMoving: factor > 0.001 };
+      return { direction: movement.direction, step: effectiveSpeed * factor * delta, isMoving: factor > 0.001 };
     }
 
     coastToStop(delta) {
@@ -354,7 +365,9 @@
       const x = Math.round(coords.screenX - 8 * pixel);
       const y = Math.round(coords.screenY - 8 * pixel);
 
-      if (this.phase === 'preplay') {
+      if (this.isBlocking) {
+        RetroSprites.drawAction(ctx, x, y, pixel, u, 'blocking', Math.floor(this.animDistance * 2) % 2, this.facingLeft);
+      } else if (this.phase === 'preplay') {
         RetroSprites.drawPrePlay(ctx, x, y, pixel, u, this.kind, this.facingLeft);
       } else if (this.isMoving) {
         RetroSprites.drawRunner(ctx, x, y, pixel, u, Math.floor(this.animDistance * 1.5), this.facingLeft);
@@ -566,7 +579,9 @@
       const x = Math.round(coords.screenX - 8 * pixel);
       const y = Math.round(coords.screenY - 8 * pixel);
 
-      if (this.phase === 'preplay') {
+      if (this.isBlocking) {
+        RetroSprites.drawAction(ctx, x, y, pixel, u, 'blocking', Math.floor(this.animDistance * 2) % 2, this.facingLeft);
+      } else if (this.phase === 'preplay') {
         RetroSprites.drawPrePlay(ctx, x, y, pixel, u, this.kind, this.facingLeft);
       } else if (this.catchType === 'jump') {
         const frame = this.catchElapsed < 0.4 ? 0 : 1;
@@ -714,6 +729,10 @@
         this.coastToStop(delta);
         return;
       }
+      if (this.isBlocking || this.isPancaked) {
+        this.coastToStop(delta);
+        return;
+      }
       if (this.isDiving) {
         this.updateDive(delta, targetPlayer);
         return;
@@ -744,7 +763,11 @@
       const x = Math.round(coords.screenX - 8 * pixel);
       const y = Math.round(coords.screenY - 8 * pixel);
 
-      if (this.isDiving) {
+      if (this.isBlocking) {
+        RetroSprites.drawAction(ctx, x, y, pixel, u, 'blocking', Math.floor(this.animDistance * 2) % 2, this.facingLeft);
+      } else if (this.isPancaked) {
+        RetroSprites.drawAction(ctx, x, y, pixel, u, 'ddive', 2, this.facingLeft);
+      } else if (this.isDiving) {
         const frame = this.diveProgress < 0.33 ? 0 : this.diveProgress < 0.66 ? 1 : 2;
         if (RetroSprites.drawAction) RetroSprites.drawAction(ctx, x, y, pixel, u, 'ddive', frame, this.facingLeft);
         else RetroSprites.drawRunner(ctx, x, y, pixel, u, 0, this.facingLeft);

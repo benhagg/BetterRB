@@ -212,6 +212,9 @@ export function attemptTackle(tackler, carrier, options = {}) {
   } = options;
 
   if (!carrier) return { success: false, reason: 'no-carrier' };
+  if (tackler?.pancakeTimer > 0 || tackler?.isPancaked) {
+    return { success: false, reason: 'pancaked' };
+  }
 
   const dx = carrier.x - (tackler?.x ?? carrier.x);
   const dy = (carrier.y - (tackler?.y ?? carrier.y)) * lateralYards;
@@ -238,7 +241,11 @@ export function attemptTackle(tackler, carrier, options = {}) {
   } = calculateTackleDiff(tackler, carrier, { isDive, lateralYards });
 
   const rawProb = TACKLE_BASE_PROBABILITY - diff * TACKLE_DIFF_SCALE;
-  const probability = Math.max(0.10, Math.min(0.95, rawProb));
+  const baseProbability = Math.max(0.10, Math.min(0.95, rawProb));
+  const blockCoefficient = tackler?.isBlocking
+    ? Math.max(0, Math.min(1, Number(tackler.tackleCoefficient ?? 1)))
+    : 1;
+  const probability = baseProbability * blockCoefficient;
   const randomValue = (typeof roll === 'number') ? roll : Math.random();
   const success = forceSuccess || (randomValue < probability);
 
@@ -255,7 +262,7 @@ export function attemptTackle(tackler, carrier, options = {}) {
     `  Defender: Strength=${tacklerStrength} (*0.5=${(tacklerStrength * 0.5).toFixed(2)}), Tackling=${tacklerTackling} (*0.75=${(tacklerTackling * 0.75).toFixed(2)})${isDive ? `, DivePenalty=-${divePenalty.toFixed(2)}` : ''} -> DefScore=${tacklerScore.toFixed(2)}\n` +
     `  Angle of Attack: ${angleDeg.toFixed(1)}° (cos=${cosAngle.toFixed(3)}) [${cosAngle > 0.5 ? 'FRONT HIT' : cosAngle < -0.5 ? 'REAR HIT' : 'FLANK/ANGLE HIT'}]\n` +
     `  Formula: diff = ${carrierScore.toFixed(2)} - ${tacklerScore.toFixed(2)} - (${cosAngle.toFixed(3)}) = ${diff.toFixed(2)}\n` +
-    `  Tackle Probability: ${(probability * 100).toFixed(1)}% | Roll: ${(randomValue * 100).toFixed(1)}%\n` +
+    `  Tackle Probability: ${(probability * 100).toFixed(1)}% (block coeff ${blockCoefficient.toFixed(2)}) | Roll: ${(randomValue * 100).toFixed(1)}%\n` +
     `  Outcome: ${success ? 'SUCCESS (CARRIER TACKLED)' : 'BROKEN TACKLE (CARRIER STUMBLES)'}`
   );
 
