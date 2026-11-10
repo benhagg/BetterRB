@@ -336,6 +336,23 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
     return [...state.receivers, state.runningBack].find(player => player.receiverNumber === receiverNumber);
   }
 
+  function passPursuers(pass) {
+    const offensiveCatchers = [...state.receivers, state.runningBack].filter(Boolean);
+    if (pass.targetReceiverNumber != null) {
+      const target = offensiveCatchers.find(player => player.receiverNumber === pass.targetReceiverNumber);
+      return target ? [target] : [];
+    }
+
+    const passDistance = Number(pass.distanceYards) > 0
+      ? Number(pass.distanceYards)
+      : Math.hypot(pass.targetX - pass.fromX, (pass.targetY - pass.fromY) * lateralYards);
+    const adjustmentRadius = passDistance / 4;
+    return offensiveCatchers.filter(player => Math.hypot(
+      pass.targetX - player.x,
+      (pass.targetY - player.y) * lateralYards
+    ) <= adjustmentRadius);
+  }
+
   function quarterbackIsBehindLineOfScrimmage() {
     return state.quarterback.x < state.scrimmagePosition;
   }
@@ -543,20 +560,18 @@ window.playGame = function playGame(team1, team2, savedState = null, selectedPla
       }
     } else if (state.phase === 'thrown') {
       catching.schedule(state.pass);
+      const pursuers = state.pass.pursuingPlayers
+        || (state.pass.pursuingPlayers = passPursuers(state.pass));
       state.pass.progress = Math.min(1, state.pass.progress + delta / state.pass.duration);
       const currentHeight = passing.throwHeightAt(state.pass.progress, state.pass);
       state.pass.heightFeet = currentHeight;
       state.pass.heightfeet = currentHeight;
       for (const player of [...state.receivers, state.runningBack]) {
         if (!player.hasBall) {
-          if (state.pass.targetReceiverNumber && player.receiverNumber === state.pass.targetReceiverNumber) {
-            // The targeted receiver always adjusts toward the predicted ball
-            // location, including passes thrown behind their current route.
-            if (state.pass.progress * state.pass.duration >= GameDefenseAI.RECEIVER_BREAK_DELAY) {
-              player.run(delta, state.pass.targetX, state.pass.targetY);
-            } else {
-              player.runRoute(delta);
-            }
+          if (pursuers.includes(player)
+            && state.pass.progress * state.pass.duration >= GameDefenseAI.RECEIVER_BREAK_DELAY) {
+            // Pass pursuers use the same movement acceleration and deceleration as routes.
+            player.run(delta, state.pass.targetX, state.pass.targetY);
           } else {
             // Non-targeted receivers keep running their assigned routes while
             // the ball is airborne. Catch-volume contests can be layered on

@@ -146,7 +146,10 @@
           const sim = sims.get(player);
           // At release, players continue in their current heading. This mirrors
           // the existing route engine without mutating live player objects.
-          const shouldPursueTarget = side === 'offense' && player.receiverNumber === pass.targetReceiverNumber
+          const isPassPursuer = Array.isArray(pass.pursuingPlayers)
+            ? pass.pursuingPlayers.includes(player)
+            : pass.targetReceiverNumber != null && player.receiverNumber === pass.targetReceiverNumber;
+          const shouldPursueTarget = side === 'offense' && isPassPursuer
             && time >= (globalThis.GameDefenseAI?.RECEIVER_BREAK_DELAY ?? 0.05);
           const target = shouldPursueTarget
             ? { x: pass.targetX, y: pass.targetY }
