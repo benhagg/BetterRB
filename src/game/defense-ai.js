@@ -7,6 +7,8 @@ import { playEndsFromTackle, shouldDefenderDive, attemptTackle } from './tacklin
   const MAN_CUT_REACTION_DELAY = 0.2;
   const RECEIVER_BREAK_DELAY = 0.05;
   const PURSUIT_MAX_LEAD_TIME = 1.5;
+  const PURSUIT_CONTAIN_OFFSET = 0.08;
+  const PURSUIT_SAFETY_CUSHION = 1.50;
 
   function calculateDefenderReactionDelay(defender, target, lateralYards = 25) {
     if (defender.isBackpedaling) return 0;
@@ -20,6 +22,58 @@ import { playEndsFromTackle, shouldDefenderDive, attemptTackle } from './tacklin
     if (!distance) return 0;
     const dot = Math.max(-1, Math.min(1, (vx * dx + vy * dy) / (speed * distance)));
     return 0.15 * (1 - dot);
+  }
+
+  function getPlayerMovementVelocity(player, lateralYards = 25) {
+    if (!player) return { vx: 0, vy: 0, speed: 0 };
+
+    const vx = Number(player.velocityX) || 0;
+    const vy = (Number(player.velocityY) || 0) * lateralYards;
+    const currentSpeed = Math.hypot(vx, vy);
+    if (currentSpeed > 0.05) {
+      return { vx, vy, speed: currentSpeed };
+    }
+
+    const playerSpeed = Math.max(0.1, Number(player.speed) || 5);
+
+    if (player.autoRun && (player.autoRun.vx !== 0 || player.autoRun.vy !== 0)) {
+      const arX = player.autoRun.vx;
+      const arY = (player.autoRun.vy || 0) * lateralYards;
+      const arDist = Math.hypot(arX, arY) || 1;
+      return {
+        vx: (arX / arDist) * playerSpeed,
+        vy: (arY / arDist) * playerSpeed,
+        speed: playerSpeed
+      };
+    }
+
+    if (player.route && Number.isFinite(player.routeIndex) && player.routeIndex < player.route.length) {
+      const wp = player.route[player.routeIndex];
+      const targetX = player.startX + wp.dx;
+      const targetY = player.startY + wp.dy / lateralYards;
+      const dx = targetX - player.x;
+      const dy = (targetY - player.y) * lateralYards;
+      const dist = Math.hypot(dx, dy);
+      if (dist > 0.05) {
+        return {
+          vx: (dx / dist) * playerSpeed,
+          vy: (dy / dist) * playerSpeed,
+          speed: playerSpeed
+        };
+      }
+    }
+
+    if (player._movement?.direction && player._movement.hasDirection) {
+      const dir = player._movement.direction;
+      const factor = player._movement.speedFactor || 1;
+      return {
+        vx: dir.x * playerSpeed * factor,
+        vy: dir.y * playerSpeed * factor,
+        speed: playerSpeed * factor
+      };
+    }
+
+    return { vx: 0, vy: 0, speed: 0 };
   }
 
   function create({ state, lateralYards = 25, fieldBounds, zoneEngine }) {
@@ -38,25 +92,99 @@ import { playEndsFromTackle, shouldDefenderDive, attemptTackle } from './tacklin
       for (const defender of defenders) {
         defender.defenseAI = { anchor: { x: defender.x, y: defender.y }, mode: 'coverage', delay: 0, routeIndex: null, lastTarget: null };
         defender.isBackpedaling = false;
+        defender._initialY = Number.isFinite(defender.startY) ? defender.startY : defender.y;
       }
-      if (coverageType !== 'man') return;
+      if (coverageType !== 'man') {
+        alignZoneDefenders(defenders);
+        return;
+      }
+
+      function alignZoneDefenders(defs) {
+        const zoneRules = zoneEngine?.zones;
+        for (const defender of defs) {
+          if (defender.role === 'rush' || ['DL', 'DT', 'DE', 'NT', 'EDGE'].includes(defender.position)) continue;
+          const zoneName = defender.zone || 'middle';
+          const rule = zoneRules?.[zoneName];
+          if (!rule || !rule.lane) continue;
+          const [laneStart, laneEnd] = rule.lane;
+          const laneMid = (laneStart + laneEnd) / 2;
+          if (laneMid < 0.48 && defender.y > 0.5) {
+            defender.y = Math.min(laneEnd, Math.max(laneStart, 1 - defender.y));
+            defender.startY = defender.y;
+            if (defender.defenseAI) defender.defenseAI.anchor.y = defender.y;
+          } else if (laneMid > 0.52 && defender.y < 0.5) {
+            defender.y = Math.min(laneEnd, Math.max(laneStart, 1 - defender.y));
+            defender.startY = defender.y;
+            if (defender.defenseAI) defender.defenseAI.anchor.y = defender.y;
+          }
+        }
+      }
 
       // Explicit manTarget assignments take priority and determine alignment.
-      // DBs without an explicit target are then assigned to the nearest
-      // uncovered WR/TE. Remaining defenders stay in their called zones.
+      // DBs and LBs in man coverage are assigned to eligible receivers.
       const eligibleReceivers = state.receivers.filter(player => ['WR', 'TE'].includes(player.position));
-      for (const defender of defenders) {
-        if (defender.role !== 'man' || ['DL', 'DT', 'DE', 'NT', 'EDGE'].includes(defender.position) || defender.role === 'rush' || !defender.manTarget) continue;
-        assignMan(defender, manTarget(defender.manTarget));
+      const manDefenders = defenders.filter(defender =>
+        defender.role === 'man' && !['DL', 'DT', 'DE', 'NT', 'EDGE'].includes(defender.position) && defender.role !== 'rush'
+      );
+
+      // 1. Assign explicit manTarget mappings
+      for (const defender of manDefenders) {
+        if (!defender.manTarget) continue;
+        const target = manTarget(defender.manTarget);
+        if (target && !assignedTargets.has(target)) {
+          assignMan(defender, target);
+        }
       }
-      for (const defender of defenders) {
-        if (defender.role !== 'man' || ['DL', 'DT', 'DE', 'NT', 'EDGE'].includes(defender.position) || defender.role === 'rush'
-          || defender.position !== 'DB' || defender.defenseAI.manTargetPlayer) continue;
+
+      // 2. Assign unassigned man defenders to nearest eligible receivers prioritizing same side of field
+      for (const defender of manDefenders) {
+        if (defender.defenseAI?.manTargetPlayer) continue;
         const target = eligibleReceivers
           .filter(receiver => !assignedTargets.has(receiver))
-          .sort((a, b) => distance(defender, a) - distance(defender, b))[0];
+          .sort((a, b) => {
+            const aSameSide = (a.y < 0.5) === (defender.y < 0.5);
+            const bSameSide = (b.y < 0.5) === (defender.y < 0.5);
+            if (aSameSide !== bSameSide) return aSameSide ? -1 : 1;
+            return distance(defender, a) - distance(defender, b);
+          })[0];
         if (target) assignMan(defender, target);
         else defender.role = 'zone';
+      }
+
+      // 3. Ensure defenders line up on the same side of the field as their assignment:
+      // If two defenders on opposite sides of the field have targets on opposite sides of the field,
+      // swap their assignments so each defender matches the receiver on their own side of the field.
+      for (let i = 0; i < manDefenders.length; i++) {
+        for (let j = i + 1; j < manDefenders.length; j++) {
+          const d1 = manDefenders[i];
+          const d2 = manDefenders[j];
+          const t1 = d1.defenseAI?.manTargetPlayer;
+          const t2 = d2.defenseAI?.manTargetPlayer;
+          if (!t1 || !t2) continue;
+
+          const d1BaseY = Number.isFinite(d1._initialY) ? d1._initialY : (Number.isFinite(d1.startY) ? d1.startY : d1.y);
+          const d2BaseY = Number.isFinite(d2._initialY) ? d2._initialY : (Number.isFinite(d2.startY) ? d2.startY : d2.y);
+          const d1Side = d1BaseY < 0.48 ? -1 : (d1BaseY > 0.52 ? 1 : 0);
+          const d2Side = d2BaseY < 0.48 ? -1 : (d2BaseY > 0.52 ? 1 : 0);
+
+          if (d1Side !== 0 && d2Side !== 0 && d1Side !== d2Side) {
+            const t1Side = t1.y < 0.48 ? -1 : (t1.y > 0.52 ? 1 : 0);
+            const t2Side = t2.y < 0.48 ? -1 : (t2.y > 0.52 ? 1 : 0);
+
+            if (d1Side !== t1Side && d2Side !== t2Side && d1Side === t2Side && d2Side === t1Side) {
+              swapManAssignments(d1, d2, t1, t2);
+            }
+          }
+        }
+      }
+
+      function swapManAssignments(d1, d2, t1, t2) {
+        assignedTargets.delete(t1);
+        assignedTargets.delete(t2);
+        d1.defenseAI.manTargetPlayer = null;
+        d2.defenseAI.manTargetPlayer = null;
+        assignMan(d1, t2);
+        assignMan(d2, t1);
       }
 
       function assignMan(defender, target) {
@@ -101,45 +229,52 @@ import { playEndsFromTackle, shouldDefenderDive, attemptTackle } from './tacklin
       return match ? state.receivers.filter(p => p.position === 'WR')[Number(match[1]) - 1] : null;
     }
 
-    function pursueTarget(defender, carrier) {
-      const rx = carrier.x - defender.x;
-      const ry = (carrier.y - defender.y) * lateralYards;
-      const vx = Number(carrier.velocityX) || 0;
-      const vy = (Number(carrier.velocityY) || 0) * lateralYards;
-      const carrierSpeed = Math.hypot(vx, vy);
-      const defenderSpeed = Math.max(0.1, Number(defender.speed) || 0);
+    function pursueTarget(defender, targetPlayer) {
+      if (!targetPlayer) return defender;
 
-      // If the defender is already ahead along the carrier's path, close on
-      // the carrier's current position instead of running farther downfield.
-      const defenderIsAhead = carrierSpeed > 0.05 && rx * vx + ry * vy < 0;
-      let leadTime = 0;
-      if (carrierSpeed > 0.05 && !defenderIsAhead) {
-        // Solve |carrierPosition + carrierVelocity * t - defenderPosition|
-        // = defenderSpeed * t, then use the earliest reachable intercept.
-        const a = vx * vx + vy * vy - defenderSpeed * defenderSpeed;
-        const b = 2 * (rx * vx + ry * vy);
-        const c = rx * rx + ry * ry;
-        const discriminant = b * b - 4 * a * c;
-        let interceptTime = Infinity;
-        if (Math.abs(a) < 1e-6) {
-          if (b < 0) interceptTime = -c / b;
-        } else if (discriminant >= 0) {
-          const root = Math.sqrt(discriminant);
-          const candidates = [(-b - root) / (2 * a), (-b + root) / (2 * a)]
-            .filter(time => time > 0);
-          if (candidates.length) interceptTime = Math.min(...candidates);
-        }
-        if (Number.isFinite(interceptTime)) {
-          leadTime = Math.min(PURSUIT_MAX_LEAD_TIME, interceptTime);
-        }
+      const rx = targetPlayer.x - defender.x;
+      const ry = (targetPlayer.y - defender.y) * lateralYards;
+      const dist = Math.hypot(rx, ry);
+
+      const { vx, vy, speed: targetSpeed } = getPlayerMovementVelocity(targetPlayer, lateralYards);
+      const defenderSpeed = Math.max(0.1, Number(defender.speed) || 5);
+
+      if (targetSpeed < 0.05 || dist < 0.05) {
+        return clampTarget({ x: targetPlayer.x, y: targetPlayer.y });
       }
+
+      // Smooth closure lead time based on distance and defender speed.
+      // At close range (< 1.2 yds), blend smoothly toward direct target to finish the tackle.
+      const closeFactor = dist < 1.2 ? (dist / 1.2) : 1.0;
+      const rawLeadTime = dist / (defenderSpeed + 0.1);
+      const leadTime = Math.max(0.15, Math.min(PURSUIT_MAX_LEAD_TIME, rawLeadTime)) * closeFactor;
+
+      let futureX = targetPlayer.x + vx * leadTime;
+      let futureY = targetPlayer.y + (vy * leadTime) / lateralYards;
+
+      if (rx < 0 && vx > 0) futureX = Math.min(defender.x - 0.05, futureX);
+      if (rx > 0 && vx < 0) futureX = Math.max(defender.x + 0.05, futureX);
+
+      // Role-based leverage adjustments from defense_ai.md:
+      // 1. Deep safeties maintain downfield depth leverage (+1.5 yds cushion)
+      const isSafety = defender.position === 'DB' && (defender.zone?.startsWith('deep') || defender.role === 'deep' || defender.zone === 'deep_free_safety');
+      // 2. Contain defenders (CBs, outside defenders) cup the runner toward the sideline
+      const isOutside = Math.abs(defender.y - 0.5) > Math.abs(targetPlayer.y - 0.5);
+
+      if (isSafety && futureX > targetPlayer.x) {
+        futureX += PURSUIT_SAFETY_CUSHION;
+      } else if (isOutside && Math.abs(futureY - 0.5) > 0.05) {
+        futureY += Math.sign(futureY - 0.5) * PURSUIT_CONTAIN_OFFSET;
+      }
+
       return clampTarget({
-        x: carrier.x + (carrier.velocityX || 0) * leadTime,
-        y: carrier.y + (carrier.velocityY || 0) * leadTime
+        x: futureX,
+        y: futureY
       });
     }
 
     function move(defender, target, delta, backpedal = false) {
+      defender.desiredTarget = target;
       defender.isBackpedaling = backpedal;
       if (!target) { defender.coastToStop(delta); return; }
       defender.run(delta, target.x, target.y);
@@ -152,11 +287,18 @@ import { playEndsFromTackle, shouldDefenderDive, attemptTackle } from './tacklin
     function updateDefender(defender, delta, phase, pass, carrier) {
       const ai = defender.defenseAI;
       if (!ai || defender.isTackled) return;
+      if (defender.isGettingUp) {
+        defender.updateGetUp?.(delta);
+        return;
+      }
       if (defender.pancakeTimer > 0) {
         defender.coastToStop(delta);
         return;
       }
       if (defender.isBlocking) {
+        if (carrier) {
+          defender.desiredTarget = pursueTarget(defender, carrier);
+        }
         const blockDistance = carrier
           ? Math.hypot(carrier.x - defender.x, (carrier.y - defender.y) * lateralYards)
           : Infinity;
@@ -221,7 +363,7 @@ import { playEndsFromTackle, shouldDefenderDive, attemptTackle } from './tacklin
         } else if (shouldDefenderDive(defender, state.quarterback, { lateralYards, goalLineX: 100 })) {
           defender.diveTackle(state.quarterback);
         } else {
-          move(defender, state.quarterback, delta);
+          move(defender, pursueTarget(defender, state.quarterback), delta);
         }
         return;
       }
@@ -233,15 +375,37 @@ import { playEndsFromTackle, shouldDefenderDive, attemptTackle } from './tacklin
         }
         ai.routeIndex = receiver.routeIndex;
         if (ai.delay > 0) { defender.coastToStop(delta); return; }
-        // coverageOffset sets only the pre-snap cushion. Once the route starts,
-        // lead the receiver toward a reachable meet point instead of chasing
-        // their current location and trailing behind their route.
-        ai.lastTarget = pursueTarget(defender, receiver);
+
+        const { vx, vy, speed: targetSpeed } = getPlayerMovementVelocity(receiver, lateralYards);
         const routeDistance = Math.hypot(
           receiver.x - receiver.startX,
           (receiver.y - receiver.startY) * lateralYards
         );
-        move(defender, ai.lastTarget, delta, routeDistance < MAN_BACKPEDAL_YARDS);
+
+        if (targetSpeed > 0.05) {
+          const dist = distance(defender, receiver);
+          const tLead = Math.max(0.15, Math.min(1.2, dist / Math.max(0.1, Number(defender.speed) || 5)));
+          const futureX = receiver.x + vx * tLead;
+          const futureY = receiver.y + (vy * tLead) / lateralYards;
+
+          const isAhead = defender.x > receiver.x;
+          const isApproaching = vx > 0;
+          let targetX = futureX;
+          let targetY = futureY;
+
+          // While ahead downfield and receiver is running forward, maintain cushion ahead of the route
+          if (isAhead && isApproaching && Math.abs(vy) < 1.5) {
+            const cushion = Math.max(1.0, Math.min(defender.coverageOffset || DEFAULT_COVERAGE_OFFSET, defender.x - receiver.x));
+            targetX = Math.max(defender.x + 0.1, futureX + cushion * 0.5);
+          }
+
+          const isBackpedal = isAhead && (defender.x - receiver.x) >= 1.0 && Math.abs(vy) < 1.5 && routeDistance < 15;
+          ai.lastTarget = clampTarget({ x: targetX, y: targetY });
+          move(defender, ai.lastTarget, delta, isBackpedal);
+        } else {
+          ai.lastTarget = clampTarget({ x: receiver.x, y: receiver.y });
+          move(defender, ai.lastTarget, delta, routeDistance < MAN_BACKPEDAL_YARDS);
+        }
         return;
       }
       if (zoneEngine && (defender.role === 'zone' || defender.zone)) {
@@ -251,14 +415,16 @@ import { playEndsFromTackle, shouldDefenderDive, attemptTackle } from './tacklin
       if (defender.zone === 'deep_free_safety') {
         const deepestReceiver = state.receivers.reduce((deepest, receiver) =>
           !deepest || receiver.x > deepest.x ? receiver : deepest, null);
-        const depth = Math.max(ai.anchor.x, (deepestReceiver?.x ?? ai.anchor.x) + 0.75);
-        move(defender, clampTarget({ x: depth, y: ai.anchor.y }), delta);
+        const target = deepestReceiver ? pursueTarget(defender, deepestReceiver) : ai.anchor;
+        const depth = Math.max(ai.anchor.x, (target?.x ?? ai.anchor.x) + 0.75);
+        move(defender, clampTarget({ x: depth, y: target?.y ?? ai.anchor.y }), delta);
         return;
       }
       const targets = [...state.receivers, state.runningBack].filter(Boolean);
       const inside = targets.filter(receiver => distance(receiver, ai.anchor) <= ZONE_CONTEST_RADIUS)
         .sort((a, b) => distance(a, ai.anchor) - distance(b, ai.anchor))[0];
-      move(defender, inside || ai.anchor, delta, !inside);
+      const zoneTarget = inside ? pursueTarget(defender, inside) : ai.anchor;
+      move(defender, zoneTarget, delta, !inside);
     }
 
     function update(delta) {
@@ -296,9 +462,9 @@ import { playEndsFromTackle, shouldDefenderDive, attemptTackle } from './tacklin
       if (playEndsFromTackle(carrier, state.quarterback)) state.phase = 'complete';
     }
 
-    return { initialize, onPassReleased, update, updateDefender };
+    return { initialize, onPassReleased, update, updateDefender, pursueTarget, getPlayerMovementVelocity };
   }
 
-  root.GameDefenseAI = { create, calculateDefenderReactionDelay, RECEIVER_BREAK_DELAY };
+  root.GameDefenseAI = { create, calculateDefenderReactionDelay, getPlayerMovementVelocity, RECEIVER_BREAK_DELAY };
   if (typeof module !== 'undefined') module.exports = root.GameDefenseAI;
 })(typeof window !== 'undefined' ? window : globalThis);

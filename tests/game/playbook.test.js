@@ -74,5 +74,33 @@ describe('Playbook Data Validation', () => {
       expect(numReceivers + numRB + numQB + numOL).toBe(11);
     });
   });
+
+  it('validates dplays.json zone and man formation slots line up on the correct side of the field', () => {
+    const dplaysRaw = fs.readFileSync(path.resolve(__dirname, '../../public/shared/dplays.json'), 'utf8');
+    const dplays = JSON.parse(dplaysRaw);
+
+    const cover2 = dplays.plays.find(p => p.id === 'base-cover-2');
+    expect(cover2).toBeDefined();
+
+    cover2.formation.defenders.forEach(slot => {
+      if (!slot.zone) return;
+      if (slot.zone.includes('top')) {
+        expect(slot.across, `${slot.zone} must have positive across (top of field)`).toBeGreaterThan(0);
+      } else if (slot.zone.includes('bottom')) {
+        expect(slot.across, `${slot.zone} must have negative across (bottom of field)`).toBeLessThan(0);
+      }
+    });
+
+    const cover1 = dplays.plays.find(p => p.id === 'base-cover-1-man');
+    expect(cover1).toBeDefined();
+    const wr1Slot = cover1.formation.defenders.find(s => s.manTarget === 'WR1');
+    const wr3Slot = cover1.formation.defenders.find(s => s.manTarget === 'WR3');
+    if (wr1Slot && Number.isFinite(wr1Slot.across)) {
+      expect(wr1Slot.across, 'WR1 DB must be positioned on top side').toBeGreaterThan(0);
+    }
+    if (wr3Slot && Number.isFinite(wr3Slot.across)) {
+      expect(wr3Slot.across, 'WR3 DB must be positioned on bottom side').toBeLessThan(0);
+    }
+  });
 });
 

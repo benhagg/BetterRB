@@ -1,13 +1,74 @@
 export const BLOCK_ENGAGE_RADIUS = 0.75;
 export const BLOCK_RESOLUTION_SECONDS = 0.5;
 export const BLOCK_DISENGAGE_DISTANCE = 3;
+export const SECONDARY_BLOCKER_EFFICIENCY = 0.4;
+export const SHED_IMMUNITY_SECONDS = 0.75;
+export const BLOCK_WHIFF_RECOVERY_SECONDS = 0.5;
+export const BLOCK_ANGLE_THRESHOLD_DEGREES = 30;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const position = player => String(player?.position || '').toUpperCase();
 const rating = (player, key) => Number(player?.ratings?.[key] ?? player?.rating?.[key] ?? player?.[key] ?? 5);
 
+const DEFENSIVE_POSITIONS = new Set(['DL', 'DT', 'DE', 'NT', 'EDGE', 'LB', 'MLB', 'OLB', 'CB', 'S', 'FS', 'SS', 'DB']);
+const isDefensivePosition = pos => DEFENSIVE_POSITIONS.has(String(pos || '').toUpperCase());
+
+export function getDefenderRunVector(defender, lateralYards = 25, options = {}) {
+  // 1. Explicit desired target (where defender AI or user intends to run)
+  const target = defender?.desiredTarget ?? defender?.target ?? defender?.defenseAI?.lastTarget ?? defender?.defenseAI?.target;
+  if (target && Number.isFinite(target.x) && Number.isFinite(target.y)) {
+    const dx = target.x - defender.x;
+    const dy = (target.y - defender.y) * lateralYards;
+    if (Math.hypot(dx, dy) > 0.001) {
+      return { x: dx, y: dy };
+    }
+  }
+
+  // 2. Active velocity if moving
+  const vx = Number(defender?.velocityX) || 0;
+  const vy = (Number(defender?.velocityY) || 0) * lateralYards;
+  if (Math.hypot(vx, vy) > 0.05) {
+    return { x: vx, y: vy };
+  }
+
+  // 3. Ball carrier pursuit vector if carrier is known
+  const carrier = options?.carrier || options?.state?.carrier || options?.state?.runningBack;
+  if (carrier && Number.isFinite(carrier.x) && Number.isFinite(carrier.y) && carrier !== defender) {
+    const dx = carrier.x - defender.x;
+    const dy = (carrier.y - defender.y) * lateralYards;
+    if (Math.hypot(dx, dy) > 0.001) {
+      return { x: dx, y: dy };
+    }
+  }
+
+  // 4. Movement heading or default facing direction
+  const defaultDirX = defender?.facingLeft ? -1 : (isDefensivePosition(defender?.position) ? -1 : 1);
+  const dirX = defender?._movement?.direction?.x ?? defender?.lastDirX ?? defaultDirX;
+  const dirY = (defender?._movement?.direction?.y ?? defender?.lastDirY ?? 0) * lateralYards;
+  return { x: dirX, y: dirY };
+}
+
+export function calculateAngleToBlocker(defender, blocker, lateralYards = 25, options = {}) {
+  const bx = blocker.x - defender.x;
+  const by = (blocker.y - defender.y) * lateralYards;
+  const bDist = Math.hypot(bx, by);
+  if (bDist < 0.0001) return 0;
+
+  const runVec = getDefenderRunVector(defender, lateralYards, options);
+  const rDist = Math.hypot(runVec.x, runVec.y);
+  if (rDist < 0.0001) return 0;
+
+  const dot = Math.max(-1, Math.min(1, (bx * runVec.x + by * runVec.y) / (bDist * rDist)));
+  return Math.acos(dot) * (180 / Math.PI);
+}
+
+export function isDefenderRunningTowards(defender, blocker, lateralYards = 25, options = {}) {
+  const angle = calculateAngleToBlocker(defender, blocker, lateralYards, options);
+  return angle <= BLOCK_ANGLE_THRESHOLD_DEGREES;
+}
+
 export function isDown(player) {
-  return Boolean(player?.isDiving || player?.pancakeTimer > 0 || player?.isTackled);
+  return Boolean(player?.isDiving || player?.isGettingUp || player?.pancakeTimer > 0 || player?.isTackled);
 }
 
 export function nearestDefender(player, defenders, lateralYards, { includeEngaged = true, filter = null } = {}) {
@@ -15,6 +76,7 @@ export function nearestDefender(player, defenders, lateralYards, { includeEngage
   let distance = Infinity;
   for (const candidate of defenders || []) {
     if (isDown(candidate)) continue;
+    if (candidate.shedImmunity > 0) continue;
     if (!includeEngaged && candidate.isBlocking) continue;
     if (filter && !filter(candidate)) continue;
     const candidateDistance = Math.hypot(candidate.x - player.x, (candidate.y - player.y) * lateralYards);
@@ -106,7 +168,11 @@ export function createBlockingEngine({ state, lateralYards = 25, random = Math.r
     const blockers = [...engagement.blockers].filter(blocker => !isDown(blocker));
     if (!blockers.length || isDown(engagement.defender)) return release(engagement);
     engagement.blockers = new Set(blockers);
-    const offense = blockers.reduce((total, blocker) => total + blockScore(blocker), 0);
+    const sortedScores = blockers.map(blocker => blockScore(blocker)).sort((a, b) => b - a);
+    const offense = sortedScores.reduce((total, score, index) => {
+      const weight = index === 0 ? 1 : SECONDARY_BLOCKER_EFFICIENCY;
+      return total + score * weight;
+    }, 0);
     const defense = shedScore(engagement.defender);
     const offenseDiff = offense - defense;
     const defenderDiff = defense - offense;
@@ -115,20 +181,25 @@ export function createBlockingEngine({ state, lateralYards = 25, random = Math.r
     engagement.defender.tackleCoefficient = tackleCoefficient(defenderDiff);
 
     if (offenseDiff >= 5 && random() < 0.5) {
-      pancake(engagement.defender, 2);
+      pancake(engagement.defender, 1);
       return release(engagement);
     }
     if (defenderDiff >= 5 && random() < 0.5) {
       pancake(blockers[0], 1);
+      engagement.defender.shedImmunity = Math.max(engagement.defender.shedImmunity ?? 0, SHED_IMMUNITY_SECONDS);
       return release(engagement, 0.8);
     }
     if (offenseDiff > 0) {
       engagement.holdElapsed += BLOCK_RESOLUTION_SECONDS;
       const holdTime = clamp((offenseDiff / 5) * 2, 0, 2);
-      if (engagement.holdElapsed >= holdTime) release(engagement);
+      if (engagement.holdElapsed >= holdTime) {
+        engagement.defender.shedImmunity = Math.max(engagement.defender.shedImmunity ?? 0, SHED_IMMUNITY_SECONDS);
+        release(engagement);
+      }
       return;
     }
     const speedDecrease = clamp(1 - (defenderDiff / 5) * 0.8, 0.2, 1);
+    engagement.defender.shedImmunity = Math.max(engagement.defender.shedImmunity ?? 0, SHED_IMMUNITY_SECONDS);
     return release(engagement, 1 - speedDecrease);
   }
 
@@ -137,10 +208,13 @@ export function createBlockingEngine({ state, lateralYards = 25, random = Math.r
       filter: candidate => {
         const engagement = engagements.get(candidate);
         const hasRoom = !engagement || engagement.blockers.size < MAX_BLOCKERS_PER_DEFENDER;
-        return hasRoom && (!options.targetFilter || options.targetFilter(candidate, blocker));
+        return hasRoom
+          && isDefenderRunningTowards(candidate, blocker, lateralYards, { ...options, state })
+          && (!options.targetFilter || options.targetFilter(candidate, blocker));
       }
     });
-    if (!defender) return false;
+    if (!defender || defender.shedImmunity > 0) return false;
+    if (!isDefenderRunningTowards(defender, blocker, lateralYards, { ...options, state })) return false;
     if (distance > BLOCK_ENGAGE_RADIUS) {
       // Movement must always use the caller's real frame delta so Player.run
       // continues to enforce speed, acceleration, deceleration, and cuts.
@@ -149,8 +223,8 @@ export function createBlockingEngine({ state, lateralYards = 25, random = Math.r
     }
     const whiffChance = clamp(0.35 - rating(blocker, 'blocking') * 0.025, 0.05, 0.35);
     if (random() < whiffChance) {
-      defender.speedModifier = Math.min(defender.speedModifier ?? 1, 0.5);
-      defender.blockSlowTimer = Math.max(defender.blockSlowTimer ?? 0, BLOCK_RESOLUTION_SECONDS);
+      blocker.blockRecoveryTimer = BLOCK_WHIFF_RECOVERY_SECONDS;
+      blocker.stumble?.(BLOCK_WHIFF_RECOVERY_SECONDS, 0.4);
       return false;
     }
     engage(blocker, defender);
@@ -167,13 +241,26 @@ export function createBlockingEngine({ state, lateralYards = 25, random = Math.r
         defender.blockSlowTimer = Math.max(0, defender.blockSlowTimer - delta);
         if (defender.blockSlowTimer === 0) defender.speedModifier = 1;
       }
+      if (defender.shedImmunity > 0) {
+        defender.shedImmunity = Math.max(0, defender.shedImmunity - delta);
+      }
     }
     for (const blocker of blockers || []) {
-      if (!blocker || blocker.hasBall || isDown(blocker) || blocker.isBlocking) continue;
-      tryStartBlock(blocker, delta, options);
+      if (blocker?.blockRecoveryTimer > 0) {
+        blocker.blockRecoveryTimer = Math.max(0, blocker.blockRecoveryTimer - delta);
+      }
+      if (!blocker || blocker.hasBall || isDown(blocker) || blocker.isBlocking || blocker.blockRecoveryTimer > 0 || blocker.stumbleTimer > 0) continue;
+      tryStartBlock(blocker, delta, { ...options, carrier });
     }
     for (const engagement of [...engagements.values()]) {
       if ((carrier && carrier.x - engagement.defender.x >= BLOCK_DISENGAGE_DISTANCE) || isDown(engagement.defender)) {
+        release(engagement);
+        continue;
+      }
+      const isRunningTowards = [...engagement.blockers].some(blocker =>
+        isDefenderRunningTowards(engagement.defender, blocker, lateralYards, { ...options, carrier, state })
+      );
+      if (!isRunningTowards) {
         release(engagement);
         continue;
       }
@@ -189,6 +276,9 @@ export function createBlockingEngine({ state, lateralYards = 25, random = Math.r
 
   function reset() {
     for (const engagement of [...engagements.values()]) release(engagement);
+    for (const defender of state.defenders || []) {
+      defender.shedImmunity = 0;
+    }
   }
 
   return { update, reset, engagements };

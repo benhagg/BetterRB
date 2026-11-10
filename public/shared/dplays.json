@@ -19,13 +19,13 @@
       "formation": {
         "defensiveLine": "standard",
         "defenders": [
-          { "position": "LB", "role": "zone", "zone": "flat_top", "across": -5.1, "offset": 3.0 },
-          { "position": "LB", "role": "zone", "zone": "hook_top", "across": -1.7, "offset": 3.5 },
-          { "position": "LB", "role": "zone", "zone": "hook_bottom", "across": 1.7, "offset": 3.5 },
-          { "position": "LB", "role": "zone", "zone": "flat_bottom", "across": 5.1, "offset": 3.0 },
-          { "position": "DB", "role": "zone", "zone": "deep_top", "across": -6.0, "offset": 8.0 },
+          { "position": "LB", "role": "zone", "zone": "flat_top", "across": 5.1, "offset": 3.0 },
+          { "position": "LB", "role": "zone", "zone": "hook_top", "across": 1.7, "offset": 3.5 },
+          { "position": "LB", "role": "zone", "zone": "hook_bottom", "across": -1.7, "offset": 3.5 },
+          { "position": "LB", "role": "zone", "zone": "flat_bottom", "across": -5.1, "offset": 3.0 },
+          { "position": "DB", "role": "zone", "zone": "deep_top", "across": 6.0, "offset": 8.0 },
           { "position": "DB", "role": "zone", "zone": "deep_middle", "across": 0.0, "offset": 10.0 },
-          { "position": "DB", "role": "zone", "zone": "deep_bottom", "across": 6.0, "offset": 8.0 }
+          { "position": "DB", "role": "zone", "zone": "deep_bottom", "across": -6.0, "offset": 8.0 }
         ]
       }
     },
@@ -41,11 +41,11 @@
         "defensiveLine": "standard",
         "defenders": [
           { "position": "LB", "role": "zone", "zone": "middle", "across": 2, "offset": 4 },
-          { "position": "LB", "role": "man", "manTarget": "TE", "coverageOffset": 4 },
+          { "position": "LB", "role": "man", "manTarget": "TE", "across": -2, "offset": 4, "coverageOffset": 4 },
           { "position": "LB", "role": "zone", "across": -1.5, "offset": 4 },
-          { "position": "DB", "role": "man", "manTarget": "WR1", "coverageOffset": 8 },
-          { "position": "DB", "role": "man", "manTarget": "WR2", "coverageOffset": 4 },
-          { "position": "DB", "role": "man", "manTarget": "WR3", "coverageOffset": 8 },
+          { "position": "DB", "role": "man", "manTarget": "WR1", "across": 6, "offset": 4.5, "coverageOffset": 8 },
+          { "position": "DB", "role": "man", "manTarget": "WR2", "across": 2.5, "offset": 4, "coverageOffset": 4 },
+          { "position": "DB", "role": "man", "manTarget": "WR3", "across": -6, "offset": 4.5, "coverageOffset": 8 },
           { "position": "DB", "role": "zone", "zone": "deep_free_safety", "across": 0, "offset": 11 }
         ]
       }

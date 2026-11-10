@@ -50,15 +50,40 @@
       const los = state.scrimmagePosition;
       let target;
 
+      const getVel = (player) => {
+        if (!player) return { vx: 0, vy: 0 };
+        const vx = Number(player.velocityX) || 0;
+        const vy = (Number(player.velocityY) || 0) * lateralYards;
+        return { vx, vy };
+      };
+
       if (rule.type === 'spy') {
         const qb = state.quarterback;
-        const spyX = qb.x <= los ? Math.max(los - 1, qb.x + 2) : qb.x;
-        target = { x: spyX, y: qb.y };
+        const { vx, vy } = getVel(qb);
+        const dist = distance(defender, qb);
+        const tLead = Math.hypot(vx, vy) > 0.05
+          ? Math.max(0.1, Math.min(1.0, dist / Math.max(0.1, Number(defender.speed) || 5)))
+          : 0;
+        const futureX = qb.x + vx * tLead;
+        const futureY = qb.y + (vy * tLead) / lateralYards;
+        const spyX = futureX <= los ? Math.max(los - 1, futureX + 2) : futureX;
+        target = { x: spyX, y: futureY };
       } else if (rule.type === 'deep') {
         const threats = threatsIn(rule, los, fieldBounds.endZoneR);
         const deepest = threats.reduce((best, player) => !best || player.x > best.x ? player : best, null);
-        const depth = Math.max(anchor.x, (deepest?.x ?? anchor.x) + (rule.stayDeepest ? 0.75 : 0.5));
-        target = { x: depth, y: deepest ? clamp(deepest.y, ...rule.lane) : anchor.y };
+        if (deepest) {
+          const { vx, vy } = getVel(deepest);
+          const dist = distance(defender, deepest);
+          const tLead = Math.hypot(vx, vy) > 0.05
+            ? Math.max(0.1, Math.min(1.2, dist / Math.max(0.1, Number(defender.speed) || 5)))
+            : 0;
+          const futureX = deepest.x + vx * tLead;
+          const futureY = deepest.y + (vy * tLead) / lateralYards;
+          const depth = Math.max(anchor.x, futureX + (rule.stayDeepest ? 0.75 : 0.5));
+          target = { x: depth, y: clamp(futureY, ...rule.lane) };
+        } else {
+          target = { x: anchor.x, y: anchor.y };
+        }
       } else {
         const maxDepth = rule.type === 'flat' ? 7 : 12;
         const minX = los + (rule.type === 'flat' ? 0 : DEFAULT_DEPTH.shallow);
@@ -67,11 +92,21 @@
         const closest = threats.sort((a, b) => distance(defender, a) - distance(defender, b))[0];
         const homeX = clamp(los + (rule.depth ?? DEFAULT_DEPTH.shallow), minX, maxX);
         const homeY = clamp(anchor.y, ...rule.lane);
-        target = closest
-          ? { x: clamp(closest.x + 0.35, minX, maxX), y: clamp(closest.y, ...rule.lane) }
-          : { x: homeX, y: homeY };
+        if (closest) {
+          const { vx, vy } = getVel(closest);
+          const dist = distance(defender, closest);
+          const tLead = Math.hypot(vx, vy) > 0.05
+            ? Math.max(0.1, Math.min(1.0, dist / Math.max(0.1, Number(defender.speed) || 5)))
+            : 0;
+          const futureX = closest.x + vx * tLead;
+          const futureY = closest.y + (vy * tLead) / lateralYards;
+          target = { x: clamp(futureX + 0.35, minX, maxX), y: clamp(futureY, ...rule.lane) };
+        } else {
+          target = { x: homeX, y: homeY };
+        }
       }
 
+      defender.desiredTarget = target;
       defender.isBackpedaling = false;
       defender.run(delta, target.x, target.y);
       const bounded = clampTarget(defender);
