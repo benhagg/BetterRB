@@ -5,46 +5,96 @@ export const TACKLE_DIVE_SPEED_MULT = 1.40;
 export const TACKLE_DIVE_DURATION = 0.45;
 export const TACKLE_BASE_PROBABILITY = 0.60;
 export const TACKLE_DIFF_SCALE = 0.08;
-export const BRACE_SPEED_THRESHOLD = 0.80;
-export const BRACE_SCORE_BOOST = 0.50;
 export const DIVE_TACKLE_PENALTY = 0;
 export const BROKEN_TACKLE_IMMUNITY = 0.40;
 export const TACKLER_MISS_RECOVERY = 0.60;
 export const TACKLER_DIVE_COOLDOWN = 1.00;
 
+export const POSITION_STRENGTH_MULTIPLIERS = {
+  QB: 0.3,
+  RB: 0.9,
+  FB: 0.9,
+  HB: 0.9,
+  TE: 1.0,
+  WR: 0.5
+};
+
+export function getPositionStrengthMultiplier(position) {
+  const code = String(position || '').trim().toUpperCase();
+  if (code in POSITION_STRENGTH_MULTIPLIERS) {
+    return POSITION_STRENGTH_MULTIPLIERS[code];
+  }
+  return 1.0;
+}
+
 export function playEndsFromTackle(carrier, quarterback) {
   return Boolean(carrier?.isTackled || quarterback?.isTackled);
 }
 
-export function getCarrierSpeedFactor(carrier, lateralYards = 25) {
-  if (!carrier) return 0;
-  if (carrier._movement && Number.isFinite(carrier._movement.speedFactor)) {
-    return Math.max(0, Math.min(1, carrier._movement.speedFactor));
-  }
-  const speed = carrier.speed || 0;
-  if (speed <= 0.05) return 0;
-  const currentSpeed = Math.hypot(carrier.velocityX || 0, (carrier.velocityY || 0) * lateralYards);
-  return Math.max(0, Math.min(1, currentSpeed / speed));
-}
-
-export function getCarrierBreakScore(carrier, lateralYards = 25) {
+export function getCarrierBreakScore(carrier) {
   const strength = Number(carrier?.ratings?.strength ?? carrier?.rating?.strength ?? carrier?.strength ?? 5);
-  const speedFactor = getCarrierSpeedFactor(carrier, lateralYards);
-  const braceBoost = speedFactor < BRACE_SPEED_THRESHOLD ? BRACE_SCORE_BOOST : 0;
-  return strength + braceBoost;
+  const multiplier = getPositionStrengthMultiplier(carrier?.position);
+  return strength * multiplier;
 }
 
 export function getTacklerScore(tackler, isDive = false) {
   const tackling = Number(tackler?.ratings?.tackling ?? tackler?.rating?.tackling ?? (Number.isFinite(tackler?.tackling) ? tackler.tackling : (Number.isFinite(tackler?.rating) ? tackler.rating : 5)));
   const strength = Number(tackler?.ratings?.strength ?? tackler?.rating?.strength ?? (Number.isFinite(tackler?.strength) ? tackler.strength : 5));
-  const divePenalty = isDive ? DIVE_TACKLE_PENALTY : 0;
-  return (tackling * 0.60 + strength * 0.40) - divePenalty;
+  const divePenalty = isDive ? (Number.isFinite(DIVE_TACKLE_PENALTY) ? DIVE_TACKLE_PENALTY : 0) : 0;
+  return (strength * 0.50 + tackling * 0.75) - divePenalty;
+}
+
+export function calculateAngleOfAttack(tackler, carrier, lateralYards = 25) {
+  if (!tackler || !carrier) {
+    return { cosAngle: 0, angleRad: Math.PI / 2, angleDeg: 90 };
+  }
+
+  const dx = tackler.x - carrier.x;
+  const dy = (tackler.y - carrier.y) * lateralYards;
+  const dist = Math.hypot(dx, dy);
+  const rx = dist > 0.0001 ? dx / dist : 1;
+  const ry = dist > 0.0001 ? dy / dist : 0;
+
+  const cvx = Number(carrier.velocityX) || 0;
+  const cvy = (Number(carrier.velocityY) || 0) * lateralYards;
+  const cSpeed = Math.hypot(cvx, cvy);
+
+  let ux, uy;
+  if (cSpeed > 0.05) {
+    ux = cvx / cSpeed;
+    uy = cvy / cSpeed;
+  } else {
+    const dirX = carrier.autoRun?.vx ?? carrier.lastDirX ?? (carrier.facingLeft ? -1 : 1);
+    const dirY = (carrier.autoRun?.vy ?? carrier.lastDirY ?? 0) * lateralYards;
+    const len = Math.hypot(dirX, dirY);
+    ux = len > 0.0001 ? dirX / len : (carrier.facingLeft ? -1 : 1);
+    uy = len > 0.0001 ? dirY / len : 0;
+  }
+
+  const dot = Math.max(-1, Math.min(1, rx * ux + ry * uy));
+  const angleRad = Math.acos(dot);
+  const angleDeg = angleRad * (180 / Math.PI);
+  return { cosAngle: dot, angleRad, angleDeg };
+}
+
+export function calculateTackleDiff(tackler, carrier, options = {}) {
+  const { isDive = false, lateralYards = 25 } = options;
+  const carrierStrength = Number(carrier?.ratings?.strength ?? carrier?.rating?.strength ?? carrier?.strength ?? 5);
+  const multiplier = getPositionStrengthMultiplier(carrier?.position);
+  const carrierScore = carrierStrength * multiplier;
+
+  const tacklerScore = getTacklerScore(tackler, isDive);
+  const { cosAngle, angleDeg } = calculateAngleOfAttack(tackler, carrier, lateralYards);
+
+  // diff = strength * multiplier - (def strength * 0.5 + def tackle * .75) - (cos(angle of attack))
+  const diff = carrierScore - tacklerScore - cosAngle;
+  return { diff, carrierScore, tacklerScore, cosAngle, angleDeg, carrierStrength, multiplier };
 }
 
 export function calculateTackleProbability(tackler, carrier, isDive = false, lateralYards = 25) {
-  const sTackler = getTacklerScore(tackler, isDive);
-  const sCarrier = getCarrierBreakScore(carrier, lateralYards);
-  const rawProb = TACKLE_BASE_PROBABILITY + (sTackler - sCarrier) * TACKLE_DIFF_SCALE;
+  const { diff } = calculateTackleDiff(tackler, carrier, { isDive, lateralYards });
+  // Negative diff means tackler advantage, positive diff means carrier advantage
+  const rawProb = TACKLE_BASE_PROBABILITY - diff * TACKLE_DIFF_SCALE;
   return Math.max(0.10, Math.min(0.95, rawProb));
 }
 
@@ -151,29 +201,35 @@ export function attemptTackle(tackler, carrier, options = {}) {
     return { success: false, reason: 'immune' };
   }
 
-  const speedFactor = getCarrierSpeedFactor(carrier, lateralYards);
-  const carrierStrength = Number(carrier?.ratings?.strength ?? carrier?.rating?.strength ?? carrier?.strength ?? 5);
-  const braceBoost = speedFactor < BRACE_SPEED_THRESHOLD ? BRACE_SCORE_BOOST : 0;
-  const sCarrier = carrierStrength + braceBoost;
+  const {
+    diff,
+    carrierScore,
+    tacklerScore,
+    cosAngle,
+    angleDeg,
+    carrierStrength,
+    multiplier
+  } = calculateTackleDiff(tackler, carrier, { isDive, lateralYards });
 
-  const tacklerTackling = Number(tackler?.ratings?.tackling ?? tackler?.rating?.tackling ?? (Number.isFinite(tackler?.tackling) ? tackler.tackling : (Number.isFinite(tackler?.rating) ? tackler.rating : 5)));
-  const tacklerStrength = Number(tackler?.ratings?.strength ?? tackler?.rating?.strength ?? (Number.isFinite(tackler?.strength) ? tackler.strength : 5));
-  const divePenalty = isDive ? DIVE_TACKLE_PENALTY : 0;
-  const sTackler = (tacklerTackling * 0.60 + tacklerStrength * 0.40) - divePenalty;
-
-  const rawProb = TACKLE_BASE_PROBABILITY + (sTackler - sCarrier) * TACKLE_DIFF_SCALE;
+  const rawProb = TACKLE_BASE_PROBABILITY - diff * TACKLE_DIFF_SCALE;
   const probability = Math.max(0.10, Math.min(0.95, rawProb));
   const randomValue = (typeof roll === 'number') ? roll : Math.random();
   const success = forceSuccess || (randomValue < probability);
+
+  const tacklerStrength = Number(tackler?.ratings?.strength ?? tackler?.rating?.strength ?? (Number.isFinite(tackler?.strength) ? tackler.strength : 5));
+  const tacklerTackling = Number(tackler?.ratings?.tackling ?? tackler?.rating?.tackling ?? (Number.isFinite(tackler?.tackling) ? tackler.tackling : (Number.isFinite(tackler?.rating) ? tackler.rating : 5)));
+  const carrierPos = carrier?.position || 'RB';
 
   // Detailed console log of every attempted tackle and all factors
   console.log(
     `[TACKLE ATTEMPT] ${tackler?.name || tackler?.position || 'Defender'} (#${tackler?.id ?? '?'}) ` +
     `vs ${carrier?.name || carrier?.position || 'Carrier'} (#${carrier?.id ?? '?'})\n` +
     `  Type: ${isDive ? 'DIVE TACKLE' : 'STANDING WRAP-UP'} | Distance: ${dist.toFixed(2)} yds\n` +
-    `  Carrier Score: ${sCarrier.toFixed(2)} [Strength: ${carrierStrength}, SpeedFactor: ${speedFactor.toFixed(2)}, BraceBoost: +${braceBoost.toFixed(2)}]\n` +
-    `  Tackler Score: ${sTackler.toFixed(2)} [Tackling: ${tacklerTackling}, Strength: ${tacklerStrength}, DivePenalty: -${divePenalty.toFixed(2)}]\n` +
-    `  Score Diff: ${(sTackler - sCarrier).toFixed(2)} -> Win Probability: ${(probability * 100).toFixed(1)}% | Roll: ${(randomValue * 100).toFixed(1)}%\n` +
+    `  Carrier: Pos=${carrierPos}, Strength=${carrierStrength}, Mult=${multiplier.toFixed(2)} -> CarrierScore=${carrierScore.toFixed(2)}\n` +
+    `  Defender: Strength=${tacklerStrength} (*0.5=${(tacklerStrength * 0.5).toFixed(2)}), Tackling=${tacklerTackling} (*0.75=${(tacklerTackling * 0.75).toFixed(2)}) -> DefScore=${tacklerScore.toFixed(2)}\n` +
+    `  Angle of Attack: ${angleDeg.toFixed(1)}° (cos=${cosAngle.toFixed(3)}) [${cosAngle > 0.5 ? 'FRONT HIT' : cosAngle < -0.5 ? 'REAR HIT' : 'FLANK/ANGLE HIT'}]\n` +
+    `  Formula: diff = ${carrierScore.toFixed(2)} - ${tacklerScore.toFixed(2)} - (${cosAngle.toFixed(3)}) = ${diff.toFixed(2)}\n` +
+    `  Tackle Probability: ${(probability * 100).toFixed(1)}% | Roll: ${(randomValue * 100).toFixed(1)}%\n` +
     `  Outcome: ${success ? 'SUCCESS (CARRIER TACKLED)' : 'BROKEN TACKLE (CARRIER STUMBLES)'}`
   );
 
@@ -222,14 +278,15 @@ const GameTackling = {
   TACKLE_DIVE_DURATION,
   TACKLE_BASE_PROBABILITY,
   TACKLE_DIFF_SCALE,
-  BRACE_SPEED_THRESHOLD,
-  BRACE_SCORE_BOOST,
+  POSITION_STRENGTH_MULTIPLIERS,
+  getPositionStrengthMultiplier,
+  calculateAngleOfAttack,
+  calculateTackleDiff,
   DIVE_TACKLE_PENALTY,
   BROKEN_TACKLE_IMMUNITY,
   TACKLER_MISS_RECOVERY,
   TACKLER_DIVE_COOLDOWN,
   playEndsFromTackle,
-  getCarrierSpeedFactor,
   getCarrierBreakScore,
   getTacklerScore,
   calculateTackleProbability,

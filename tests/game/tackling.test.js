@@ -7,8 +7,10 @@ import {
   TACKLE_DIVE_DURATION,
   TACKLE_BASE_PROBABILITY,
   TACKLE_DIFF_SCALE,
-  BRACE_SPEED_THRESHOLD,
-  BRACE_SCORE_BOOST,
+  POSITION_STRENGTH_MULTIPLIERS,
+  getPositionStrengthMultiplier,
+  calculateAngleOfAttack,
+  calculateTackleDiff,
   DIVE_TACKLE_PENALTY,
   BROKEN_TACKLE_IMMUNITY,
   TACKLER_MISS_RECOVERY,
@@ -23,52 +25,135 @@ import {
 } from '../../src/game/tackling.js';
 import PlayerClasses from '../../src/game/players/index.js';
 
-const { DefensivePlayer, RunningBack, WideReceiver } = PlayerClasses;
+const { DefensivePlayer, RunningBack, WideReceiver, Quarterback, TightEnd } = PlayerClasses;
 
 describe('tackling rules and resolution', () => {
-  describe('effective scores and probability', () => {
-    it('calculates carrier break score with and without brace boost', () => {
-      const carrier = new RunningBack({ ratings: { strength: 6 } });
-      carrier._movement = { speedFactor: 0.90 };
-      // Above 80% speed: no brace boost
-      expect(getCarrierBreakScore(carrier)).toBe(6);
-
-      // Under 80% speed: +BRACE_SCORE_BOOST brace boost
-      carrier._movement = { speedFactor: 0.50 };
-      expect(getCarrierBreakScore(carrier)).toBe(6 + BRACE_SCORE_BOOST);
+  describe('position multipliers and effective scores', () => {
+    it('applies correct position strength multipliers', () => {
+      expect(getPositionStrengthMultiplier('QB')).toBe(0.3);
+      expect(getPositionStrengthMultiplier('RB')).toBe(0.9);
+      expect(getPositionStrengthMultiplier('FB')).toBe(0.9);
+      expect(getPositionStrengthMultiplier('HB')).toBe(0.9);
+      expect(getPositionStrengthMultiplier('TE')).toBe(1.0);
+      expect(getPositionStrengthMultiplier('WR')).toBe(0.5);
+      expect(getPositionStrengthMultiplier('UNKNOWN')).toBe(1.0);
     });
 
-    it('calculates tackler score for standing vs dive tackle', () => {
-      const defender = new DefensivePlayer({ ratings: { tackling: 8, strength: 5 } });
-      // Standing: 8 * 0.60 + 5 * 0.40 = 4.8 + 2.0 = 6.8
-      expect(getTacklerScore(defender, false)).toBeCloseTo(6.8);
+    it('calculates carrier break score using strength * multiplier without brace boost or speed factor', () => {
+      const qb = new Quarterback({ ratings: { strength: 10 } });
+      expect(getCarrierBreakScore(qb)).toBeCloseTo(3.0); // 10 * 0.3
 
-      // Dive: 6.8 - DIVE_TACKLE_PENALTY
-      expect(getTacklerScore(defender, true)).toBeCloseTo(6.8 - DIVE_TACKLE_PENALTY);
+      const rb = new RunningBack({ ratings: { strength: 10 } });
+      expect(getCarrierBreakScore(rb)).toBeCloseTo(9.0); // 10 * 0.9
+
+      const te = new TightEnd({ ratings: { strength: 10 } });
+      expect(getCarrierBreakScore(te)).toBeCloseTo(10.0); // 10 * 1.0
+
+      const wr = new WideReceiver({ ratings: { strength: 10 } });
+      expect(getCarrierBreakScore(wr)).toBeCloseTo(5.0); // 10 * 0.5
+    });
+
+    it('calculates tackler score: def strength * 0.5 + def tackle * 0.75', () => {
+      const defender = new DefensivePlayer({ ratings: { strength: 6, tackling: 8 } });
+      // 6 * 0.50 + 8 * 0.75 = 3.0 + 6.0 = 9.0
+      expect(getTacklerScore(defender, false)).toBeCloseTo(9.0);
+      expect(getTacklerScore(defender, true)).toBeCloseTo(9.0);
+    });
+  });
+
+  describe('angle of attack and tackle diff formula', () => {
+    it('calculates angle of attack correctly for front, rear, and flank hits', () => {
+      const carrier = new RunningBack({ x: 20, y: 0.5 });
+      carrier.velocityX = 5.0; // Moving right (+X)
+      carrier.velocityY = 0;
+
+      // Front hit: defender directly ahead downfield (+X)
+      const frontDefender = new DefensivePlayer({ x: 21, y: 0.5 });
+      const frontAoA = calculateAngleOfAttack(frontDefender, carrier);
+      expect(frontAoA.cosAngle).toBeCloseTo(1.0);
+      expect(frontAoA.angleDeg).toBeCloseTo(0);
+
+      // Rear hit: defender directly behind (-X)
+      const rearDefender = new DefensivePlayer({ x: 19, y: 0.5 });
+      const rearAoA = calculateAngleOfAttack(rearDefender, carrier);
+      expect(rearAoA.cosAngle).toBeCloseTo(-1.0);
+      expect(rearAoA.angleDeg).toBeCloseTo(180);
+
+      // Flank hit: defender perpendicular on lateral axis
+      const flankDefender = new DefensivePlayer({ x: 20, y: 0.6 });
+      const flankAoA = calculateAngleOfAttack(flankDefender, carrier);
+      expect(flankAoA.cosAngle).toBeCloseTo(0.0);
+      expect(flankAoA.angleDeg).toBeCloseTo(90);
+    });
+
+    it('implements diff = strength * mult - (def strength * 0.5 + def tackle * 0.75) - cos(angle)', () => {
+      const carrier = new RunningBack({ ratings: { strength: 10 } }); // carrierScore = 9.0
+      carrier.x = 20;
+      carrier.y = 0.5;
+      carrier.velocityX = 4;
+      carrier.velocityY = 0;
+
+      const defender = new DefensivePlayer({ ratings: { strength: 6, tackling: 8 } }); // defScore = 9.0
+
+      // Case 1: Front hit (cos = 1) -> diff = 9.0 - 9.0 - (1) = -1.0 (helps defense)
+      defender.x = 21;
+      defender.y = 0.5;
+      const frontRes = calculateTackleDiff(defender, carrier);
+      expect(frontRes.diff).toBeCloseTo(-1.0);
+
+      // Case 2: Rear hit (cos = -1) -> diff = 9.0 - 9.0 - (-1) = +1.0 (helps carrier)
+      defender.x = 19;
+      defender.y = 0.5;
+      const rearRes = calculateTackleDiff(defender, carrier);
+      expect(rearRes.diff).toBeCloseTo(1.0);
+
+      // Case 3: Flank hit (cos = 0) -> diff = 9.0 - 9.0 - 0 = 0.0 (neutral)
+      defender.x = 20;
+      defender.y = 0.6;
+      const flankRes = calculateTackleDiff(defender, carrier);
+      expect(flankRes.diff).toBeCloseTo(0.0);
     });
 
     it('calculates tackle probability and clamps to [0.10, 0.95]', () => {
-      // Even matchup: 5 tackling, 5 strength vs 5 strength (unbraced)
-      const defender = new DefensivePlayer({ ratings: { tackling: 5, strength: 5 } });
-      const carrier = new RunningBack({ ratings: { strength: 5 } });
-      carrier._movement = { speedFactor: 1.0 };
+      // Even matchup with flank hit (diff = 0) -> probability = 0.60
+      const carrier = new RunningBack({ ratings: { strength: 10 } }); // 10 * 0.9 = 9.0
+      carrier.x = 20;
+      carrier.y = 0.5;
+      carrier.velocityX = 4;
+      carrier.velocityY = 0;
 
-      // Base rate: 60%
-      expect(calculateTackleProbability(defender, carrier, false)).toBeCloseTo(0.60);
+      const defender = new DefensivePlayer({ ratings: { strength: 6, tackling: 8 } }); // 6*0.5 + 8*0.75 = 9.0
+      defender.x = 20;
+      defender.y = 0.6; // flank hit -> cos = 0, diff = 0
+      expect(calculateTackleProbability(defender, carrier)).toBeCloseTo(0.60);
 
-      // Defender advantage: 10 tackling, 10 strength vs 2 strength
-      const eliteDefender = new DefensivePlayer({ ratings: { tackling: 10, strength: 10 } });
-      const weakCarrier = new RunningBack({ ratings: { strength: 2 } });
-      weakCarrier._movement = { speedFactor: 1.0 };
-      // 0.60 + (10 - 2) * 0.08 = 0.60 + 0.64 = 1.24 -> clamped to 0.95
-      expect(calculateTackleProbability(eliteDefender, weakCarrier, false)).toBe(0.95);
+      // Front hit increases tackle probability: diff = -1 -> prob = 0.60 - (-1)*0.08 = 0.68
+      defender.x = 21;
+      defender.y = 0.5;
+      expect(calculateTackleProbability(defender, carrier)).toBeCloseTo(0.68);
 
-      // Carrier advantage: 1 tackling, 1 strength vs 10 strength + 2.5 brace = 12.5
-      const weakDefender = new DefensivePlayer({ ratings: { tackling: 1, strength: 1 } });
-      const tankCarrier = new RunningBack({ ratings: { strength: 10 } });
-      tankCarrier._movement = { speedFactor: 0.5 }; // braced (+2.5) -> 12.5
-      // 0.60 + (1 - 12.5) * 0.08 = 0.60 - 0.92 = -0.32 -> clamped to 0.10
-      expect(calculateTackleProbability(weakDefender, tankCarrier, false)).toBe(0.10);
+      // Rear hit decreases tackle probability: diff = +1 -> prob = 0.60 - (1)*0.08 = 0.52
+      defender.x = 19;
+      defender.y = 0.5;
+      expect(calculateTackleProbability(defender, carrier)).toBeCloseTo(0.52);
+
+      // Extreme defender advantage clamps to 0.95
+      const eliteDefender = new DefensivePlayer({ ratings: { strength: 20, tackling: 20 } });
+      eliteDefender.x = 21;
+      eliteDefender.y = 0.5;
+      const weakQb = new Quarterback({ ratings: { strength: 1 } });
+      weakQb.x = 20;
+      weakQb.y = 0.5;
+      expect(calculateTackleProbability(eliteDefender, weakQb)).toBe(0.95);
+
+      // Extreme carrier advantage clamps to 0.10
+      const weakDefender = new DefensivePlayer({ ratings: { strength: 1, tackling: 1 } });
+      weakDefender.x = 19;
+      weakDefender.y = 0.5;
+      const tankTe = new TightEnd({ ratings: { strength: 25 } });
+      tankTe.x = 20;
+      tankTe.y = 0.5;
+      expect(calculateTackleProbability(weakDefender, tankTe)).toBe(0.10);
     });
   });
 
